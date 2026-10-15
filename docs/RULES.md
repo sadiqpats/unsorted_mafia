@@ -110,3 +110,8 @@ If a night produces both outcomes at once (e.g. the last Mafia and the last town
 | Restart / cancel | Restart returns everyone to the lobby (same seats, roles cleared, log kept). Close room ends all sessions. |
 | Host correction (eliminate/restore) | Always announced publicly and logged. Victory is re-checked. |
 | Late join (off by default) | Joiners enter as Villagers so the secret distribution can't be inferred or gamed. |
+
+## Role secrecy
+- **Default (`revealRoleOnDeath: false`): no role is revealed when someone dies.** Death, vote-out and host-correction announcements give only the name. The TV wall shows the cut photo with “Eliminated”. Every role is revealed on the **game-over** screen.
+- If the Jester is voted out and the game continues (`jesterEndsGame: false`), the “was the Jester” line is held back until game over.
+- The host can switch “Reveal role when a player dies” on in House rules → Information.

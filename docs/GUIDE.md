@@ -58,6 +58,8 @@ Everyone else is a Villager. Red messages (e.g. “roles add up to 9, need 10”
 | 🗳 Voting | Secret ballot. Most (weighted) votes is eliminated. | Living, not-silenced players |
 | ⚖ Verdict | Result revealed, then night falls again. | — |
 
+**Roles stay secret until the game is over.** Deaths are announced by name only; every role is revealed on the game-over screen (the host can change this).
+
 **Win conditions:** Town wins when all Mafia are gone. Mafia wins when they equal or outnumber everyone else. The Jester wins if voted out during the day. The Thief and Priest win if they’re alive at the end.
 
 ## 6. Host controls during play

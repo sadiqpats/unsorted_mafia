@@ -19,7 +19,9 @@ test('5 players: full match — Mafia kill, Detective result, refresh, Town wins
 
   // Night resolves the moment everyone has locked in; all phones see the same announcement.
   await expect(t.host.getByTestId('host-phase')).toHaveText('Morning');
-  for (const s of t.seats) await expect(s.page.getByText(`${victim.name} was found dead at dawn. They were the Villager.`).first()).toBeVisible();
+  for (const s of t.seats) await expect(s.page.getByText(`${victim.name} was found dead at dawn.`, { exact: true }).first()).toBeVisible();
+  // Roles stay secret until the game is over.
+  for (const s of t.seats.filter((x) => x !== victim)) expect(await s.page.locator('body').innerText()).not.toMatch(/They were the/);
   await expect(victim.page.getByText('You have been eliminated')).toBeVisible();
 
   // Detective's result is private.
@@ -90,7 +92,7 @@ test('Judge’s double vote changes the outcome', async ({ browser }) => {
   // Unweighted this would be 2–2 (no elimination). Weighted it is 3–2.
   await expect(t.host.getByText(`${judge.name} → ${m.name} (×2)`)).toBeVisible();
   await t.host.getByRole('button', { name: /Next phase/ }).click();
-  await expect(v1.page.getByText(`The town has eliminated ${m.name}. They were the Mafia.`).first()).toBeVisible();
+  await expect(v1.page.getByText(new RegExp(`The town has eliminated ${m.name}\\.$`)).first()).toBeVisible();
   await expect(v1.page.getByText('The Town Prevails')).toBeVisible();
 });
 

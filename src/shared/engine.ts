@@ -1118,7 +1118,9 @@ function eliminateByVote(room: Room, targetId: string, verdict: Verdict, now: nu
   if (t.roleId === 'jester') {
     verdict.jesterWin = true;
     g.jesterWinners.push(t.id);
-    addLog(room, now, 'verdict', fillTemplate(s.announcements.jesterWin, { name: t.name }));
+    // Saying "they were the Jester" reveals a role, so mid-game it is only public if roles are revealed on death.
+    const announceNow = s.jesterEndsGame || s.revealRoleOnDeath;
+    addLog(room, now, 'verdict', fillTemplate(s.announcements.jesterWin, { name: t.name }), announceNow ? 'public' : 'host');
     if (s.jesterEndsGame) {
       return endGame(room, { faction: 'jester', winnerIds: [t.id], reason: `${t.name} the Jester tricked the town into voting them out.` }, now);
     }
@@ -1186,6 +1188,9 @@ function endGame(room: Room, win: WinResult, now: number) {
   g.pendingTie = null;
   enterPhase(room, 'game_over', now);
   room.status = 'over';
+  if (!g.settings.jesterEndsGame && !g.settings.revealRoleOnDeath) {
+    for (const id of g.jesterWinners) addLog(room, now, 'verdict', fillTemplate(g.settings.announcements.jesterWin, { name: getPlayer(room, id).name }));
+  }
   room.gamesPlayed++;
   const label = { good: 'The Town wins!', mafia: 'The Mafia wins!', jester: 'The Jester wins!', draw: 'It’s a draw.', none: 'Game ended.' }[win.faction];
   addLog(room, now, 'gameover', `${label} ${win.reason}`);

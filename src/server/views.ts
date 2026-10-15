@@ -76,6 +76,7 @@ export function buildPublic(room: Room, connected: Set<string>, now: number): Pu
           ...g.lastVerdict,
           tally: settings.voteReveal === 'outcome' && !over ? {} : g.lastVerdict.tally,
           votes: settings.voteReveal === 'full' || over ? g.lastVerdict.votes : {},
+          jesterWin: over || settings.revealRoleOnDeath || settings.jesterEndsGame ? g.lastVerdict.jesterWin : false,
         }
       : null;
     const morning = g.lastMorning ? { ...g.lastMorning, saved: settings.announceSaves ? g.lastMorning.saved : false, silenced: settings.announceSilenced ? g.lastMorning.silenced : [] } : null;

@@ -152,7 +152,7 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     allowAbstain: true,
     tieRule: 'none',
     voteReveal: 'tally',
-    revealRoleOnDeath: true,
+    revealRoleOnDeath: false,
     announceSaves: false,
     announceSilenced: true,
     deadCanSeeRoles: false,

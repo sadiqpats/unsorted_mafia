@@ -297,7 +297,7 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           <NumberSetting label="Judge vote weight" value={s.judgeWeight} min={1} max={5} suffix="×" onChange={(v) => patch({ judgeWeight: v })} />
         </Group>
         <Group title="Information">
-          <Toggle label="Reveal role when a player dies" checked={s.revealRoleOnDeath} onChange={(v) => patch({ revealRoleOnDeath: v })} />
+          <Toggle label="Reveal role when a player dies" hint="Off (default): every role stays secret until the game is over." checked={s.revealRoleOnDeath} onChange={(v) => patch({ revealRoleOnDeath: v })} />
           <Toggle label="Announce when someone is saved" checked={s.announceSaves} onChange={(v) => patch({ announceSaves: v })} />
           <Toggle label="Announce who is silenced" checked={s.announceSilenced} onChange={(v) => patch({ announceSilenced: v })} />
           <Toggle label="Dead players can see all roles" hint="Off is safer: ghosts can’t leak with their faces." checked={s.deadCanSeeRoles} onChange={(v) => patch({ deadCanSeeRoles: v })} />

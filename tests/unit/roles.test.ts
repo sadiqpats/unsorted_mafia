@@ -12,7 +12,8 @@ describe('Mafia team kill', () => {
     g.advance();
     expect(g.P(1).alive).toBe(false);
     expect(g.room.game!.phase).toBe('morning');
-    expect(g.publicLog().join('\n')).toContain('P1 was found dead at dawn. They were the Villager.');
+    expect(g.publicLog()).toContain('P1 was found dead at dawn.');
+    expect(g.publicLog().join('\n')).not.toMatch(/They were/);
   });
 
   it('cannot target its own members', () => {
@@ -73,6 +74,33 @@ describe('Mafia team kill', () => {
     g.advance();
     expect(g.room.players.every((p) => p.alive)).toBe(true);
     expect(g.publicLog()).toContain('The town wakes. Nobody died tonight.');
+  });
+});
+
+describe('Role reveal', () => {
+  it('keeps every role secret until the game is over (default)', () => {
+    const g = setup(['mafia', 'jester', V, V, V, V], { jesterEndsGame: false });
+    g.goToNight();
+    g.act(0, 'mafia_kill', 2);
+    g.advance();
+    g.goToVoting();
+    for (const i of [0, 3, 4, 5]) g.vote(i, 1); // Jester voted out, game continues
+    g.advance();
+    expect(g.room.status).toBe('active');
+    const text = g.publicLog().join('\n');
+    expect(text).not.toMatch(/They were|Jester|Villager|Mafia/);
+    expect(g.room.game!.lastVerdict!.jesterWin).toBe(true); // stored privately…
+    hostEliminate(g.room, 'p0', 0); // …and revealed at the end
+    expect(g.room.status).toBe('over');
+    expect(g.publicLog().join('\n')).toMatch(/P1 was the Jester/);
+  });
+
+  it('can reveal roles on death as a house rule', () => {
+    const g = setup(['mafia', V, V, V, V], { revealRoleOnDeath: true });
+    g.goToNight();
+    g.act(0, 'mafia_kill', 1);
+    g.advance();
+    expect(g.publicLog()).toContain('P1 was found dead at dawn. They were the Villager.');
   });
 });
 
