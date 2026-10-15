@@ -1,0 +1,212 @@
+/**
+ * PRIVACY BOUNDARY
+ * ----------------
+ * The full Room object never leaves the server. Each connected socket receives a
+ * projection built here, according to who it authenticated as:
+ *   - public  (TV display / unauthenticated spectator): public information only
+ *   - player: public + their own role, own actions, own private results
+ *   - host:   public + (if the host is NOT playing) every role, action and vote
+ * Tests in tests/integration/privacy.test.ts verify that no other player's role
+ * or action ever appears in a player's payload.
+ */
+import { analyzeDistribution } from '../shared/distribution';
+import {
+  checkWin,
+  eligibleVoters,
+  hasRally,
+  heldAbilities,
+  nightOptions,
+  voteEligibility,
+  voteTargets,
+  voteWeight,
+} from '../shared/engine';
+import { isMafiaTeam, roleAlignment } from '../shared/roles';
+import type { Alignment, Room } from '../shared/types';
+import type { ClientView, HostPanel, MeView, PublicGame, PublicPlayer, PublicView } from '../shared/view-types';
+
+export type Viewer = { kind: 'public' } | { kind: 'player'; playerId: string } | { kind: 'host' };
+
+const FEED_LIMIT = 80;
+
+function publicSilenced(room: Room, silencedRound: number | null): boolean {
+  const g = room.game;
+  if (!g || silencedRound === null || silencedRound !== g.round) return false;
+  if (!g.settings.announceSilenced) return false;
+  return ['morning', 'discussion', 'voting', 'verdict'].includes(g.phase);
+}
+
+export function buildPublic(room: Room, connected: Set<string>, now: number): PublicView {
+  const g = room.game;
+  const settings = g?.settings ?? room.settings;
+  const over = g?.phase === 'game_over';
+  const players: PublicPlayer[] = [...room.players]
+    .sort((a, b) => a.seat - b.seat)
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      seat: p.seat,
+      isHost: p.isHost,
+      ready: p.ready,
+      connected: connected.has(p.id),
+      alive: p.alive,
+      silenced: publicSilenced(room, p.silencedRound),
+      revealedRoleId: over || (g && !p.alive && settings.revealRoleOnDeath) ? p.roleId : null,
+      deathCause: g && !p.alive ? p.deathCause : null,
+      photo: p.photoVersion ? `/api/rooms/${room.code}/photos/${p.id}?v=${p.photoVersion}` : null,
+    }));
+
+  let game: PublicGame | null = null;
+  if (g) {
+    const night = g.phase === 'night' || g.phase === 'prenight';
+    let nightProgress = null;
+    if (night) {
+      let total = 0;
+      let done = 0;
+      for (const p of room.players) {
+        const opts = nightOptions(room, p.id);
+        if (!opts.length) continue;
+        total++;
+        if (opts.every((o) => g.night.actions[`${p.id}:${o.abilityId}`])) done++;
+      }
+      nightProgress = { done, total };
+    }
+    const voters = g.phase === 'voting' ? eligibleVoters(room) : [];
+    const verdict = g.lastVerdict
+      ? {
+          ...g.lastVerdict,
+          tally: settings.voteReveal === 'outcome' && !over ? {} : g.lastVerdict.tally,
+          votes: settings.voteReveal === 'full' || over ? g.lastVerdict.votes : {},
+        }
+      : null;
+    const morning = g.lastMorning ? { ...g.lastMorning, saved: settings.announceSaves ? g.lastMorning.saved : false, silenced: settings.announceSilenced ? g.lastMorning.silenced : [] } : null;
+    game = {
+      phase: g.phase,
+      round: g.round,
+      phaseSeq: g.phaseSeq,
+      phaseEndsAt: g.phaseEndsAt,
+      paused: g.pausedRemainingMs !== null,
+      pausedRemainingMs: g.pausedRemainingMs,
+      nightProgress,
+      votingProgress: g.phase === 'voting' ? { done: voters.filter((p) => g.day.votes[p.id]).length, total: voters.length } : null,
+      revealProgress: g.phase === 'reveal' ? { done: room.players.filter((p) => p.revealAck).length, total: room.players.length } : null,
+      runoff: g.day.runoff,
+      pendingTie: g.pendingTie,
+      lastMorning: morning,
+      lastVerdict: verdict,
+      winner: g.winner,
+      stats: over ? g.stats : null,
+      aliveCount: room.players.filter((p) => p.alive).length,
+    };
+  }
+
+  return {
+    kind: 'public',
+    serverNow: now,
+    code: room.code,
+    status: room.status,
+    hostName: room.hostName,
+    gamesPlayed: room.gamesPlayed,
+    settings,
+    distribution: analyzeDistribution(room.settings, room.status === 'lobby' ? undefined : room.players.length),
+    players,
+    game,
+    feed: room.log.filter((l) => l.visibility === 'public').slice(-FEED_LIMIT),
+  };
+}
+
+function buildMe(room: Room, playerId: string): MeView | null {
+  const p = room.players.find((x) => x.id === playerId);
+  if (!p) return null;
+  const g = room.game;
+  const s = g?.settings ?? room.settings;
+  const inGame = !!g && !!p.roleId;
+  let vote: MeView['vote'] = null;
+  if (g && g.phase === 'voting') {
+    const e = voteEligibility(room, p);
+    const v = g.day.votes[p.id];
+    vote = {
+      eligible: e.ok,
+      reason: e.reason ?? null,
+      targets: e.ok ? voteTargets(room, p) : [],
+      myVote: v ? v.targetId : undefined,
+      rallyAvailable: e.ok && hasRally(room, p),
+      weight: e.ok ? voteWeight(room, p, false) : 0,
+    };
+  }
+  let night: MeView['night'] = null;
+  if (g && (g.phase === 'night' || g.phase === 'prenight')) {
+    const options = nightOptions(room, p.id);
+    const submitted: Record<string, string | null> = {};
+    for (const o of options) {
+      const a = g.night.actions[`${p.id}:${o.abilityId}`];
+      if (a) submitted[o.abilityId] = a.targetId;
+    }
+    night = { options, submitted };
+  }
+  let mafia: MeView['mafia'] = null;
+  if (inGame && isMafiaTeam(p.roleId, s)) {
+    const team = room.players.filter((x) => isMafiaTeam(x.roleId, s)).map((x) => ({ id: x.id, name: x.name, roleId: x.roleId! }));
+    const votes: Record<string, string | null> = {};
+    if (g!.phase === 'night' && p.alive) {
+      for (const a of Object.values(g!.night.actions)) if (a.abilityId === 'mafia_kill') votes[a.actorId] = a.targetId;
+    }
+    mafia = { team, votes };
+  }
+  const allRoles = g && ((!p.alive && s.deadCanSeeRoles) || g.phase === 'game_over') ? Object.fromEntries(room.players.map((x) => [x.id, x.roleId ?? ''])) : null;
+  return {
+    id: p.id,
+    name: p.name,
+    isHost: p.isHost,
+    alive: p.alive,
+    roleId: inGame ? p.roleId : null,
+    alignment: inGame ? roleAlignment(p.roleId, s) : null,
+    abilities: inGame ? heldAbilities(room, p) : [],
+    stolen: inGame ? p.stolen : null,
+    lostAbilities: inGame ? p.lostAbilities : [],
+    silenced: !!g && p.silencedRound === g.round && g.phase !== 'night' && g.phase !== 'prenight',
+    revealAck: p.revealAck,
+    vote,
+    night,
+    mafia,
+    privateResults: room.privateResults.filter((r) => r.playerId === p.id).map((r) => ({ id: r.id, round: r.round, kind: r.kind, text: r.text })),
+    allRoles,
+  };
+}
+
+function buildHost(room: Room): HostPanel {
+  const g = room.game;
+  const secrets = !room.settings.hostPlays;
+  const nightSubmitted: Record<string, boolean> = {};
+  const voteSubmitted: Record<string, boolean> = {};
+  if (g?.phase === 'night' || g?.phase === 'prenight') {
+    for (const p of room.players) {
+      const opts = nightOptions(room, p.id);
+      if (opts.length) nightSubmitted[p.id] = opts.every((o) => !!g.night.actions[`${p.id}:${o.abilityId}`]);
+    }
+  }
+  if (g?.phase === 'voting') for (const p of eligibleVoters(room)) voteSubmitted[p.id] = !!g.day.votes[p.id];
+  let alignmentAlive: Record<Alignment, number> | null = null;
+  if (g && secrets) {
+    alignmentAlive = { good: 0, mafia: 0, neutral: 0 };
+    for (const p of room.players) if (p.alive) alignmentAlive[roleAlignment(p.roleId, g.settings)]++;
+  }
+  return {
+    secrets,
+    roles: g && secrets ? Object.fromEntries(room.players.map((p) => [p.id, p.roleId ?? ''])) : null,
+    nightActions: g && secrets ? Object.values(g.night.actions).filter(() => g.phase === 'night' || g.phase === 'prenight').map(({ actorId, abilityId, targetId }) => ({ actorId, abilityId, targetId })) : null,
+    votes: g && secrets && g.phase === 'voting' ? Object.values(g.day.votes).map(({ voterId, targetId, weight }) => ({ voterId, targetId, weight })) : null,
+    nightSubmitted,
+    voteSubmitted,
+    log: secrets ? room.log.slice(-400) : room.log.filter((l) => l.visibility === 'public').slice(-400),
+    alignmentAlive,
+    winPreview: g && secrets && room.status === 'active' ? checkWin(room) : null,
+  };
+}
+
+export function buildView(room: Room, viewer: Viewer, connected: Set<string>, now: number): ClientView {
+  const base = buildPublic(room, connected, now);
+  if (viewer.kind === 'public') return { ...base, me: null, host: null };
+  if (viewer.kind === 'player') return { ...base, kind: 'player', me: buildMe(room, viewer.playerId), host: null };
+  const me = room.hostPlayerId ? buildMe(room, room.hostPlayerId) : null;
+  return { ...base, kind: 'host', me, host: buildHost(room) };
+}

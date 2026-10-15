@@ -1,0 +1,19 @@
+# Game server on Render (Blueprint). The website can be served from here too, or from Vercel.
+# A paid "starter" instance is needed for the persistent disk (rooms + photos survive restarts).
+services:
+  - type: web
+    name: mafia-night
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_PATH
+        value: /data/mafia.db
+      - key: CLIENT_ORIGIN
+        sync: false # set to your Vercel URL, e.g. https://unsorted-mafia.vercel.app
+    disk:
+      name: mafia-data
+      mountPath: /data
+      sizeGB: 1

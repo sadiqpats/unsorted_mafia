@@ -1,0 +1,106 @@
+import { describe, expect, it } from 'vitest';
+import { analyzeDistribution, suggestDistribution } from '../../src/shared/distribution';
+import { addPlayer, createRoom, startGame, updateSettings } from '../../src/shared/engine';
+import { ROLES, isMafiaTeam } from '../../src/shared/roles';
+import { MAX_PLAYERS, MIN_PLAYERS, defaultSettings, type Settings } from '../../src/shared/settings';
+import { T0, testRng } from './helpers';
+
+const settingsWith = (n: number, roles: Record<string, number>, extra: Partial<Settings> = {}): Settings => ({
+  ...defaultSettings(n),
+  roles,
+  ...extra,
+});
+
+describe('default role distribution', () => {
+  for (let n = MIN_PLAYERS; n <= MAX_PLAYERS; n++) {
+    it(`produces a valid, balanced game for ${n} players`, () => {
+      const roles = suggestDistribution(n);
+      const total = Object.values(roles).reduce((a, b) => a + b, 0);
+      expect(total).toBe(n);
+      const report = analyzeDistribution(settingsWith(n, roles));
+      expect(report.errors).toEqual([]);
+      expect(report.mafiaTeam).toBeGreaterThanOrEqual(1);
+      for (const [id, c] of Object.entries(roles)) if (ROLES[id].unique) expect(c).toBeLessThanOrEqual(1);
+      expect(report.byAlignment.mafia).toBeLessThan(n - report.byAlignment.mafia);
+    });
+  }
+
+  it('rejects counts outside 5–22 and non-integers', () => {
+    expect(() => suggestDistribution(4)).toThrow();
+    expect(() => suggestDistribution(23)).toThrow();
+    expect(() => suggestDistribution(7.5)).toThrow();
+  });
+
+  it('supports odd player counts (e.g. 7, 13, 21)', () => {
+    for (const n of [7, 13, 21]) expect(Object.values(suggestDistribution(n)).reduce((a, b) => a + b, 0)).toBe(n);
+  });
+});
+
+describe('role assignment', () => {
+  for (let n = MIN_PLAYERS; n <= MAX_PLAYERS; n++) {
+    it(`assigns exactly the configured roles to ${n} players`, () => {
+      const room = createRoom({ code: 'ABCD', hostName: 'Host', hostTokenHash: 'h', hostPlays: false, now: T0, playerCount: n });
+      for (let i = 0; i < n; i++) addPlayer(room, { id: `p${i}`, name: `Player ${i}`, tokenHash: `t${i}`, now: T0 });
+      startGame(room, T0, testRng(), { force: true });
+      const counts: Record<string, number> = {};
+      for (const p of room.players) counts[p.roleId!] = (counts[p.roleId!] ?? 0) + 1;
+      const expected = Object.fromEntries(Object.entries(room.settings.roles).filter(([, c]) => c > 0));
+      expect(counts).toEqual(expected);
+      expect(room.players.some((p) => isMafiaTeam(p.roleId, room.game!.settings))).toBe(true);
+    });
+  }
+
+  it('refuses to start when the joined count does not match', () => {
+    const room = createRoom({ code: 'ABCD', hostName: 'Host', hostTokenHash: 'h', hostPlays: false, now: T0, playerCount: 6 });
+    for (let i = 0; i < 5; i++) addPlayer(room, { id: `p${i}`, name: `P${i}`, tokenHash: `t${i}`, now: T0 });
+    expect(() => startGame(room, T0, testRng(), { force: true })).toThrow(/6 players/);
+  });
+
+  it('requires everyone ready unless forced', () => {
+    const room = createRoom({ code: 'ABCD', hostName: 'Host', hostTokenHash: 'h', hostPlays: false, now: T0, playerCount: 5 });
+    for (let i = 0; i < 5; i++) addPlayer(room, { id: `p${i}`, name: `P${i}`, tokenHash: `t${i}`, now: T0 });
+    expect(() => startGame(room, T0, testRng())).toThrow(/not ready/);
+    startGame(room, T0, testRng(), { force: true });
+    expect(room.status).toBe('active');
+  });
+
+  it('settings are frozen into the game when it starts', () => {
+    const room = createRoom({ code: 'ABCD', hostName: 'Host', hostTokenHash: 'h', hostPlays: false, now: T0, playerCount: 5 });
+    for (let i = 0; i < 5; i++) addPlayer(room, { id: `p${i}`, name: `P${i}`, tokenHash: `t${i}`, now: T0 });
+    startGame(room, T0, testRng(), { force: true });
+    expect(() => updateSettings(room, { nightSeconds: 99 })).toThrow(/locked/);
+    expect(room.game!.settings.nightSeconds).toBe(60);
+  });
+});
+
+describe('invalid and unbalanced configurations', () => {
+  it('flags a total that does not match the player count', () => {
+    const r = analyzeDistribution(settingsWith(6, { mafia: 1, villager: 4 }));
+    expect(r.errors.join()).toMatch(/add up to 5/);
+  });
+  it('flags duplicate unique roles', () => {
+    const r = analyzeDistribution(settingsWith(6, { mafia: 1, detective: 2, villager: 3 }));
+    expect(r.errors.join()).toMatch(/unique/);
+  });
+  it('requires a Mafia-team role', () => {
+    const r = analyzeDistribution(settingsWith(5, { villager: 4, jester: 1 }));
+    expect(r.errors.join()).toMatch(/Mafia-team/);
+  });
+  it('rejects a Mafia that would win immediately', () => {
+    const r = analyzeDistribution(settingsWith(6, { mafia: 3, villager: 3 }));
+    expect(r.errors.join()).toMatch(/win immediately/);
+  });
+  it('rejects more than two villager powers', () => {
+    const r = analyzeDistribution(settingsWith(5, { mafia: 1, villager: 4 }, { villagerPowers: { hunch: true, shield: true, rally: true } }));
+    expect(r.errors.join()).toMatch(/at most two/);
+  });
+  it('warns when a table is unbalanced', () => {
+    const r = analyzeDistribution(settingsWith(12, { mafia: 1, villager: 11 }));
+    expect(r.errors).toEqual([]);
+    expect(r.warnings.join()).toMatch(/Town is strongly favoured/);
+  });
+  it('rejects unknown roles', () => {
+    const r = analyzeDistribution(settingsWith(5, { mafia: 1, wizard: 1, villager: 3 }));
+    expect(r.errors.join()).toMatch(/Unknown role/);
+  });
+});
