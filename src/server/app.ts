@@ -47,8 +47,10 @@ export function createApp(opts: AppOptions) {
   const io = new IOServer(http, {
     cors: opts.corsOrigin ? { origin: opts.corsOrigin } : undefined,
     maxHttpBufferSize: 32_000,
-    pingInterval: 10_000,
-    pingTimeout: 8_000,
+    // Phones throttle or pause pages when the screen locks or the player switches apps.
+    // Be patient before declaring a phone gone (25s between pings, 45s grace).
+    pingInterval: 25_000,
+    pingTimeout: 45_000,
   });
 
   // -------------------------------------------------------------- realtime fan-out
@@ -147,7 +149,8 @@ export function createApp(opts: AppOptions) {
     return res.status(500).json({ error: { code: 'server_error', message: 'Something went wrong.' } });
   };
 
-  app.get('/api/health', (_req, res) => res.json({ ok: true, rooms: service.rooms.size }));
+  const startedAt = new Date().toISOString();
+  app.get('/api/health', (_req, res) => res.json({ ok: true, rooms: service.rooms.size, startedAt }));
 
   app.post('/api/rooms', limit, (req, res) => {
     const body = CreateSchema.safeParse(req.body);

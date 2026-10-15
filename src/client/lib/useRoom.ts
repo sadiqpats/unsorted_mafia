@@ -29,8 +29,9 @@ export function useRoom(code: string, auth: { token?: string; display?: boolean 
     const s = io(SERVER_URL || undefined, {
       auth: { code, ...auth },
       transports: ['websocket', 'polling'],
-      reconnectionDelay: 500,
-      reconnectionDelayMax: 4000,
+      reconnectionDelay: 300,
+      reconnectionDelayMax: 2000,
+      timeout: 15000,
     });
     socketRef.current = s;
     let stopped = false;
@@ -43,7 +44,11 @@ export function useRoom(code: string, auth: { token?: string; display?: boolean 
       if (e.message === 'unauthorized' || e.message === 'no_room') {
         stopped = true;
         setStatus('denied');
-        setEndedReason(e.message === 'no_room' ? 'This room no longer exists.' : 'This device is not part of that room.');
+        setEndedReason(
+          e.message === 'no_room'
+            ? 'This room no longer exists. If the game server restarted (free hosting does not keep games through a restart), the host needs to create a new room.'
+            : 'This device is not part of that room.',
+        );
         s.disconnect();
       } else setStatus('offline');
     });

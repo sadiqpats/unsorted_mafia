@@ -107,7 +107,7 @@ export function ConnectionBadge({ status }: { status: ConnStatus }) {
   const map: Record<ConnStatus, [string, string]> = {
     connecting: ['bg-gold', 'Connecting'],
     online: ['bg-ok', 'Live'],
-    offline: ['bg-ember', 'Reconnecting…'],
+    offline: ['bg-gold', 'Reconnecting…'],
     denied: ['bg-ember', 'No access'],
     ended: ['bg-ember', 'Session ended'],
   };
@@ -121,7 +121,14 @@ export function ConnectionBadge({ status }: { status: ConnStatus }) {
 }
 
 export function OfflineBanner({ status }: { status: ConnStatus }) {
-  if (status !== 'offline') return null;
+  // Only warn if the connection stays down for a few seconds; brief blips reconnect silently.
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (status !== 'offline') return setShow(false);
+    const t = setTimeout(() => setShow(true), 4000);
+    return () => clearTimeout(t);
+  }, [status]);
+  if (!show) return null;
   return (
     <div className="fixed inset-x-0 top-14 z-50 mx-auto max-w-md px-4" role="alert">
       <div className="rounded-xl border border-ember/50 bg-blood/90 px-4 py-2 text-center text-sm">
