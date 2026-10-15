@@ -325,12 +325,13 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           <Toggle label="Revived players can vote the next day" checked={s.revivedCanActNextPhase} onChange={(v) => patch({ revivedCanActNextPhase: v })} />
         </Group>
         <Group title="Thief">
+          <Select label="Thief steals" value={s.thiefTargetMode} options={[['power', 'A power — blind (never learns whose)'], ['player', 'From a chosen player']]} onChange={(v) => patch({ thiefTargetMode: v })} />
           <Select label="Thief alignment" value={s.thiefAlignment} options={[['neutral', 'Neutral'], ['good', 'Town'], ['mafia', 'Mafia (solo)']]} onChange={(v) => patch({ thiefAlignment: v })} />
           <Select label="Stealing" value={s.thiefMode} options={[['take', 'Takes it (target loses it)'], ['copy', 'Copies it (target keeps it)']]} onChange={(v) => patch({ thiefMode: v })} />
           <Select label="Stolen power lasts" value={s.thiefDuration} options={[['oneUse', 'One use'], ['permanent', 'Permanently']]} onChange={(v) => patch({ thiefDuration: v })} />
           <NumberSetting label="Steal attempts" value={s.thiefCharges} min={1} max={10} suffix="" onChange={(v) => patch({ thiefCharges: v })} />
           <Toggle label="Can steal passive powers (Judge vote)" checked={s.thiefStealPassive} onChange={(v) => patch({ thiefStealPassive: v })} />
-          <Toggle label="Can target the same player twice" checked={s.thiefRepeatTarget} onChange={(v) => patch({ thiefRepeatTarget: v })} />
+          <Toggle label="Can steal the same power / player twice" checked={s.thiefRepeatTarget} onChange={(v) => patch({ thiefRepeatTarget: v })} />
         </Group>
         <Group title="Imposter">
           <Select label="Imposter’s side" value={s.imposterAlignment} options={[['mafia', 'Mafia'], ['neutral', 'Neutral'], ['good', 'Town']]} onChange={(v) => patch({ imposterAlignment: v })} />
@@ -525,7 +526,8 @@ function HostGame({ view, send, serverNow }: GameProps) {
                     .filter((a) => a.abilityId !== 'decoy')
                     .map((a) => (
                       <li key={a.actorId + a.abilityId}>
-                        <b>{nameOf(a.actorId)}</b> <span className="text-mute">({roleName(a.actorId)})</span> · {ABILITIES[a.abilityId]?.name} → {nameOf(a.targetId)}
+                        <b>{nameOf(a.actorId)}</b> <span className="text-mute">({roleName(a.actorId)})</span> · {ABILITIES[a.abilityId]?.name} →{' '}
+                        {a.abilityId === 'steal' && a.targetId && ABILITIES[a.targetId] ? `${ABILITIES[a.targetId].name} (power)` : nameOf(a.targetId)}
                       </li>
                     ))}
                 </ul>

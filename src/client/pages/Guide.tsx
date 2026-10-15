@@ -108,7 +108,7 @@ export default function Guide() {
           <ol id="round" className="space-y-3 text-sm">
             <li>
               <b className="text-gold">🕯 Before Nightfall.</b> (Only when a Thief or Imposter is in the game.) Everyone opens their panel and makes a choice. The Thief
-              may steal someone’s power — taking over their job from that night on, while the victim plays on as a Villager. The Imposter may bring a dead player back,
+              picks a <i>power</i> to steal (not a person) and never learns whose it was — they take over that job, and only the victim is told, privately. The Imposter may bring a dead player back,
               or skip. Every phone then shows <i>that</i> something happened — never who did it. The round keeps running even after they die, so nobody can tell.
             </li>
             <li>

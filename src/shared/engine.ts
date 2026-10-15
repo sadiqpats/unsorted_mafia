@@ -7,7 +7,7 @@
  *
  * Resolution order (night):  see NIGHT ORDER below and docs/RULES.md.
  */
-import { ABILITIES, ROLES, isMafiaTeam, roleAlignment, type AbilityDef } from './roles';
+import { ABILITIES, ROLES, ROLE_ORDER, isMafiaTeam, roleAlignment, type AbilityDef } from './roles';
 import { analyzeDistribution, suggestDistribution } from './distribution';
 import { MAX_PLAYERS, defaultSettings, fillTemplate, mergeSettings, type Settings, type SettingsPatch } from './settings';
 import type { Game, LogEntry, MorningReport, NightAction, Phase, Player, Room, Verdict, WinResult } from './types';
@@ -496,7 +496,9 @@ export interface NightOption {
   source: 'role' | 'stolen' | 'decoy';
   name: string;
   prompt: string;
+  /** Player ids — or ability ids when targetKind is 'power'. */
   targets: string[];
+  targetKind: 'player' | 'power';
   charges: number | null;
   team: boolean;
   changeable: boolean;
@@ -535,6 +537,27 @@ function targetsFor(room: Room, p: Player, def: AbilityDef): string[] {
   return list.map((x) => x.id);
 }
 
+/**
+ * Powers the Thief may name in "power" mode: every transferable power of every role in
+ * the SETUP (not just living holders), so the list never reveals who is alive.
+ */
+export function stealablePowers(room: Room, thief: Player): string[] {
+  const s = settingsOf(room);
+  const out: string[] = [];
+  for (const roleId of ROLE_ORDER) {
+    if (!s.roles[roleId] || !ROLES[roleId]) continue;
+    for (const a of ROLES[roleId].abilities) {
+      const def = ABILITIES[a.id];
+      if (!def || !def.transferable || a.id === 'steal' || out.includes(a.id)) continue;
+      if (a.enabled && !a.enabled(s)) continue;
+      if (def.kind === 'passive' && !s.thiefStealPassive) continue;
+      if (!s.thiefRepeatTarget && thief.thiefTargets.includes(a.id)) continue;
+      out.push(a.id);
+    }
+  }
+  return out;
+}
+
 export function nightOptions(room: Room, playerId: string): NightOption[] {
   const g = room.game;
   if (!g || room.status !== 'active' || (g.phase !== 'night' && g.phase !== 'prenight')) return [];
@@ -550,7 +573,8 @@ export function nightOptions(room: Room, playerId: string): NightOption[] {
     if (!p.alive && def.id !== 'revive') continue;
     if (def.id === 'steal' && p.stolen) continue;
     if (def.id === 'revive' && s.priestAlternateRounds && p.lastReviveRound !== null && p.lastReviveRound === g.round - 1) continue;
-    const targets = targetsFor(room, p, def);
+    const powerMode = def.id === 'steal' && s.thiefTargetMode === 'power';
+    const targets = powerMode ? stealablePowers(room, p) : targetsFor(room, p, def);
     if (!targets.length) continue;
     opts.push({
       abilityId: def.id,
@@ -558,6 +582,7 @@ export function nightOptions(room: Room, playerId: string): NightOption[] {
       name: def.name,
       prompt: def.prompt,
       targets,
+      targetKind: powerMode ? 'power' : 'player',
       charges: h.charges,
       team: !!def.team,
       changeable: !!def.team,
@@ -572,6 +597,7 @@ export function nightOptions(room: Room, playerId: string): NightOption[] {
       name: 'Suspicion',
       prompt: phase === 'prenight' ? 'Before nightfall: who do you suspect most?' : DECOY_PROMPT,
       targets: room.players.filter((x) => x.alive && x.id !== p.id).sort(bySeat).map((x) => x.id),
+      targetKind: 'player',
       charges: null,
       team: false,
       changeable: false,
@@ -727,23 +753,41 @@ export const NIGHT_RESOLVERS: Record<string, Resolver> = {
   steal(room, ctx, a, now, rng) {
     const s = room.game!.settings;
     const thief = getPlayer(room, a.actorId);
-    const t = getPlayer(room, a.targetId!);
     useCharge(room, thief, 'steal');
-    thief.thiefTargets.push(t.id);
+    thief.thiefTargets.push(a.targetId!);
     if (!thief.alive || ctx.deaths.includes(thief.id)) return;
-    const candidates = heldAbilities(room, t).filter((h) => {
+    const stealable = (h: HeldAbility) => {
       const def = ABILITIES[h.abilityId];
       if (!def || !def.transferable || h.source !== 'role') return false;
       if (h.charges !== null && h.charges <= 0) return false;
-      if (def.kind === 'passive' && !s.thiefStealPassive) return false;
-      return true;
-    });
-    candidates.sort((x, y) => (ABILITIES[x.abilityId].kind === 'night' ? -1 : 0) - (ABILITIES[y.abilityId].kind === 'night' ? -1 : 0));
-    const pick = candidates[0];
-    if (!pick) {
-      addPrivate(room, rng, now, thief.id, 'steal', `${t.name} had nothing you could steal. Your attempt was spent.`);
-      addLog(room, now, 'night', `${thief.name} tried to steal from ${t.name} — nothing transferable.`, 'host');
-      return;
+      return def.kind !== 'passive' || s.thiefStealPassive;
+    };
+    let t: Player | undefined;
+    let pick: HeldAbility | undefined;
+    if (s.thiefTargetMode === 'power') {
+      // Blind steal: the Thief names a power; the server finds who holds it. The Thief never learns who.
+      const holders = room.players
+        .filter((x) => x.alive && x.id !== thief.id)
+        .map((x) => ({ x, h: heldAbilities(room, x).find((h) => h.abilityId === a.targetId && stealable(h)) }))
+        .filter((c) => !!c.h);
+      const chosen = holders.length ? holders[rng.int(holders.length)] : undefined;
+      t = chosen?.x;
+      pick = chosen?.h;
+      if (!t || !pick) {
+        addPrivate(room, rng, now, thief.id, 'steal', `Nobody could give up the ${ABILITIES[a.targetId!]?.name ?? ''} power. Your attempt was spent.`);
+        addLog(room, now, 'night', `${thief.name} tried to steal ${ABILITIES[a.targetId!]?.name} — no living holder.`, 'host');
+        return;
+      }
+    } else {
+      t = getPlayer(room, a.targetId!);
+      const candidates = heldAbilities(room, t).filter(stealable);
+      candidates.sort((x, y) => (ABILITIES[x.abilityId].kind === 'night' ? -1 : 0) - (ABILITIES[y.abilityId].kind === 'night' ? -1 : 0));
+      pick = candidates[0];
+      if (!pick) {
+        addPrivate(room, rng, now, thief.id, 'steal', `${t.name} had nothing you could steal. Your attempt was spent.`);
+        addLog(room, now, 'night', `${thief.name} tried to steal from ${t.name} — nothing transferable.`, 'host');
+        return;
+      }
     }
     const def = ABILITIES[pick.abilityId];
     thief.stolen = {
@@ -754,7 +798,7 @@ export const NIGHT_RESOLVERS: Record<string, Resolver> = {
       duration: s.thiefDuration,
     };
     ctx.stolen.push(t.id);
-    const now_ = room.game!.phase === 'prenight';
+    const preNight = room.game!.phase === 'prenight';
     if (s.thiefMode === 'take') {
       t.lostAbilities.push(pick.abilityId);
       addPrivate(
@@ -768,7 +812,9 @@ export const NIGHT_RESOLVERS: Record<string, Resolver> = {
           : `Someone stole your ${def.name} ability. You cannot use it until it is returned.`,
       );
     }
-    addPrivate(room, rng, now, thief.id, 'steal', `You stole ${def.name} from ${t.name}. ${def.kind !== 'night' ? 'It applies automatically.' : now_ ? 'Use it in your night panel — starting tonight.' : 'It appears in your night panel from tomorrow night.'}`);
+    const when = def.kind !== 'night' ? 'It applies automatically.' : preNight ? 'Use it in your night panel — starting tonight.' : 'It appears in your night panel from tomorrow night.';
+    const from = s.thiefTargetMode === 'power' ? 'You don’t know whose it was.' : `It was ${t.name}’s.`;
+    addPrivate(room, rng, now, thief.id, 'steal', `You stole the ${def.name} power. ${from} ${when}`);
     addLog(room, now, 'night', `${thief.name} stole ${def.name} from ${t.name} (${s.thiefMode}, ${s.thiefDuration}).`, 'host');
   },
 };

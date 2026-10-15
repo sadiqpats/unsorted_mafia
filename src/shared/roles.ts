@@ -110,7 +110,7 @@ export const ABILITIES: Record<string, AbilityDef> = {
     target: 'alive-other',
     charges: (s) => s.thiefCharges,
     preNight: true,
-    prompt: 'Whose ability will you steal?',
+    prompt: 'Which power will you steal?',
     description: "Steal another player's ability and take over their job.",
     usableWhenSilenced: true,
   },

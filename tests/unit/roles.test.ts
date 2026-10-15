@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advancePhase, checkWin, hostEliminate, nightOptions, voteWeight } from '../../src/shared/engine';
+import { advancePhase, checkWin, hostEliminate, nightOptions, submitNightAction, voteWeight } from '../../src/shared/engine';
 import { setup } from './helpers';
 
 const V = 'villager';
@@ -233,13 +233,13 @@ describe('Bodyguard', () => {
 });
 
 describe('Thief (night-time stealing mode)', () => {
-  const setupT = (roles: string[], patch = {}) => setup(roles, { preNightRound: false, thiefDuration: 'oneUse', thiefCharges: 2, ...patch });
+  const setupT = (roles: string[], patch = {}) => setup(roles, { preNightRound: false, thiefDuration: 'oneUse', thiefCharges: 2, thiefTargetMode: 'player', ...patch });
   it('takes an ability (default) and can use it the next night, once', () => {
     const g = setupT(['mafia', 'thief', 'detective', V, V]);
     g.goToNight();
     g.act(1, 'steal', 2);
     g.advance();
-    expect(g.results(1).join()).toMatch(/You stole Investigate from P2/);
+    expect(g.results(1).join()).toMatch(/You stole the Investigate power\. It was P2’s\./);
     expect(g.results(2).join()).toMatch(/stole your Investigate/);
     expect(g.P(2).lostAbilities).toContain('investigate');
     g.goToNight();
@@ -506,6 +506,8 @@ describe('Before Nightfall (pre-night) round', () => {
     expect(g.room.game!.phase).toBe('prenight');
     expect(g.room.game!.round).toBe(1);
     expect([0, 1, 2, 3, 4].map((i) => opts(g, i))).toEqual([['decoy'], ['steal'], ['decoy'], ['decoy'], ['decoy']]);
+    // Default: the Thief chooses from POWERS in the setup, not from players.
+    expect(nightOptions(g.room, 'p1')[0]).toMatchObject({ targetKind: 'power', targets: ['investigate'] });
     g.advance();
     expect(g.room.game!.phase).toBe('night');
     expect(opts(g, 1)).toEqual(['decoy']); // stealing is no longer a night action
@@ -522,7 +524,7 @@ describe('Before Nightfall (pre-night) round', () => {
   });
 
   it('Thief takes over the stolen job permanently; the victim plays as a Villager; the table learns no names', () => {
-    const g = setup(['mafia', 'thief', 'detective', V, V, V]);
+    const g = setup(['mafia', 'thief', 'detective', V, V, V], { thiefTargetMode: 'player' });
     toPreNight(g);
     g.act(1, 'steal', 2);
     g.advance();
@@ -611,5 +613,35 @@ describe('Before Nightfall (pre-night) round', () => {
     g.act(2, 'imposter_revive', 1);
     advancePhase(g.room, 0, g.rng);
     expect(g.room.game!.winner!.faction).toBe('mafia');
+  });
+});
+
+describe('Thief blind power steal (default)', () => {
+  it('names a power; the server takes it from whoever holds it; the Thief never learns who', () => {
+    const g = setup(['mafia', 'godfather', 'thief', 'detective', 'doctor', 'judge', V, V, V]);
+    g.advance();
+    expect(g.room.game!.phase).toBe('prenight');
+    const steal = nightOptions(g.room, 'p2')[0];
+    expect(steal.targets).toEqual(['silence', 'investigate', 'protect', 'judge_vote']);
+    expect(() => g.act(2, 'steal', 3)).toThrow(/not allowed/); // players are not valid targets
+    submitNightAction(g.room, 'p2', { abilityId: 'steal', targetId: 'protect', phaseSeq: g.seq() }, 1);
+    g.advance();
+    const thiefMsg = g.results(2).join();
+    expect(thiefMsg).toMatch(/You stole the Protect power\. You don’t know whose it was\./);
+    expect(thiefMsg).not.toMatch(/P4|Doctor/);
+    expect(g.results(4).join()).toMatch(/The Thief stole your Protect power/);
+    expect(nightOptions(g.room, 'p2').map((o) => o.abilityId)).toEqual(['protect']);
+    expect(nightOptions(g.room, 'p4').map((o) => o.abilityId)).toEqual(['decoy']);
+  });
+
+  it('lists powers from the setup even when their holder is dead, and fails quietly', () => {
+    const g = setup(['mafia', 'thief', 'detective', V, V, V]);
+    g.P(2).alive = false;
+    g.advance();
+    expect(nightOptions(g.room, 'p1')[0].targets).toEqual(['investigate']);
+    submitNightAction(g.room, 'p1', { abilityId: 'steal', targetId: 'investigate', phaseSeq: g.seq() }, 1);
+    g.advance();
+    expect(g.results(1).join()).toMatch(/Nobody could give up the Investigate power/);
+    expect(g.room.log.filter((l) => l.kind === 'prenight').map((l) => l.text)).toEqual(['Nothing stirred before nightfall.']);
   });
 });

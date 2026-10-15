@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { NightOption } from '../../shared/engine';
 import type { Ack, CommandInput } from '../../shared/protocol';
-import { ROLES, roleAlignment } from '../../shared/roles';
+import { ABILITIES, ROLES, roleAlignment } from '../../shared/roles';
 import type { ClientView, PublicPlayer } from '../../shared/view-types';
 import { Avatar } from '../components/Avatar';
 import { HoldToReveal, PrivacyShield, RoleDetails } from '../components/RoleCard';
@@ -36,6 +36,8 @@ export function useAct(send: Send) {
 
 const nameOf = (view: ClientView, id: string | null | undefined) => (id ? (view.players.find((p) => p.id === id)?.name ?? '—') : 'Nobody');
 
+const ACTION_PHASES = ['prenight', 'night', 'voting'];
+
 // ======================================================================= root
 
 export function PlayerGame({ view, send, serverNow }: GameProps) {
@@ -59,15 +61,20 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
       {phase === 'voting' && <VotingPanel view={view} send={send} />}
       {phase === 'verdict' && <VerdictPanel view={view} />}
       {phase === 'game_over' && <GameOverPanel view={view} />}
-      {phase !== 'reveal' && phase !== 'game_over' && <MyRoleButton view={view} />}
-      {phase !== 'game_over' && (
-        <Section title="Town square">
-          <PlayersList view={view} />
-        </Section>
+      {/* Action phases show ONLY the action — no lists, feeds or extra buttons. */}
+      {!ACTION_PHASES.includes(phase) && (
+        <>
+          {phase !== 'reveal' && phase !== 'game_over' && <MyRoleButton view={view} />}
+          {phase !== 'game_over' && (
+            <Section title="Town square">
+              <PlayersList view={view} />
+            </Section>
+          )}
+          <Section title="Announcements">
+            <Feed entries={view.feed} limit={12} />
+          </Section>
+        </>
       )}
-      <Section title="Announcements">
-        <Feed entries={view.feed} limit={12} />
-      </Section>
     </div>
   );
 }
@@ -293,7 +300,6 @@ function Notebook({ view }: { view: ClientView }) {
 function NightPanel({ view, send }: { view: ClientView; send: Send }) {
   const me = view.me!;
   const night = me.night;
-  const prog = view.game!.nightProgress;
   if (!night || night.options.length === 0) {
     return (
       <div className="card p-6 text-center">
@@ -307,25 +313,24 @@ function NightPanel({ view, send }: { view: ClientView; send: Send }) {
   return (
     <div className="space-y-3">
       {!pre && <PreNightNews view={view} />}
-      <div className="text-center">
-        <p className="font-[family-name:var(--font-serif)] text-xl italic text-mute">{pre ? 'Before nightfall, everyone makes a choice.' : 'Night has fallen. Everyone makes a choice.'}</p>
-        {prog && (
-          <p className="mt-1 text-xs text-mute" aria-live="polite">
-            {prog.done} of {prog.total} players locked in
-          </p>
-        )}
-      </div>
       <PrivacyShield label={allDone ? 'Review your choice' : pre ? 'Open your pre-night panel' : 'Open your night panel'}>
         <div className="space-y-6 pt-6">
+          {me.privateResults
+            .filter((r) => r.round === view.game!.round)
+            .map((r) => (
+              <p key={r.id} className="rounded-xl border border-gold/40 bg-gold/5 p-3 text-sm" data-testid="private-note">
+                {r.text}
+              </p>
+            ))}
           {night.options.map((o) => (
             <NightOptionCard key={o.abilityId} view={view} option={o} submitted={night.submitted} send={send} />
           ))}
-          {me.mafia && <MafiaVotes view={view} />}
+          {me.mafia && !pre && <MafiaVotes view={view} />}
         </div>
       </PrivacyShield>
       {allDone && (
         <div className="rounded-xl border border-ok/40 bg-ok/10 p-3 text-center text-sm" role="status">
-          ✓ Locked in. Put your phone face down and wait for dawn.
+          ✓ Locked in. Put your phone face down.
         </div>
       )}
     </div>
@@ -357,10 +362,8 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
     act({ type: 'night_action', abilityId: option.abilityId, targetId: target, phaseSeq: view.game!.phaseSeq }, target ? 'Choice locked in.' : 'Skipped.');
   return (
     <div data-option={option.abilityId}>
-      <h3 className="font-[family-name:var(--font-display)] text-base text-gold">{option.source === 'decoy' ? 'Your night choice' : option.name}</h3>
-      <p className="mt-1 text-sm text-bone/90">{option.prompt}</p>
-      {option.charges !== null && <p className="text-xs text-mute">{option.charges} use(s) left</p>}
-      {option.source === 'stolen' && <p className="text-xs text-neutral">Stolen ability — works once.</p>}
+      <p className="text-base text-bone">{option.prompt}</p>
+      {option.charges !== null && option.source !== 'decoy' && <p className="text-xs text-mute">{option.charges} use(s) left</p>}
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={option.prompt}>
         {option.targets.map((t) => {
           const selected = pick === t;
@@ -373,15 +376,15 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
               onClick={() => setPick(t)}
               className={`min-h-12 rounded-xl border px-3 py-2 text-sm font-medium transition ${selected ? 'border-gold bg-gold/15 text-bone' : 'border-line bg-black/30 text-bone/90 hover:border-gold/50'}`}
             >
-              {nameOf(view, t)}
-              {t === view.me!.id && ' (you)'}
+              {option.targetKind === 'power' ? (ABILITIES[t]?.name ?? t) : nameOf(view, t)}
+              {option.targetKind === 'player' && t === view.me!.id && ' (you)'}
             </button>
           );
         })}
       </div>
       <div className="mt-3 flex gap-2">
         <button className="btn btn-primary flex-1" disabled={locked || busy || !pick || (done && submitted[option.abilityId] === pick)} onClick={() => submit(pick)}>
-          {done ? (locked ? `✓ Locked: ${nameOf(view, submitted[option.abilityId])}` : 'Change pick') : 'Lock in'}
+          {done ? (locked ? `✓ Locked: ${submitted[option.abilityId] === null ? 'skipped' : option.targetKind === 'power' ? ABILITIES[submitted[option.abilityId]!]?.name : nameOf(view, submitted[option.abilityId])}` : 'Change pick') : 'Lock in'}
         </button>
         {!done && (
           <button className="btn btn-ghost" disabled={busy} onClick={() => submit(null)}>
@@ -474,20 +477,10 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
   const { act, busy } = useAct(send);
   const [pick, setPick] = useState<string | null | undefined>(v?.myVote);
   const [rally, setRally] = useState(false);
-  const prog = view.game!.votingProgress;
   const runoff = view.game!.runoff;
   const voted = v?.myVote !== undefined;
   const canChange = view.settings.allowVoteChange;
-  const header = (
-    <div className="text-center">
-      <p className="font-[family-name:var(--font-serif)] text-xl italic text-mute">{runoff ? `Runoff: ${runoff.map((id) => nameOf(view, id)).join(' vs ')}` : 'Cast your vote in secret.'}</p>
-      {prog && (
-        <p className="mt-1 text-xs text-mute" aria-live="polite">
-          {prog.done} of {prog.total} votes in
-        </p>
-      )}
-    </div>
-  );
+  const header = runoff ? <p className="text-center text-mute">Runoff: {runoff.map((id) => nameOf(view, id)).join(' vs ')}</p> : null;
   if (!v || !v.eligible) {
     return (
       <div className="space-y-3">
@@ -539,12 +532,11 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
           >
             {voted ? (canChange ? 'Change vote' : `✓ Voted: ${pick === null ? 'abstain' : nameOf(view, v.myVote)}`) : pick === undefined ? 'Choose a player' : `Vote ${pick === null ? 'to abstain' : `for ${nameOf(view, pick)}`}`}
           </button>
-          {!canChange && !voted && <p className="mt-2 text-center text-xs text-mute">Votes are final once cast.</p>}
         </div>
       </PrivacyShield>
       {voted && (
         <div className="rounded-xl border border-ok/40 bg-ok/10 p-3 text-center text-sm" role="status">
-          ✓ Your vote is in. Results are revealed when voting closes.
+          ✓ Your vote is in.
         </div>
       )}
     </div>

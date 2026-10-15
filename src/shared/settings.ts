@@ -90,6 +90,8 @@ export const SettingsSchema = z.object({
   thiefCharges: z.number().int().min(1).max(10),
   thiefStealPassive: z.boolean(),
   thiefRepeatTarget: z.boolean(),
+  /** power: the Thief picks a POWER and never learns whose it was. player: the Thief picks a player. */
+  thiefTargetMode: z.enum(['power', 'player']),
 
   // ---- Imposter ----
   imposterAlignment: z.enum(['mafia', 'neutral', 'good']),
@@ -176,6 +178,7 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     thiefCharges: 1,
     thiefStealPassive: true,
     thiefRepeatTarget: false,
+    thiefTargetMode: 'power',
     imposterAlignment: 'mafia',
     imposterCharges: 0,
     judgeWeight: 2,

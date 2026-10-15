@@ -50,7 +50,8 @@ Everyone else is a Villager. Red messages (e.g. “roles add up to 9, need 10”
 | Phase | What happens | Who acts |
 |---|---|---|
 | 🂠 Role reveal | Press and hold the card to see your role privately. Tap “I’ve seen my role”. | Everyone |
-| 🕯 Before Nightfall | *(Only if a Thief or Imposter is in the game.)* Everyone opens their panel. The Thief may steal a power (taking over that job from that night on; the victim plays as a Villager). The Imposter may revive a dead player or skip. Every phone then shows **that** it happened, never who. The round keeps running even after they die. | Everyone (others tap a decoy) |
+| 🕯 Before Nightfall | *(Only if a Thief or Imposter is in the game.)* Everyone opens their panel. The Thief picks a **power** to steal, not a person, and never learns whose it was. They take over that job from that night on; only the victim is told, privately, and plays on as a Villager. The Imposter may revive a dead player or skip. Every phone then shows **that** it happened, never who. The round keeps running even after they die. | Everyone (others tap a decoy) |
+| (screens) | During Before Nightfall, Night and Voting, phones show **only the action**: no player list, feed or extra text. | |
 | 🌙 Night | Open the secret panel and lock in a choice. Powers resolve in secret. | Everyone (villagers pick a suspect) |
 | 🌅 Morning | Public announcement: deaths, revivals, who is silenced. Private results go to that player’s notebook. | — |
 | 🗣 Discussion | Talk, accuse, defend. | Living, not-silenced players |

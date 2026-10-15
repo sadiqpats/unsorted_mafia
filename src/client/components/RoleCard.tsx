@@ -180,7 +180,6 @@ export function PrivacyShield({ children, label = 'Open your secret panel', auto
           🕯️
         </span>
         <span className="font-[family-name:var(--font-display)] text-lg tracking-wider text-gold">{label}</span>
-        <span className="max-w-xs text-sm text-mute">Shield your screen first. It closes by itself after {autoHideSec}s.</span>
       </button>
     );
   }

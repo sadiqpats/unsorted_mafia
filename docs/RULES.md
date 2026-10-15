@@ -50,12 +50,13 @@ Night actions are **simultaneous**: a player killed tonight still has their acti
 | Bodyguard | Good | Protect **once per game**, not self; charge spent **when used** | charges; self; spent only `onSave` |
 | Judge | Good | Vote counts **×2**, applied by the server; still one ballot | weight 1–5 |
 | Villager | Good | No power; picks a suspect at night | up to 2 optional powers (below) |
-| Thief | Neutral | Steals **Before Nightfall**: **1** steal that **takes over the job permanently** (usable that same night); the victim keeps their team but plays as a Villager; can steal passives; no repeat target | alignment (neutral/good/mafia); copy vs take; one use vs permanent; charges; passives; repeat targets |
+| Thief | Neutral | Steals **Before Nightfall** by naming a **power** (not a player) — the server takes it from whoever holds it and the Thief **never learns whose it was**; only the victim is told (privately). **1** steal, **taken over permanently**, usable that same night; the victim keeps their team but plays as a Villager; can steal passives | power vs player targeting (`thiefTargetMode`); alignment; copy vs take; one use vs permanent; charges; passives; repeat targets |
 | Priest | Neutral | **2** revivals, only while alive, not self | charges; alternate rounds only; acts when dead; self-revive; revived keep role / effects; can vote next day |
 | Imposter | **Mafia** (wins with them, but doesn't know them or join the hit) | Revives any dead player **Before Nightfall** (from round 2), or skips; **unlimited** revivals; dead Imposter can't act | side (mafia/neutral/good); revival limit (`imposterCharges`, 0 = unlimited) |
 | Jester | Neutral | Wins alone if **voted out by day**; ends the game | `jesterEndsGame: false` → credited, game continues |
 
 ### Thief details (fully configurable)
+- **Blind steal (default `thiefTargetMode: power`):** the list shows every transferable power of every role in the *setup* (even if its holder is dead), so it reveals nothing. If several living players hold that power, one is picked at random. If nobody alive holds it, the attempt is spent and the Thief is told “Nobody could give up that power”. The public sees nothing in that case.
 - Default (with the pre-night round): steal in **Before Nightfall**, take the power **permanently**, use it that same night. Setting `preNightRound: false` moves stealing back to the night (stolen power usable from the next night).
 - **Transferable:** Silence, Investigate, Protect, Guard, Revive, Judge's weighted vote (if `thiefStealPassive`), and Villager powers.
 - **Never transferable:** the Mafia hit, win conditions, host privileges, and abilities the target is itself holding as stolen.
