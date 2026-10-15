@@ -16,3 +16,6 @@
 | “Too many requests” | Per-IP rate limit. Raise `HTTP_RATE_BURST` / `HTTP_RATE_PER_SEC` for very large venues on one NAT IP. |
 | Playwright tests can't find a browser | Run `npx playwright install chromium`. |
 | E2E port 4173 in use | Stop the other process, or change `PORT` in `playwright.config.ts`. |
+| “Waking up the game server…” for a while | Render free plan cold start (30–60 s). Wait. Open the site a couple of minutes before guests arrive. |
+| A game vanished mid-event | On the Render free plan, a restart or redeploy wipes rooms. Don't redeploy during events, or move to Starter with a disk. |
+| Website loads but can't create a room (Vercel) | `VITE_SERVER_URL` in Vercel is missing/wrong (redeploy after changing it), or `CLIENT_ORIGIN` in Render doesn't exactly match the Vercel URL. |

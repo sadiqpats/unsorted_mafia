@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import { SERVER_URL } from './server';
+import { SERVER_URL, serverUrl } from './server';
 import type { Ack, CommandInput } from '../../shared/protocol';
 import type { ClientView } from '../../shared/view-types';
 
@@ -61,10 +61,16 @@ export function useRoom(code: string, auth: { token?: string; display?: boolean 
       if (!s.connected) s.connect();
       else s.emit('sync');
     };
+    // Free hosting (e.g. Render free) sleeps after ~15 min without HTTP requests, and WebSocket
+    // traffic may not count. While a room is open, ping the server every 4 minutes to keep it awake.
+    const keepAwake = setInterval(() => {
+      if (!stopped) fetch(serverUrl('/api/health'), { cache: 'no-store' }).catch(() => undefined);
+    }, 4 * 60_000);
     const onVisible = () => document.visibilityState === 'visible' && wake();
     window.addEventListener('online', wake);
     document.addEventListener('visibilitychange', onVisible);
     return () => {
+      clearInterval(keepAwake);
       window.removeEventListener('online', wake);
       document.removeEventListener('visibilitychange', onVisible);
       s.disconnect();

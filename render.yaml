@@ -1,19 +1,22 @@
-# Game server on Render (Blueprint). The website can be served from here too, or from Vercel.
-# A paid "starter" instance is needed for the persistent disk (rooms + photos survive restarts).
+# Game server on Render's FREE plan (Blueprint).
+# Free-plan limits: no persistent disk (rooms + photos are wiped whenever the service
+# restarts or redeploys) and the service sleeps after 15 min without HTTP traffic.
+# The app keeps it awake while a room is open (see src/client/lib/useRoom.ts) and the
+# landing page wakes it up early. For paid "starter" + a disk, see docs/DEPLOYMENT.md.
 services:
   - type: web
     name: mafia-night
-    runtime: docker
-    plan: starter
+    runtime: node
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
     healthCheckPath: /api/health
     envVars:
+      - key: NODE_VERSION
+        value: "22"
       - key: TRUST_PROXY
         value: "true"
       - key: DATABASE_PATH
-        value: /data/mafia.db
+        value: ./data/mafia.db
       - key: CLIENT_ORIGIN
-        sync: false # set to your Vercel URL, e.g. https://unsorted-mafia.vercel.app
-    disk:
-      name: mafia-data
-      mountPath: /data
-      sizeGB: 1
+        sync: false # your Vercel URL, e.g. https://unsorted-mafia.vercel.app

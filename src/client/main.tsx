@@ -2,6 +2,7 @@ import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
 import { ConfirmProvider, Shell, ToastProvider } from './components/ui';
+import { WakeBanner } from './components/WakeBanner';
 import { PrefsProvider } from './lib/prefs';
 import Landing from './pages/Landing';
 import './index.css';
@@ -31,6 +32,7 @@ createRoot(document.getElementById('root')!).render(
     <PrefsProvider>
       <ToastProvider>
         <ConfirmProvider>
+          <WakeBanner />
           <BrowserRouter>
             <Suspense fallback={<div className="grid min-h-dvh place-items-center text-mute">Loading…</div>}>
               <Routes>

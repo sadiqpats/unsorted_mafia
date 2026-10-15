@@ -9,20 +9,32 @@ The app is **one Node process** serving the website, the JSON API and the WebSoc
 
 > Vercel/Netlify alone won't work, because they don't keep a WebSocket server running. Use a container/VM host such as the ones below. (You *can* put the static client on Vercel and point it at this server with `CLIENT_ORIGIN`, but one service is simpler.)
 
-## Option 0 — Vercel (website) + Render (game server)  ← your chosen setup
-Vercel serves the website. Render runs the live game server (WebSockets, SQLite, photos).
+## Option 0 — Vercel (website) + Render FREE plan (game server)  ← your chosen setup
+Vercel serves the website. Render runs the live game server (WebSockets, rooms, photos). Both are free.
 
-1. **Render** → New → **Blueprint** → pick `sadiqpats/unsorted_mafia`. `render.yaml` creates the `mafia-night` Docker service with a 1 GB disk.
-   When asked for `CLIENT_ORIGIN`, enter your Vercel URL (e.g. `https://unsorted-mafia.vercel.app`; several can be comma-separated, and you can fill it in after step 2).
-   Wait until `https://<service>.onrender.com/api/health` shows `{"ok":true}`.
-2. **Vercel** → Add New → Project → import `sadiqpats/unsorted_mafia`. `vercel.json` already sets the build (`vite build` → `dist/client`) and SPA routing.
-   Under **Environment Variables** add `VITE_SERVER_URL = https://<service>.onrender.com`, then **Deploy**.
-3. Back in Render, set `CLIENT_ORIGIN` to the exact Vercel URL (including `https://`, no trailing slash) and redeploy.
-4. Open the Vercel URL → Host a Game. QR codes and invite links use the Vercel address.
+1. **Push the code** to `https://github.com/sadiqpats/unsorted_mafia` (`git push -u origin main`).
+2. **Render** (render.com, sign in with GitHub) → **New → Blueprint** → pick `unsorted_mafia`.
+   `render.yaml` creates a **free** Node web service called `mafia-night`. When it asks for `CLIENT_ORIGIN`, leave it empty for now.
+   When the deploy finishes, open `https://<your-service>.onrender.com/api/health`. It should show `{"ok":true,...}`.
+3. **Vercel** (vercel.com, sign in with GitHub) → **Add New → Project** → import `unsorted_mafia`.
+   The build settings come from `vercel.json`. Under **Environment Variables** add
+   `VITE_SERVER_URL` = `https://<your-service>.onrender.com` (no trailing slash) → **Deploy**.
+4. **Render** → your service → **Environment** → set `CLIENT_ORIGIN` = your Vercel URL, e.g. `https://unsorted-mafia.vercel.app`
+   (exact, with `https://`, no trailing slash; add more separated by commas) → **Save** (it redeploys).
+5. Open the Vercel URL → **Host a Game**.
 
-Notes: Render's free plan sleeps after inactivity and has no persistent disk (rooms and photos are lost on restart). Use **Starter** for real events. The live camera (*Take a selfie*) needs HTTPS, which both Vercel and Render provide.
+### What the free plan means for your events
+| Free-plan limit | What happens | What the app does about it |
+|---|---|---|
+| Sleeps after 15 min with no visitors | The first visit takes **30–60 s** to wake it | The site pings the server the moment it opens and shows *“Waking up the game server…”*. **Open the site ~2 minutes before guests arrive.** |
+| Sleep during a game | Would drop the game | Every open room pings the server every 4 minutes, so it stays awake while anyone is in a room |
+| No permanent disk | Rooms and photos are **wiped whenever the service restarts or redeploys** | Don't redeploy during an event. A refresh or reconnect is fine; only a server restart loses the game |
+| 750 free hours/month | Enough to run one service all month | — |
 
-## Option 1 — Render only (one service)
+If you later want games to survive restarts, switch the service to **Starter** and add a disk mounted at `/data` with `DATABASE_PATH=/data/mafia.db` (see Option 1).
+
+## Option 1 — Render only, paid Starter with a disk (one service)
+Use the `render.yaml` above but change `plan: free` to `plan: starter`, add a disk (`mountPath: /data`, 1 GB) and set `DATABASE_PATH=/data/mafia.db`.
 1. Push this repository to GitHub.
 2. In Render: **New → Blueprint** → pick the repo. `render.yaml` creates a Docker web service with a 1 GB disk at `/data`.
 3. Wait for the health check (`/api/health`) to pass, then open the URL.
