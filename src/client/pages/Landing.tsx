@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import { ROLES, ROLE_ORDER } from '../../shared/roles';
 import { defaultSettings } from '../../shared/settings';
 import { RoleArt } from '../components/RoleArt';
-import { AlignmentBadge, BrandMark, LOGO, PrefsMenu, useTitle } from '../components/ui';
+import { OtherGame } from '../components/OtherGame';
+import { AlignmentBadge, BrandMark, HomeMenu, LOGO, MainMenuLink, PrefsMenu, useTitle } from '../components/ui';
 
 const settings = { ...defaultSettings(10), roles: {} };
 
@@ -16,13 +17,15 @@ export default function Landing() {
           <Link to="/guide" className="btn btn-ghost !min-h-10 !px-3 !py-1.5">
             Guide
           </Link>
+          <HomeMenu game="mafia" />
           <PrefsMenu />
         </nav>
       </header>
 
       <main className="relative z-10">
         {/* HERO */}
-        <section className="mx-auto flex max-w-6xl flex-col items-center px-4 pb-20 pt-10 text-center md:pt-20">
+        <section className="mx-auto flex max-w-6xl flex-col items-center px-4 pb-20 pt-4 text-center md:pt-10">
+          <MainMenuLink className="anim-fade-up mb-6 md:mb-10" />
           <img src={LOGO.wordmark} alt="Unsorted" className="anim-fade-up h-auto w-56 sm:w-72" />
           <p className="eyebrow anim-fade-up mt-3">presents</p>
           <h1 className="brand-title anim-fade-up mt-4 text-5xl font-black leading-[0.95] sm:text-7xl md:text-8xl" style={{ animationDelay: '0.1s' }}>
@@ -120,6 +123,13 @@ export default function Landing() {
               <li>🔒 Roles are dealt by the server with a secure random generator. Phones only ever receive their own secrets.</li>
               <li>🗳️ Votes stay hidden until the timer ends. Each seat is locked to one phone.</li>
             </ul>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-2xl px-4 pb-16">
+          <OtherGame game="charades" />
+          <div className="mt-4 text-center">
+            <MainMenuLink />
           </div>
         </section>
       </main>

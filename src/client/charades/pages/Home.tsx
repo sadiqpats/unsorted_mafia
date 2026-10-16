@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import { OtherGame } from '../../components/OtherGame';
+import { MainMenuLink } from '../../components/ui';
 import { Clapper, Reel } from '../art';
 import { BollyShell } from '../ui';
 
@@ -23,7 +25,8 @@ const SIGNS: [string, string][] = [
 export default function CharadesHome() {
   return (
     <BollyShell>
-      <section className="flex flex-col items-center pt-4 text-center">
+      <section className="flex flex-col items-center pt-1 text-center">
+        <MainMenuLink className="anim-fade-up mb-5" />
         <Clapper size={140} className="anim-fade-up" />
         <p className="eyebrow anim-fade-up mt-4" style={{ animationDelay: '0.05s' }}>
           Unsorted presents
@@ -113,8 +116,11 @@ export default function CharadesHome() {
           Host a game
         </Link>
         <Link to="/" className="btn btn-ghost flex-1">
-          Back to all games
+          ← Main menu · all games
         </Link>
+      </div>
+      <div className="mt-6">
+        <OtherGame game="mafia" />
       </div>
     </BollyShell>
   );

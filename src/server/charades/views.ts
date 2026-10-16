@@ -8,7 +8,7 @@ const cardView = (c: Card): CardView => ({ title: c.title, year: c.year || null,
 
 /**
  * Who may see the movie:
- * - the host (the judge) always;
+ * - the host only when they aren't playing (house rule), or after they flipped it themselves;
  * - the acting captain once they flip the card;
  * - the rival captain in "rival picks" mode (they chose it);
  * - everyone (TV included) once the turn is over.
@@ -16,7 +16,9 @@ const cardView = (c: Card): CardView => ({ title: c.title, year: c.year || null,
 function canSeeCard(room: CRoom, v: CViewer): boolean {
   const t = room.turn;
   if (!t?.card) return false;
-  if (t.stage === 'done' || v.kind === 'host') return true;
+  if (t.stage === 'done') return true;
+  // The host sees it only if they said they aren't playing (and always after "Flip it here", which they chose).
+  if (v.kind === 'host') return room.settings.hostSeesMovie || t.flippedByHost === true;
   if (v.kind !== 'captain') return false;
   if (v.team === t.team) return t.stage === 'acting';
   return room.settings.picker === 'rival' && ['ready', 'acting'].includes(t.stage) && t.card.source !== 'deck';
@@ -46,8 +48,12 @@ export function buildCView(room: CRoom, v: CViewer, online: Set<string>, now: nu
           tookMs: t.tookMs,
           words: showWords ? wordCount(t.card!.title) : null,
           card: canSeeCard(room, v) ? cardView(t.card!) : null,
+          cards: v.kind === 'captain' && v.team === t.team && t.stage === 'acting' ? (t.cards ?? []).map(cardView) : null,
+          current: t.current ?? 0,
+          cardCount: (t.cards ?? []).length,
           checking: !!t.checking,
-          pending: v.kind === 'host' ? t.pending : t.pending ? { title: '', reason: '' } : null,
+          // When the host plays, an unverified rival title is approved blind (it's the other team's secret).
+          pending: v.kind === 'host' && t.pending ? (room.settings.hostSeesMovie ? t.pending : { title: '', reason: t.pending.reason }) : t.pending ? { title: '', reason: '' } : null,
         }
       : null,
     history: room.history,

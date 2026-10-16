@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { MOVIE_COUNTS } from '../../../shared/charades/counts';
 import { wordCount } from '../../../shared/charades/movie';
-import { ROUND_OPTIONS, SWAP_OPTIONS, TIMER_OPTIONS, type CCommand, type CSettings, type CView, type TeamIdx } from '../../../shared/charades/types';
+import { ROUND_OPTIONS, SWAP_OPTIONS, TIMER_OPTIONS, type CardView, type CCommand, type CSettings, type CView, type TeamIdx } from '../../../shared/charades/types';
 import { OfflineBanner, QR, useConfirm, useToast } from '../../components/ui';
 import { api } from '../../lib/api';
 import { clearCSession, fmtClock, loadCSession, RESULT_LINE, useCharades, useTurnClock, type CAck } from '../lib';
@@ -164,13 +164,11 @@ function HostLobby({ view, send }: { view: CView; send: Send }) {
       <section className="card space-y-4 p-5">
         <div className="flex items-center justify-between gap-2">
           <h2 className="charades-title text-3xl">Invite the captains</h2>
-          <a className="btn btn-ghost !min-h-10 shrink-0 whitespace-nowrap text-sm" href={`/ctv/${view.code}`} target="_blank" rel="noreferrer">
-            📺 Open TV
-          </a>
         </div>
         <p className="text-sm text-white/75">
           Each team sends one captain. They scan their team’s QR, or open <b>Join as captain</b> and type <b className="font-mono tracking-[0.2em] text-[#ffd76a]">{view.code}</b>.
         </p>
+        <TvLink code={view.code} />
         <div className="grid gap-4 sm:grid-cols-2">
           {view.teams.map((t, i) => (
             <TeamInvite key={i} view={view} team={i as TeamIdx} url={`${origin}/charades/join/${view.code}?team=${i + 1}`} send={send} />
@@ -203,7 +201,14 @@ function HostLobby({ view, send }: { view: CView; send: Send }) {
           onChange={(v) => set({ difficulty: v as CSettings['difficulty'] })}
           disabled={busy}
         />
-        <Choice label="Card swaps per turn (clock keeps running)" value={s.swaps} options={withCurrent(SWAP_OPTIONS, s.swaps).map((n) => [n, n === 0 ? 'No swaps' : `${n} swap${n > 1 ? 's' : ''}`])} onChange={(v) => set({ swaps: Number(v) })} disabled={busy} />
+        <label className="flex items-center justify-between gap-3 rounded-xl border border-[#ffb300]/20 bg-black/20 p-3 text-sm">
+          <span>
+            I’m playing too
+            <span className="block text-xs text-white/60">Hides the movie on your screen. The acting captain taps ✅ when their team gets it.</span>
+          </span>
+          <input type="checkbox" className="h-5 w-5 accent-[#ff3d8b]" aria-label="I’m playing too" checked={!s.hostSeesMovie} onChange={(e) => set({ hostSeesMovie: !e.target.checked })} />
+        </label>
+        <Choice label="New cards per turn (flip back to any of them; the clock keeps running)" value={s.swaps} options={withCurrent(SWAP_OPTIONS, s.swaps).map((n) => [n, n === 0 ? 'Just one card' : `Up to ${n} more`])} onChange={(v) => set({ swaps: Number(v) })} disabled={busy} />
         <Choice
           label="Who goes first?"
           value={s.firstTeam}
@@ -232,6 +237,37 @@ function HostLobby({ view, send }: { view: CView; send: Send }) {
 
 /** Keep a value the host set some other way (e.g. "+ Add a round") selectable in its dropdown. */
 const withCurrent = (opts: readonly number[], v: number) => [...new Set([...opts, v])].sort((a, b) => a - b);
+
+/** The TV gets its own link: open it on the TV's browser (or a laptop plugged into it). Your host screen stays private. */
+function TvLink({ code }: { code: string }) {
+  const toast = useToast();
+  const url = `${typeof location !== 'undefined' ? location.origin : ''}/ctv/${code}`;
+  return (
+    <div className="flex items-center gap-4 rounded-xl border border-[#ffb300]/30 bg-black/25 p-3" data-testid="tv-link">
+      <QR text={url} size={88} />
+      <div className="min-w-0 flex-1 space-y-2">
+        <p className="text-sm font-semibold">📺 TV screen link</p>
+        <p className="truncate font-mono text-xs text-[#ffd76a]">{url.replace(/^https?:\/\//, '')}</p>
+        <div className="flex gap-2">
+          <a className="btn btn-marigold !min-h-9 !px-3 !py-1 text-xs" href={url} target="_blank" rel="noreferrer">
+            Open TV
+          </a>
+          <button
+            className="btn btn-ghost !min-h-9 !px-3 !py-1 text-xs"
+            onClick={() =>
+              navigator.clipboard?.writeText(url).then(
+                () => toast('TV link copied'),
+                () => toast(url),
+              )
+            }
+          >
+            Copy link
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Choice({ label, value, options, onChange, disabled }: { label: string; value: string | number; options: (readonly [string | number, string])[]; onChange: (v: string) => void; disabled?: boolean }) {
   return (
@@ -325,10 +361,19 @@ function HostTurn({ view, send, left }: { view: CView; send: Send; left: number 
     return (
       <Panel>
         <BigEmoji>🤔</BigEmoji>
-        <p className="text-lg">
-          {rival.name} picked <b className="text-[#ffd76a]">“{t.pending?.title}”</b>
-        </p>
-        <p className="text-sm text-white/70">{t.pending?.reason} Is it a real Hindi film from 2000 or later?</p>
+        {t.pending?.title ? (
+          <>
+            <p className="text-lg">
+              {rival.name} picked <b className="text-[#ffd76a]">“{t.pending.title}”</b>
+            </p>
+            <p className="text-sm text-white/70">{t.pending.reason} Is it a real Hindi film from 2000 or later?</p>
+          </>
+        ) : (
+          <>
+            <p className="text-lg">{rival.name} typed a movie we couldn’t check online.</p>
+            <p className="text-sm text-white/70">The title stays hidden because you’re playing. Allow it if you trust {rival.captain?.name ?? 'their captain'} to pick a real Hindi film from 2000 or later.</p>
+          </>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <button className="btn btn-ok" disabled={busy} onClick={() => act({ type: 'approve', seq, ok: true })}>
             ✅ Allow it
@@ -359,9 +404,21 @@ function HostTurn({ view, send, left }: { view: CView; send: Send; left: number 
       <div className="space-y-4">
         <div className="grid items-center gap-4 sm:grid-cols-[auto_1fr]">
           <TimerRing left={left ?? 0} total={view.settings.turnSeconds} paused={paused} />
-          {t.card && <MovieCard card={t.card} />}
+          {t.card ? (
+            <MovieCard card={t.card} />
+          ) : (
+            <div className="card p-5 text-center" data-testid="movie-hidden">
+              <div className="text-4xl" aria-hidden="true">
+                🙈
+              </div>
+              <p className="mt-2 font-semibold">Movie hidden — you’re playing too.</p>
+              <p className="mt-1 text-sm text-white/70">
+                {acting.captain?.name ?? 'The captain'} can see it{t.cardCount > 1 ? ` (card ${t.current + 1} of ${t.cardCount})` : ''} and taps ✅ when the team gets it.
+              </p>
+            </div>
+          )}
         </div>
-        <p className="text-center text-sm text-white/70">Did {acting.name} shout the exact title?</p>
+        <p className="text-center text-sm text-white/70">{t.card ? `Did ${acting.name} shout the exact title?` : 'Or judge it yourself when the captain nods:'}</p>
         <div className="grid grid-cols-2 gap-3">
           <button className="btn btn-ok min-h-16 text-xl" disabled={busy} onClick={() => act({ type: 'judge', seq, result: 'correct' })}>
             ✅ Guessed it!
@@ -443,7 +500,9 @@ function HostTools({ view, send }: { view: CView; send: Send }) {
           {s.rounds} rounds · {fmtClock(s.turnSeconds)} per turn
         </li>
         <li>
-          {pickLabel(s)} · {s.swaps} swap{s.swaps === 1 ? '' : 's'} · {s.difficulty === 'easy' ? 'Easy' : s.difficulty === 'mixed' ? 'Mixed' : 'Film buff'}
+          {pickLabel(s)} · {s.swaps} new card{s.swaps === 1 ? '' : 's'} per turn · {s.difficulty === 'easy' ? 'Easy' : s.difficulty === 'mixed' ? 'Mixed' : 'Film buff'}
+        </li>
+        <li>{s.hostSeesMovie ? '👀 Movie shown on your screen' : '🙈 You’re playing — movie hidden on your screen'}
         </li>
       </ul>
       <ul className="space-y-1.5" aria-label="Captains">
@@ -546,20 +605,33 @@ function MyTurn({ view, send, left }: { view: CView; send: Send; left: number | 
   }
   if (t.stage === 'ready') return <CardBack label={`${rival.name} picked your movie. Tap to reveal — the clock starts!`} disabled={busy} onClick={() => act({ type: 'reveal', seq })} />;
   if (t.stage === 'acting') {
-    const canSwap = t.card?.source === 'deck' && t.swapsLeft > 0;
+    const cards = t.cards ?? (t.card ? [t.card] : []);
+    const canSwap = cards[0]?.source === 'deck' && t.swapsLeft > 0;
+    const hostPlays = !view.settings.hostSeesMovie;
     return (
       <div className="space-y-4">
         <TimerRing left={left ?? 0} total={view.settings.turnSeconds} paused={t.pausedLeft !== null} />
-        {t.card && <MovieCard card={t.card} />}
-        <p className="text-center text-xs text-white/70">🤫 Show this to your actor only. The host judges the guess.</p>
+        <CardBrowser cards={cards} current={t.current} onShow={(index) => void send({ type: 'show_card', index })} />
+        <p className="text-center text-xs text-white/70">🤫 Show this to your actor only. The card on screen is the one being acted.</p>
+        {hostPlays && (
+          <button
+            className="btn btn-ok min-h-14 w-full text-lg"
+            disabled={busy}
+            onClick={async () =>
+              (await confirm({ title: 'Did your team get it?', body: `They said “${cards[t.current]?.title ?? ''}” exactly?`, confirm: 'Yes — +1 point' })) && act({ type: 'got_it', seq })
+            }
+          >
+            ✅ They got it!
+          </button>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <button className="btn btn-marigold" disabled={busy || !canSwap} onClick={() => act({ type: 'swap', seq })}>
-            🔀 Swap ({t.swapsLeft})
+            🔀 New card ({t.swapsLeft})
           </button>
           <button
             className="btn btn-ghost"
             disabled={busy}
-            onClick={async () => (await confirm({ title: 'Give up this movie?', body: 'Your team gets no point for this turn.', confirm: 'Pass', danger: true })) && act({ type: 'give_up', seq })}
+            onClick={async () => (await confirm({ title: 'Give up this turn?', body: 'Your team gets no point for this turn.', confirm: 'Pass', danger: true })) && act({ type: 'give_up', seq })}
           >
             🏳️ Pass
           </button>
@@ -572,6 +644,49 @@ function MyTurn({ view, send, left }: { view: CView; send: Send; left: number | 
       <ResultBanner view={view} />
       {t.card && <MovieCard card={t.card} />}
       <p className="text-center text-sm text-white/70">Next up: {rival.name}. The host moves the game on.</p>
+    </div>
+  );
+}
+
+/** The cards drawn this turn: arrows, dots and swipe to flip back and forth. The one showing is the one being acted. */
+function CardBrowser({ cards, current, onShow }: { cards: CardView[]; current: number; onShow: (i: number) => void }) {
+  const startX = useRef<number | null>(null);
+  const go = (i: number) => i >= 0 && i < cards.length && i !== current && onShow(i);
+  const card = cards[current] ?? cards[cards.length - 1];
+  if (!card) return null;
+  return (
+    <div>
+      <div
+        onTouchStart={(e) => (startX.current = e.touches[0].clientX)}
+        onTouchEnd={(e) => {
+          if (startX.current === null) return;
+          const dx = e.changedTouches[0].clientX - startX.current;
+          startX.current = null;
+          if (Math.abs(dx) > 50) go(dx < 0 ? current + 1 : current - 1);
+        }}
+      >
+        <MovieCard card={card} />
+      </div>
+      {cards.length > 1 && (
+        <div className="mt-3 flex items-center justify-between gap-2" data-testid="card-browser">
+          <button className="btn btn-ghost !min-h-10 !px-4" aria-label="Previous card" disabled={current === 0} onClick={() => go(current - 1)}>
+            ‹
+          </button>
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {cards.map((c, i) => (
+                <button key={c.title + i} aria-label={`Card ${i + 1}`} aria-current={i === current} className={`card-dot ${i === current ? 'is-on' : ''}`} onClick={() => go(i)} />
+              ))}
+            </div>
+            <span className="text-xs text-white/70">
+              Card {current + 1} of {cards.length}
+            </span>
+          </div>
+          <button className="btn btn-ghost !min-h-10 !px-4" aria-label="Next card" disabled={current === cards.length - 1} onClick={() => go(current + 1)}>
+            ›
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -166,7 +166,9 @@ export class CharadesService {
           return E.randomForTurn(room, ctx);
         case 'reveal_here':
           if (!room.turn) throw new CharadesError('not_playing', 'The game isn’t running.');
-          return E.reveal(room, room.turn.team, ctx);
+          E.reveal(room, room.turn.team, ctx);
+          room.turn.flippedByHost = true;
+          return;
         case 'approve':
           return E.approve(room, c.ok, ctx.now);
         case 'judge':
@@ -190,8 +192,12 @@ export class CharadesService {
     const p = CCaptainCommandSchema.safeParse(raw);
     if (!p.success) throw new CharadesError('bad_command', 'That command isn’t valid.');
     const c = p.data;
-    E.checkSeq(room, c.seq);
+    if ('seq' in c) E.checkSeq(room, c.seq);
     switch (c.type) {
+      case 'show_card':
+        return E.showCard(room, id.team, c.index, ctx.now);
+      case 'got_it':
+        return E.captainGotIt(room, id.team, ctx.now);
       case 'reveal':
         return E.reveal(room, id.team, ctx);
       case 'swap':

@@ -34,7 +34,26 @@ test('the front door is Unsorted: both games are one tap away', async ({ browser
   await expect(p).toHaveTitle('Unsorted');
   await p.getByRole('link', { name: /Mafia Night/ }).click();
   await expect(p).toHaveURL(/\/mafia$/);
+  // Every Mafia page has a Home menu back to the main menu.
+  await p.goto('/guide');
+  await p.getByRole('button', { name: 'Home menu' }).click();
+  await p.getByRole('menuitem', { name: /Mafia Night menu/ }).click();
+  await expect(p).toHaveURL(/\/mafia$/);
+  await p.getByRole('button', { name: 'Home menu' }).click();
+  await p.getByRole('menuitem', { name: /Main menu/ }).click();
+  await expect(p).toHaveURL(/\/$/);
   await p.goto('/');
   await p.getByRole('link', { name: /Bollywood Dumb Charades/ }).click();
   await expect(p).toHaveURL(/\/charades$/);
+  // Each game's page: a Main menu button, the Unsorted logo, and a jump to the other game.
+  await p.getByRole('link', { name: /Main menu · all games/ }).first().click();
+  await expect(p).toHaveURL(/\/$/);
+  await p.goto('/charades');
+  await p.getByTestId('other-game').click();
+  await expect(p).toHaveURL(/\/mafia$/);
+  await p.getByTestId('other-game').click();
+  await expect(p).toHaveURL(/\/charades$/);
+  await p.goto('/mafia');
+  await p.getByRole('link', { name: 'Unsorted — main menu (all games)' }).click();
+  await expect(p).toHaveURL(/\/$/);
 });

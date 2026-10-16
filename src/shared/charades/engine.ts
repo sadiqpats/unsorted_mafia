@@ -78,6 +78,8 @@ function newTurn(room: CRoom, n: number, team: TeamIdx): Turn {
     team,
     stage: 'picking',
     card: null,
+    cards: [],
+    current: 0,
     pending: null,
     checking: null,
     rivalNote: null,
@@ -116,7 +118,7 @@ export function updateSettings(room: CRoom, patch: Partial<CSettings>, now: numb
     // Only harmless tweaks mid-game: rounds (not below what's been played), timer, swaps, word count.
     const played = room.turn ? room.turn.round : 0;
     if (patch.rounds !== undefined && patch.rounds < played) fail('bad_settings', `You’re already in round ${played}.`);
-    const allowed: (keyof CSettings)[] = ['rounds', 'turnSeconds', 'swaps', 'showWordCount', 'difficulty', 'picker'];
+    const allowed: (keyof CSettings)[] = ['rounds', 'turnSeconds', 'swaps', 'showWordCount', 'difficulty', 'picker', 'hostSeesMovie'];
     for (const k of Object.keys(patch) as (keyof CSettings)[]) if (!allowed.includes(k)) fail('bad_settings', 'That can only change in the lobby.');
   } else if (room.status !== 'lobby' && room.status !== 'over') fail('bad_settings', 'Settings can’t change now.');
   room.settings = { ...room.settings, ...patch };
@@ -167,6 +169,8 @@ export function reveal(room: CRoom, team: TeamIdx, ctx: Ctx) {
     if (room.settings.picker === 'rival') fail('wait_rival', `Waiting for ${room.teams[1 - t.team].name} to pick your movie.`);
     t.card = drawCard(room, ctx);
   }
+  t.cards = [t.card!];
+  t.current = 0;
   t.stage = 'acting';
   t.startedAt = ctx.now;
   t.endsAt = ctx.now + room.settings.turnSeconds * 1000;
@@ -178,6 +182,8 @@ export function reveal(room: CRoom, team: TeamIdx, ctx: Ctx) {
 export function setRivalCard(room: CRoom, card: Card, now: number) {
   const t = requireTurn(room, 'picking', 'approval');
   t.card = card;
+  t.cards = [card];
+  t.current = 0;
   t.pending = null;
   t.checking = null;
   t.rivalNote = null;
@@ -228,16 +234,40 @@ export function randomForTurn(room: CRoom, ctx: Ctx) {
 
 // ------------------------------------------------------------------ acting
 
+/** Draw a fresh card. Earlier cards stay in the turn so the captain can flip back to them. */
 export function swap(room: CRoom, team: TeamIdx, ctx: Ctx) {
   const t = requireTurn(room, 'acting');
   if (team !== t.team) fail('not_your_turn', 'It’s the other team’s turn.');
-  if (t.card?.source !== 'deck') fail('no_swap', 'The other team chose this movie — no swapping.');
-  if (t.swapsLeft <= 0) fail('no_swaps', 'No swaps left this turn.');
+  const cards = t.cards ?? (t.card ? [t.card] : []);
+  if (cards[0]?.source !== 'deck') fail('no_swap', 'The other team chose this movie — no swapping.');
+  if (t.swapsLeft <= 0) fail('no_swaps', 'No new cards left this turn.');
   if (t.pausedLeft !== null) fail('paused', 'The game is paused.');
   t.swapped.push(t.card!.title);
   t.swapsLeft -= 1;
-  t.card = drawCard(room, ctx);
+  const card = drawCard(room, ctx);
+  t.cards = [...cards, card];
+  t.current = t.cards.length - 1;
+  t.card = card;
   touch(room, ctx.now);
+}
+
+/** Flip back (or forward) to another card drawn this turn; that one is now being acted. */
+export function showCard(room: CRoom, team: TeamIdx, index: number, now: number) {
+  const t = requireTurn(room, 'acting');
+  if (team !== t.team) fail('not_your_turn', 'It’s the other team’s turn.');
+  const cards = t.cards ?? [];
+  if (index < 0 || index >= cards.length) fail('no_card', 'No such card.');
+  if (index === t.current) return;
+  t.current = index;
+  t.card = cards[index];
+  touch(room, now);
+}
+
+/** The acting captain confirms the guess (for games where the host plays and can't see the movie). */
+export function captainGotIt(room: CRoom, team: TeamIdx, now: number) {
+  const t = requireTurn(room, 'acting');
+  if (team !== t.team) fail('not_your_turn', 'It’s the other team’s turn.');
+  finish(room, 'correct', now);
 }
 
 function finish(room: CRoom, result: Result, now: number) {

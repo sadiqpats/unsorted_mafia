@@ -585,3 +585,9 @@ p { text-wrap: pretty; }
 @keyframes bulbs { 50% { opacity: 0.95; filter: drop-shadow(0 0 4px #ffb300); } }
 .clap-arm { animation: clap 2.8s ease-in-out infinite; }
 @keyframes clap { 0%, 70%, 100% { transform: rotate(0deg); } 78% { transform: rotate(-14deg); } 86% { transform: rotate(0deg); } }
+/* Home menu: solid so it reads over QR codes and photos */
+.card.home-menu { background: #161213; box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.9); }
+.bolly .card.home-menu { background: #24082a; }
+.main-menu-link { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.5rem; padding: 0.4rem 1rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600; color: var(--color-bone); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(201, 164, 92, 0.45); transition: background 0.2s ease, transform 0.2s ease; }
+.main-menu-link:hover { background: rgba(201, 164, 92, 0.15); transform: translateX(-2px); }
+.bolly .main-menu-link { border-color: rgba(255, 179, 0, 0.5); color: #fff4d6; }

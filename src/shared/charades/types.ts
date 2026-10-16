@@ -5,7 +5,7 @@ export type TeamIdx = 0 | 1;
 
 export const ROUND_OPTIONS = [3, 5, 7, 10, 15] as const;
 export const TIMER_OPTIONS = [60, 90, 120, 150, 180] as const;
-export const SWAP_OPTIONS = [0, 1, 2, 3] as const;
+export const SWAP_OPTIONS = [0, 1, 2, 3, 5, 10] as const;
 
 export const CSettingsSchema = z.object({
   /** Each round = one turn for each team. */
@@ -13,8 +13,10 @@ export const CSettingsSchema = z.object({
   turnSeconds: z.number().int().min(30).max(600),
   /** deck: the acting captain draws a random card. rival: the other captain picks (types one or sends a random card). */
   picker: z.enum(['deck', 'rival']),
-  /** Card swaps allowed per turn (the clock keeps running). */
-  swaps: z.number().int().min(0).max(5),
+  /** New cards a captain may draw per turn (the clock keeps running; earlier cards stay browsable). */
+  swaps: z.number().int().min(0).max(10),
+  /** Off (default): the host plays too, so their screen hides the movie until the turn ends. */
+  hostSeesMovie: z.boolean(),
   /** easy = blockbusters only, mixed = well-known too, all = includes film-buff picks. */
   difficulty: z.enum(['easy', 'mixed', 'all']),
   /** Show "_ _ _" word blanks on the TV while acting. */
@@ -27,7 +29,8 @@ export const DEFAULT_CSETTINGS: CSettings = {
   rounds: 5,
   turnSeconds: 120,
   picker: 'deck',
-  swaps: 1,
+  swaps: 10,
+  hostSeesMovie: false,
   difficulty: 'mixed',
   showWordCount: true,
   firstTeam: 'random',
@@ -60,7 +63,13 @@ export interface Turn {
   round: number;
   team: TeamIdx;
   stage: Stage;
+  /** The card being acted (the one on the captain's screen). */
   card: Card | null;
+  /** Every card drawn this turn, in order; the captain can flip back through them. */
+  cards: Card[];
+  current: number;
+  /** The host flipped the card on their own screen (captain's phone died). */
+  flippedByHost?: boolean;
   /** Rival's typed title waiting on the host (couldn't be verified online). */
   pending: { title: string; reason: string } | null;
   /** Title being checked online right now (rival mode). */
@@ -131,6 +140,10 @@ export const CHostCommandSchema = z.discriminatedUnion('type', [
 export const CCaptainCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('reveal'), seq }),
   z.object({ type: z.literal('swap'), seq }),
+  /** Flip back/forward through the cards drawn this turn. */
+  z.object({ type: z.literal('show_card'), index: z.number().int().min(0).max(20) }),
+  /** The acting captain confirms their team guessed it (used when the host plays and can't see the movie). */
+  z.object({ type: z.literal('got_it'), seq }),
   z.object({ type: z.literal('give_up'), seq }),
   z.object({ type: z.literal('choose_movie'), seq, title: z.string().trim().min(1).max(80).optional(), random: z.boolean().optional() }),
 ]);
@@ -172,6 +185,10 @@ export interface CView {
     words: number | null;
     /** Only for those allowed to see it (see views). */
     card: CardView | null;
+    /** All cards drawn this turn (acting captain only), and which one is showing. */
+    cards: CardView[] | null;
+    current: number;
+    cardCount: number;
     checking: boolean;
     pending: { title: string; reason: string } | null;
   } | null;

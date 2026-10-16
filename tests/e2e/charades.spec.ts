@@ -15,6 +15,7 @@ async function table(browser: Browser, setup?: (host: Page) => Promise<void>) {
   await host.waitForURL(/\/c\/[A-Z0-9]{5}$/);
   const code = host.url().split('/').pop()!;
   await expect(host.getByText('Invite the captains')).toBeVisible();
+  await expect(host.getByTestId('tv-link')).toContainText(`/ctv/${code}`);
 
   const tvCtx = await browser.newContext({ viewport: { width: 1600, height: 900 } });
   const tv = await tvCtx.newPage();
@@ -61,23 +62,30 @@ test('Dumb Charades from the deck: only the acting captain and the host see the 
   await expect(tv.getByRole('timer')).toBeVisible();
   await expect(tv.getByTestId('word-blanks')).toBeVisible();
   const first = await title(a);
-  await expect(host.getByTestId('movie-title')).toHaveText(first);
-  // Nobody else sees it.
+  // Nobody else sees it — not even the host, who is playing too (the default).
+  await expect(host.getByTestId('movie-hidden')).toBeVisible();
+  await expect(host.getByTestId('movie-card')).toHaveCount(0);
   await expect(b.getByTestId('movie-card')).toHaveCount(0);
   await expect(tv.getByTestId('movie-card')).toHaveCount(0);
-  await shot(a, 'captain-acting');
   await shot(host, 'host-acting');
   await shot(tv, 'tv-acting');
 
-  // One swap allowed: a different movie, then the button is used up.
-  await a.getByRole('button', { name: /Swap \(1\)/ }).click();
+  // New cards (10 allowed): each is different, and the captain can flip back to an earlier one.
+  await a.getByRole('button', { name: /New card \(10\)/ }).click();
   await expect(a.getByTestId('movie-title')).not.toHaveText(first);
-  await expect(a.getByRole('button', { name: /Swap \(0\)/ })).toBeDisabled();
-  const second = await title(a);
-  await expect(host.getByTestId('movie-title')).toHaveText(second);
+  await a.getByRole('button', { name: /New card \(9\)/ }).click();
+  await expect(a.getByText('Card 3 of 3')).toBeVisible();
+  await a.getByRole('button', { name: 'Previous card' }).click();
+  await a.getByRole('button', { name: 'Previous card' }).click();
+  await expect(a.getByText('Card 1 of 3')).toBeVisible();
+  await expect(a.getByTestId('movie-title')).toHaveText(first);
+  await shot(a, 'captain-acting');
+  await expect(host.getByText(/card 1 of 3/)).toBeVisible();
+  const second = first;
 
-  // The host judges: guessed it!
-  await host.getByRole('button', { name: '✅ Guessed it!' }).click();
+  // The acting captain confirms the guess (the host is playing and can't see it).
+  await a.getByRole('button', { name: '✅ They got it!' }).click();
+  await a.getByRole('button', { name: 'Yes — +1 point' }).click();
   for (const p of [a, b, host]) await expect(p.getByTestId('result')).toContainText('Sahi Jawab!');
   await expect(tv.getByTestId('tv-result')).toContainText('Sahi Jawab!');
   await expect(tv.getByTestId('movie-title')).toHaveText(second);
@@ -114,6 +122,8 @@ test('Dumb Charades from the deck: only the acting captain and the host see the 
 test('Dumb Charades, rival picks: the other captain types a movie (checked) or sends a random card', async ({ browser }) => {
   const { host, tv, a, b } = await table(browser, async (h) => {
     await h.getByLabel('Who picks the movie?').selectOption('rival');
+    await h.getByLabel('I’m playing too').click(); // this host only judges, so they see the movies
+    await expect(h.getByLabel('I’m playing too')).not.toBeChecked();
   });
   // Team 1 acts, so Team 2's captain picks.
   await expect(b.getByTestId('rival-picker')).toBeVisible();
@@ -133,7 +143,7 @@ test('Dumb Charades, rival picks: the other captain types a movie (checked) or s
   await expect(tv.getByText(/Waiting for the captain to flip/)).toBeVisible();
   await a.getByTestId('card-back').click();
   await expect(a.getByTestId('movie-title')).toHaveText('Jab We Met');
-  await expect(a.getByRole('button', { name: /Swap/ })).toBeDisabled(); // no swapping a rival's pick
+  await expect(a.getByRole('button', { name: /New card/ })).toBeDisabled(); // no swapping a rival's pick
   await host.getByRole('button', { name: '❌ Pass' }).click();
   await expect(tv.getByTestId('movie-title')).toHaveText('Jab We Met');
 
@@ -182,5 +192,9 @@ test('Dumb Charades: a captain whose phone dies can be replaced, and the host ca
   await fresh.getByLabel('Your name').fill('Neha');
   await fresh.getByRole('button', { name: 'Join as captain' }).click();
   await expect(fresh.getByTestId('scoreboard')).toContainText('Captain Neha');
+  // Home menu: back to the game's menu or to the main menu with both games.
+  await fresh.getByRole('button', { name: 'Home menu' }).click();
+  await fresh.getByRole('menuitem', { name: /Main menu/ }).click();
+  await expect(fresh.getByRole('heading', { name: 'Pick tonight’s game' })).toBeVisible();
   await expect(tv.getByTestId('scoreboard')).toContainText('Captain Neha');
 });

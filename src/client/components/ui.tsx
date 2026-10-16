@@ -18,13 +18,30 @@ export const LOGO = {
   mark: '/brand/unsorted-mark.png',
 };
 
+/** Logo → main menu (all games); the game name next to it → that game's menu. */
 export function BrandMark({ compact = false, label = 'MAFIA NIGHT', to = '/mafia' }: { compact?: boolean; label?: string | null; to?: string }) {
   return (
-    <Link to={to} className="flex items-center gap-3 focus-ring rounded-lg" aria-label={label ? `Unsorted — ${label.toLowerCase()} home` : 'Unsorted home'}>
-      <img src={LOGO.wordmark} alt="Unsorted" className={compact ? 'h-5 w-auto' : 'h-7 w-auto'} />
+    <div className="flex items-center gap-3">
+      <Link to="/" className="focus-ring rounded-lg" aria-label="Unsorted — main menu (all games)" title="Main menu — all games">
+        <img src={LOGO.wordmark} alt="Unsorted" className={compact ? 'h-5 w-auto' : 'h-7 w-auto'} />
+      </Link>
       {label && (
-        <span className={`whitespace-nowrap border-l border-line pl-3 font-[family-name:var(--font-display)] tracking-[0.16em] text-gold hidden sm:inline ${compact ? 'text-[0.7rem]' : 'text-sm'}`}>{label}</span>
+        <Link
+          to={to}
+          className={`hidden whitespace-nowrap border-l border-line pl-3 font-[family-name:var(--font-display)] tracking-[0.16em] text-gold focus-ring rounded sm:inline ${compact ? 'text-[0.7rem]' : 'text-sm'}`}
+        >
+          {label}
+        </Link>
       )}
+    </div>
+  );
+}
+
+/** A clear "back to the main menu" pill for the top of each game's home page. */
+export function MainMenuLink({ className = '' }: { className?: string }) {
+  return (
+    <Link to="/" className={`main-menu-link focus-ring ${className}`}>
+      <span aria-hidden="true">←</span> Main menu · all games
     </Link>
   );
 }
@@ -44,7 +61,10 @@ export function Shell({ children, right, wide = false }: { children: ReactNode; 
       <header className="sticky top-0 z-40 border-b border-line/60 bg-ink/80 backdrop-blur-md">
         <div className={`mx-auto flex h-14 items-center justify-between gap-3 px-4 ${wide ? 'max-w-7xl' : 'max-w-3xl'}`}>
           <BrandMark compact />
-          <div className="flex items-center gap-2">{right}</div>
+          <div className="flex items-center gap-2">
+            <HomeMenu game="mafia" />
+            {right}
+          </div>
         </div>
       </header>
       <main className={`relative z-10 mx-auto px-4 pb-16 pt-5 ${wide ? 'max-w-7xl' : 'max-w-3xl'}`}>{children}</main>
@@ -157,6 +177,52 @@ export function OfflineBanner({ status }: { status: ConnStatus }) {
 }
 
 // ------------------------------------------------------------------ settings toggles
+
+/** 🏠 Home: back to this game's menu, or to the Unsorted main menu with every game. */
+export function HomeMenu({ game }: { game: 'mafia' | 'charades' }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: Event) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  const items: [string, string, string][] =
+    game === 'mafia'
+      ? [
+          ['/mafia', '🎩', 'Mafia Night menu'],
+          ['/', '🏠', 'Main menu — all games'],
+        ]
+      : [
+          ['/charades', '🎬', 'Dumb Charades menu'],
+          ['/', '🏠', 'Main menu — all games'],
+        ];
+  return (
+    <div className="relative" ref={ref}>
+      <button className="btn btn-ghost !min-h-10 !px-3 !py-1.5 text-sm" aria-expanded={open} aria-haspopup="menu" aria-label="Home menu" onClick={() => setOpen((o) => !o)}>
+        <span aria-hidden="true">🏠</span>
+        <span className="sr-only sm:not-sr-only">Home</span>
+      </button>
+      {open && (
+        <div className="card home-menu anim-pop fixed right-3 top-14 z-50 w-64 p-2 text-sm sm:absolute sm:right-0 sm:top-auto sm:mt-2" role="menu">
+          {items.map(([to, icon, label]) => (
+            <Link key={to} to={to} role="menuitem" className="flex min-h-11 items-center gap-3 rounded-lg px-3 hover:bg-white/5 focus-ring" onClick={() => setOpen(false)}>
+              <span aria-hidden="true">{icon}</span>
+              {label}
+            </Link>
+          ))}
+          <p className="px-3 pb-1 pt-2 text-xs text-mute">Leaving is safe: your seat is kept on this phone if a game is running.</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function PrefsMenu() {
   const { prefs, set } = usePrefs();

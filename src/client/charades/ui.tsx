@@ -2,7 +2,7 @@ import './charades.css';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { CardView, CView } from '../../shared/charades/types';
-import { LOGO, PrefsMenu } from '../components/ui';
+import { HomeMenu, LOGO, PrefsMenu } from '../components/ui';
 import { useFx } from '../lib/prefs';
 import { Clapper } from './art';
 import { fmtClock } from './lib';
@@ -18,11 +18,16 @@ export function BollyShell({ children, right, wide = false }: { children: ReactN
       <div className="bolly-rays" aria-hidden="true" />
       <header className="sticky top-0 z-40 border-b border-[#ffb300]/25 bg-[#14041a]/85 backdrop-blur-md">
         <div className={`mx-auto flex h-14 items-center justify-between gap-3 px-4 ${wide ? 'max-w-7xl' : 'max-w-3xl'}`}>
-          <Link to="/charades" className="flex items-center gap-3 focus-ring rounded-lg" aria-label="Bollywood Dumb Charades home">
-            <img src={LOGO.wordmark} alt="Unsorted" className="h-5 w-auto" />
-            <span className="charades-title hidden border-l border-[#ffb300]/30 pl-3 text-sm sm:inline">Dumb Charades</span>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link to="/" className="focus-ring rounded-lg" aria-label="Unsorted — main menu (all games)" title="Main menu — all games">
+              <img src={LOGO.wordmark} alt="Unsorted" className="h-5 w-auto" />
+            </Link>
+            <Link to="/charades" className="charades-title hidden border-l border-[#ffb300]/30 pl-3 text-sm focus-ring rounded sm:inline">
+              Dumb Charades
+            </Link>
+          </div>
           <div className="flex items-center gap-2">
+            <HomeMenu game="charades" />
             {right}
             <PrefsMenu />
           </div>

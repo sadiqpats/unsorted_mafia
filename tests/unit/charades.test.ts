@@ -127,7 +127,7 @@ describe('a game', () => {
     E.swap(g, 0, ctx(5));
     expect(g.turn!.card!.title).not.toBe(first);
     expect(g.turn!.endsAt).toBe(ends);
-    expect(() => E.swap(g, 0, ctx(6))).toThrow(/No swaps/);
+    expect(() => E.swap(g, 0, ctx(6))).toThrow(/No new cards/);
   });
 
   it('never deals the same movie twice in a session, and respects difficulty', () => {
@@ -139,6 +139,25 @@ describe('a game', () => {
       expect(seen.has(c.id)).toBe(false);
       seen.add(c.id);
     }
+  });
+
+  it('10 new cards by default; the captain can flip back to any earlier card, and that one is acted', () => {
+    const g = started();
+    expect(g.settings.swaps).toBe(10);
+    E.reveal(g, 0, ctx());
+    for (let i = 1; i <= 10; i++) E.swap(g, 0, ctx(i));
+    expect(() => E.swap(g, 0, ctx(99))).toThrow(/No new cards/);
+    expect(g.turn!.cards).toHaveLength(11);
+    expect(new Set(g.turn!.cards.map((c) => c.id)).size).toBe(11);
+    E.showCard(g, 0, 2, clock);
+    expect(g.turn!.card!.title).toBe(g.turn!.cards[2].title);
+    expect(() => E.showCard(g, 1, 3, clock)).toThrow(/other team/);
+    expect(view(g, { kind: 'captain', team: 0 }).turn!.cards).toHaveLength(11);
+    expect(view(g, { kind: 'captain', team: 1 }).turn!.cards).toBeNull();
+    expect(view(g, { kind: 'tv' }).turn!.cards).toBeNull();
+    E.captainGotIt(g, 0, clock);
+    expect(g.history[0]).toMatchObject({ title: g.turn!.cards[2].title, result: 'correct' });
+    expect(g.teams[0].score).toBe(1);
   });
 
   it('pause freezes the clock; resume gives back the same time', () => {
@@ -170,9 +189,11 @@ describe('a game', () => {
 });
 
 describe('who sees the movie', () => {
-  it('deck mode: host and the acting captain only, everyone once the turn is over', () => {
+  it('deck mode: the acting captain only (plus the host if they aren’t playing), everyone once the turn is over', () => {
     const g = started();
     E.reveal(g, 0, ctx());
+    expect(view(g, { kind: 'host' }).turn!.card).toBeNull(); // default: the host plays too
+    g.settings.hostSeesMovie = true;
     expect(view(g, { kind: 'host' }).turn!.card).not.toBeNull();
     expect(view(g, { kind: 'captain', team: 0 }).turn!.card).not.toBeNull();
     expect(view(g, { kind: 'captain', team: 1 }).turn!.card).toBeNull();
@@ -247,6 +268,9 @@ describe('the rival picks a movie (server)', () => {
     pick(none, 'Made Up Movie');
     await new Promise((r) => setTimeout(r, 10));
     expect(none.room.turn!.stage).toBe('approval');
+    // The host plays by default, so the title stays hidden from them; a judging-only host sees it.
+    expect(view(none.room, { kind: 'host' }).turn!.pending!.title).toBe('');
+    none.room.settings.hostSeesMovie = true;
     expect(view(none.room, { kind: 'host' }).turn!.pending!.title).toBe('Made Up Movie');
     none.s.handle(none.code, none.host, { type: 'approve', seq: none.room.seq, ok: true });
     expect(none.room.turn).toMatchObject({ stage: 'ready', card: { title: 'Made Up Movie', verified: false } });
