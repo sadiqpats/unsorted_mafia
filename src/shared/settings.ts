@@ -30,21 +30,16 @@ export const SettingsSchema = z.object({
   /** If true, the host also gets a secret role and the host dashboard hides all secrets. */
   hostPlays: z.boolean(),
 
-  // ---- Timers (seconds) ----
+  // ---- Timers ----
+  /** Off (default): every phase ends as soon as everyone has acted — no clock. On: phases also end when their timer runs out. */
+  timers: z.boolean(),
   revealSeconds: seconds(5, 300),
-  nightSeconds: seconds(15, 600),
-  morningSeconds: seconds(3, 120),
-  discussionSeconds: seconds(15, 1800),
-  votingSeconds: seconds(10, 600),
-  verdictSeconds: seconds(3, 120),
   preNightSeconds: seconds(10, 300),
+  nightSeconds: seconds(15, 600),
+  daySeconds: seconds(30, 3600),
 
   // ---- Flow ----
-  /** auto: phases advance when the timer runs out. manual: the host presses "Next phase". */
-  advanceMode: z.enum(['auto', 'manual']),
-  /** End the night as soon as every living player has locked in (everyone must act — see anti-cheat). */
-  nightAutoResolve: z.boolean(),
-  /** A 'Before Nightfall' round before every night where the Thief steals and the Imposter revives. Runs whenever either role is in the setup, even after they die. */
+  /** The Dawn round before every night where the Thief steals and the Imposter revives. Runs whenever either role is in the setup, even after they die. */
   preNightRound: z.boolean(),
 
   // ---- Voting ----
@@ -65,36 +60,23 @@ export const SettingsSchema = z.object({
 
   // ---- Mafia ----
   mafiaDecision: z.enum(['plurality', 'leader']),
-  godfatherJoinsKill: z.boolean(),
   mafiaWin: z.enum(['parity', 'majority']),
 
-  // ---- Protection ----
-  doctorSelfProtect: z.boolean(),
-  bodyguardSelfProtect: z.boolean(),
-  bodyguardCharges: z.number().int().min(1).max(10),
-  bodyguardConsume: z.enum(['onUse', 'onSave']),
+  // ---- Doctor ----
+  /** alternate (default): may self-save, but never two rounds in a row. */
+  doctorSelfProtect: z.enum(['never', 'alternate', 'always']),
 
-  // ---- Priest ----
-  priestCharges: z.number().int().min(1).max(10),
-  priestAlternateRounds: z.boolean(),
-  priestSelfRevive: z.boolean(),
-  priestActsWhenDead: z.boolean(),
+  // ---- Revivals (Imposter) ----
   revivedKeepRole: z.boolean(),
   revivedKeepEffects: z.boolean(),
   revivedCanActNextPhase: z.boolean(),
 
   // ---- Thief ----
-  thiefAlignment: z.enum(['neutral', 'good', 'mafia']),
-  thiefMode: z.enum(['copy', 'take']),
-  thiefDuration: z.enum(['oneUse', 'permanent']),
-  thiefCharges: z.number().int().min(1).max(10),
+  thiefAlignment: z.enum(['neutral', 'good']),
   thiefStealPassive: z.boolean(),
-  thiefRepeatTarget: z.boolean(),
-  /** power: the Thief picks a POWER and never learns whose it was. player: the Thief picks a player. */
-  thiefTargetMode: z.enum(['power', 'player']),
 
   // ---- Imposter ----
-  imposterAlignment: z.enum(['mafia', 'neutral', 'good']),
+  imposterAlignment: z.enum(['neutral', 'good', 'mafia']),
   /** 0 = unlimited revivals */
   imposterCharges: z.number().int().min(0).max(10),
 
@@ -124,9 +106,9 @@ export type Announcements = z.infer<typeof AnnouncementsSchema>;
 export const DEFAULT_ANNOUNCEMENTS: Announcements = {
   nightDeath: '{name} was found dead at dawn.',
   noDeath: 'The town wakes. Nobody died tonight.',
-  revived: '{name} has returned to the game!',
-  theft: 'Before nightfall, the Thief struck — someone’s power was stolen.',
-  quietPreNight: 'Nothing stirred before nightfall.',
+  revived: '{name} has been revived and is back in the game!',
+  theft: 'At dawn, the Thief struck — someone’s power was stolen for this round.',
+  quietPreNight: 'Dawn passed quietly.',
   silenced: '{name} has been silenced and cannot speak or vote today.',
   voteOut: 'The town has eliminated {name}.',
   noElimination: 'The town could not agree. Nobody was eliminated.',
@@ -137,15 +119,11 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
   return {
     playerCount,
     hostPlays: false,
+    timers: false,
     revealSeconds: 30,
-    nightSeconds: 60,
-    morningSeconds: 10,
-    discussionSeconds: 180,
-    votingSeconds: 45,
-    verdictSeconds: 10,
     preNightSeconds: 30,
-    advanceMode: 'auto',
-    nightAutoResolve: true,
+    nightSeconds: 60,
+    daySeconds: 300,
     preNightRound: true,
     allowVoteChange: false,
     allowSelfVote: false,
@@ -159,27 +137,14 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     detectiveResult: 'binary',
     godfatherAppearsInnocent: false,
     mafiaDecision: 'plurality',
-    godfatherJoinsKill: true,
     mafiaWin: 'parity',
-    doctorSelfProtect: false,
-    bodyguardSelfProtect: false,
-    bodyguardCharges: 1,
-    bodyguardConsume: 'onUse',
-    priestCharges: 2,
-    priestAlternateRounds: false,
-    priestSelfRevive: false,
-    priestActsWhenDead: false,
+    doctorSelfProtect: 'alternate',
     revivedKeepRole: true,
     revivedKeepEffects: false,
     revivedCanActNextPhase: true,
     thiefAlignment: 'neutral',
-    thiefMode: 'take',
-    thiefDuration: 'permanent',
-    thiefCharges: 1,
     thiefStealPassive: true,
-    thiefRepeatTarget: false,
-    thiefTargetMode: 'power',
-    imposterAlignment: 'mafia',
+    imposterAlignment: 'neutral',
     imposterCharges: 0,
     judgeWeight: 2,
     jesterEndsGame: true,

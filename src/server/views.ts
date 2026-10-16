@@ -14,13 +14,14 @@ import {
   checkWin,
   eligibleVoters,
   hasRally,
+  hasUsable,
   heldAbilities,
   nightOptions,
   voteEligibility,
   voteTargets,
   voteWeight,
 } from '../shared/engine';
-import { isMafiaTeam, roleAlignment } from '../shared/roles';
+import { ROLES, isMafiaTeam, roleAlignment } from '../shared/roles';
 import type { Alignment, Room } from '../shared/types';
 import type { ClientView, HostPanel, MeView, PublicGame, PublicPlayer, PublicView } from '../shared/view-types';
 
@@ -146,13 +147,17 @@ function buildMe(room: Room, playerId: string): MeView | null {
   }
   let mafia: MeView['mafia'] = null;
   if (inGame && isMafiaTeam(p.roleId, s)) {
-    const team = room.players.filter((x) => isMafiaTeam(x.roleId, s)).map((x) => ({ id: x.id, name: x.name, roleId: x.roleId! }));
+    const team = room.players
+      .filter((x) => isMafiaTeam(x.roleId, s))
+      .map((x) => ({ id: x.id, name: x.name, roleId: x.roleId!, canAct: x.alive && !!hasUsable(room, x, 'mafia_kill') }));
     const votes: Record<string, string | null> = {};
     if (g!.phase === 'night' && p.alive) {
       for (const a of Object.values(g!.night.actions)) if (a.abilityId === 'mafia_kill') votes[a.actorId] = a.targetId;
     }
     mafia = { team, votes };
   }
+  const knownMafia =
+    inGame && ROLES[p.roleId!]?.knowsMafia ? room.players.filter((x) => isMafiaTeam(x.roleId, s)).map((x) => ({ id: x.id, name: x.name })) : null;
   const allRoles = g && ((!p.alive && s.deadCanSeeRoles) || g.phase === 'game_over') ? Object.fromEntries(room.players.map((x) => [x.id, x.roleId ?? ''])) : null;
   return {
     id: p.id,
@@ -169,6 +174,7 @@ function buildMe(room: Room, playerId: string): MeView | null {
     vote,
     night,
     mafia,
+    knownMafia,
     privateResults: room.privateResults.filter((r) => r.playerId === p.id).map((r) => ({ id: r.id, round: r.round, kind: r.kind, text: r.text })),
     allRoles,
   };

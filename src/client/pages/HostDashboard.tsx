@@ -263,29 +263,29 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
       <p className="mb-3 text-xs text-mute">Rules lock when the game starts, so they can never change mid-match.</p>
       <div className="space-y-2">
         <Group title="Timers" open>
-          <NumberSetting label="Role reveal" value={s.revealSeconds} min={5} max={300} onChange={(v) => patch({ revealSeconds: v })} />
-          <NumberSetting label="Before nightfall" value={s.preNightSeconds} min={10} max={300} onChange={(v) => patch({ preNightSeconds: v })} />
-          <NumberSetting label="Night" value={s.nightSeconds} min={15} max={600} onChange={(v) => patch({ nightSeconds: v })} />
-          <NumberSetting label="Morning announcement" value={s.morningSeconds} min={3} max={120} onChange={(v) => patch({ morningSeconds: v })} />
-          <NumberSetting label="Discussion" value={s.discussionSeconds} min={15} max={1800} onChange={(v) => patch({ discussionSeconds: v })} />
-          <NumberSetting label="Voting" value={s.votingSeconds} min={10} max={600} onChange={(v) => patch({ votingSeconds: v })} />
-          <NumberSetting label="Verdict" value={s.verdictSeconds} min={3} max={120} onChange={(v) => patch({ verdictSeconds: v })} />
+          <Toggle
+            label="Use timers"
+            hint="Off (default): each phase ends as soon as everyone has acted. On: phases also end when the clock runs out."
+            checked={s.timers}
+            onChange={(v) => patch({ timers: v })}
+          />
+          {s.timers && (
+            <>
+              <NumberSetting label="Role reveal" value={s.revealSeconds} min={5} max={300} onChange={(v) => patch({ revealSeconds: v })} />
+              <NumberSetting label="Dawn" value={s.preNightSeconds} min={10} max={300} onChange={(v) => patch({ preNightSeconds: v })} />
+              <NumberSetting label="Night" value={s.nightSeconds} min={15} max={600} onChange={(v) => patch({ nightSeconds: v })} />
+              <NumberSetting label="Day (discussion + vote)" value={s.daySeconds} min={30} max={3600} onChange={(v) => patch({ daySeconds: v })} />
+            </>
+          )}
         </Group>
         <Group title="Flow">
-          <Select label="Phase advance" value={s.advanceMode} options={[['auto', 'Automatic (timers)'], ['manual', 'Host presses Next']]} onChange={(v) => patch({ advanceMode: v })} />
           <Toggle
-            label="“Before Nightfall” round"
-            hint="Thief steals and Imposter revives before each night. Runs only if one of them is in the game."
+            label="Dawn round"
+            hint="Thief steals and Imposter revives at Dawn, before each night. Runs only if one of them is in the game."
             checked={s.preNightRound}
             onChange={(v) => patch({ preNightRound: v })}
           />
-          <Toggle label="End night when everyone locks in" checked={s.nightAutoResolve} onChange={(v) => patch({ nightAutoResolve: v })} />
-          <Toggle
-            label="I’m also playing"
-            hint="Hides every secret from this dashboard."
-            checked={s.hostPlays}
-            onChange={(v) => act({ type: 'set_host_plays', hostPlays: v })}
-          />
+          <Toggle label="I’m also playing" hint="Hides every secret from this dashboard." checked={s.hostPlays} onChange={(v) => act({ type: 'set_host_plays', hostPlays: v })} />
           <Toggle label="Allow late joining" hint="Late joiners always become Villagers." checked={s.allowLateJoin} onChange={(v) => patch({ allowLateJoin: v })} />
         </Group>
         <Group title="Voting">
@@ -302,39 +302,32 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           <Toggle label="Announce who is silenced" checked={s.announceSilenced} onChange={(v) => patch({ announceSilenced: v })} />
           <Toggle label="Dead players can see all roles" hint="Off is safer: ghosts can’t leak with their faces." checked={s.deadCanSeeRoles} onChange={(v) => patch({ deadCanSeeRoles: v })} />
           <Select label="Detective learns" value={s.detectiveResult} options={[['binary', 'Suspicious / not'], ['alignment', 'Exact alignment']]} onChange={(v) => patch({ detectiveResult: v })} />
-          <Toggle label="Godfather appears innocent" checked={s.godfatherAppearsInnocent} onChange={(v) => patch({ godfatherAppearsInnocent: v })} />
         </Group>
-        <Group title="Mafia">
-          <Select label="Team decision" value={s.mafiaDecision} options={[['plurality', 'Most picks (Godfather breaks ties)'], ['leader', 'Godfather decides']]} onChange={(v) => patch({ mafiaDecision: v })} />
-          <Toggle label="Godfather joins the hit" checked={s.godfatherJoinsKill} onChange={(v) => patch({ godfatherJoinsKill: v })} />
-          <Select label="Mafia win when" value={s.mafiaWin} options={[['parity', 'They equal the rest'], ['majority', 'They outnumber the rest']]} onChange={(v) => patch({ mafiaWin: v })} />
+        <Group title="Mafia & Godfather">
+          <Select label="Mafia kill decision" value={s.mafiaDecision} options={[['plurality', 'Most picks'], ['leader', 'First-seated Mafia decides']]} onChange={(v) => patch({ mafiaDecision: v })} />
+          <Select label="Mafia side wins when" value={s.mafiaWin} options={[['parity', 'They equal the rest'], ['majority', 'They outnumber the rest']]} onChange={(v) => patch({ mafiaWin: v })} />
+          <Toggle label="Godfather appears innocent to the Detective" checked={s.godfatherAppearsInnocent} onChange={(v) => patch({ godfatherAppearsInnocent: v })} />
         </Group>
-        <Group title="Doctor & Bodyguard">
-          <Toggle label="Doctor can protect themselves" checked={s.doctorSelfProtect} onChange={(v) => patch({ doctorSelfProtect: v })} />
-          <Toggle label="Bodyguard can protect themselves" checked={s.bodyguardSelfProtect} onChange={(v) => patch({ bodyguardSelfProtect: v })} />
-          <NumberSetting label="Bodyguard uses" value={s.bodyguardCharges} min={1} max={10} suffix="" onChange={(v) => patch({ bodyguardCharges: v })} />
-          <Select label="A use is spent" value={s.bodyguardConsume} options={[['onUse', 'Whenever used'], ['onSave', 'Only when it saves someone']]} onChange={(v) => patch({ bodyguardConsume: v })} />
+        <Group title="Doctor">
+          <Select
+            label="Doctor saving themselves"
+            value={s.doctorSelfProtect}
+            options={[['alternate', 'Allowed, not two rounds in a row'], ['always', 'Always allowed'], ['never', 'Never']]}
+            onChange={(v) => patch({ doctorSelfProtect: v })}
+          />
         </Group>
-        <Group title="Priest">
-          <NumberSetting label="Revival charges" value={s.priestCharges} min={1} max={10} suffix="" onChange={(v) => patch({ priestCharges: v })} />
-          <Toggle label="Only every other round" checked={s.priestAlternateRounds} onChange={(v) => patch({ priestAlternateRounds: v })} />
-          <Toggle label="Can still revive after dying" checked={s.priestActsWhenDead} onChange={(v) => patch({ priestActsWhenDead: v })} />
-          <Toggle label="Can revive themselves" hint="Only matters if they can act while dead." checked={s.priestSelfRevive} onChange={(v) => patch({ priestSelfRevive: v })} />
+        <Group title="Revivals (Imposter)">
           <Toggle label="Revived players keep their role" checked={s.revivedKeepRole} onChange={(v) => patch({ revivedKeepRole: v })} />
           <Toggle label="Revived players keep status effects" checked={s.revivedKeepEffects} onChange={(v) => patch({ revivedKeepEffects: v })} />
           <Toggle label="Revived players can vote the next day" checked={s.revivedCanActNextPhase} onChange={(v) => patch({ revivedCanActNextPhase: v })} />
         </Group>
         <Group title="Thief">
-          <Select label="Thief steals" value={s.thiefTargetMode} options={[['power', 'A power — blind (never learns whose)'], ['player', 'From a chosen player']]} onChange={(v) => patch({ thiefTargetMode: v })} />
-          <Select label="Thief alignment" value={s.thiefAlignment} options={[['neutral', 'Neutral'], ['good', 'Town'], ['mafia', 'Mafia (solo)']]} onChange={(v) => patch({ thiefAlignment: v })} />
-          <Select label="Stealing" value={s.thiefMode} options={[['take', 'Takes it (target loses it)'], ['copy', 'Copies it (target keeps it)']]} onChange={(v) => patch({ thiefMode: v })} />
-          <Select label="Stolen power lasts" value={s.thiefDuration} options={[['oneUse', 'One use'], ['permanent', 'Permanently']]} onChange={(v) => patch({ thiefDuration: v })} />
-          <NumberSetting label="Steal attempts" value={s.thiefCharges} min={1} max={10} suffix="" onChange={(v) => patch({ thiefCharges: v })} />
-          <Toggle label="Can steal passive powers (Judge vote)" checked={s.thiefStealPassive} onChange={(v) => patch({ thiefStealPassive: v })} />
-          <Toggle label="Can steal the same power / player twice" checked={s.thiefRepeatTarget} onChange={(v) => patch({ thiefRepeatTarget: v })} />
+          <Select label="Thief’s side" value={s.thiefAlignment} options={[['neutral', 'Neutral'], ['good', 'Town']]} onChange={(v) => patch({ thiefAlignment: v })} />
+          <Toggle label="Can steal the Judge’s double vote" checked={s.thiefStealPassive} onChange={(v) => patch({ thiefStealPassive: v })} />
+          <p className="px-2 pb-1 text-xs text-mute">Every Dawn the Thief picks a power (never a person). It lasts that round; the same power can’t be taken two rounds in a row.</p>
         </Group>
         <Group title="Imposter">
-          <Select label="Imposter’s side" value={s.imposterAlignment} options={[['mafia', 'Mafia'], ['neutral', 'Neutral'], ['good', 'Town']]} onChange={(v) => patch({ imposterAlignment: v })} />
+          <Select label="Imposter’s side" value={s.imposterAlignment} options={[['neutral', 'Neutral'], ['good', 'Town'], ['mafia', 'Mafia']]} onChange={(v) => patch({ imposterAlignment: v })} />
           <NumberSetting label="Revivals (0 = unlimited)" value={s.imposterCharges} min={0} max={10} suffix="" onChange={(v) => patch({ imposterCharges: v })} />
         </Group>
         <Group title="Jester">
@@ -399,7 +392,7 @@ function HostGame({ view, send, serverNow }: GameProps) {
       {/* Control bar */}
       <div className="card sticky top-16 z-30 flex flex-wrap items-center gap-3 p-3">
         <div className="mr-auto">
-          <div className="eyebrow">{g.phase === 'night' || g.phase === 'prenight' ? `Night ${g.round}` : g.round ? `Day ${g.round}` : 'Start'}</div>
+          <div className="eyebrow">{g.round ? `Round ${g.round}` : 'Start'}</div>
           <div className="font-[family-name:var(--font-display)] text-xl" data-testid="host-phase">
             {PHASE_LABEL[g.phase]}
           </div>
@@ -407,12 +400,16 @@ function HostGame({ view, send, serverNow }: GameProps) {
         <Timer endsAt={g.phaseEndsAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
         {!over && (
           <div className="flex flex-wrap gap-2">
-            <button className="btn btn-ghost !min-h-10 text-sm" disabled={busy} onClick={() => act({ type: 'extend', seconds: -30 })} aria-label="Remove 30 seconds">
-              −30s
-            </button>
-            <button className="btn btn-ghost !min-h-10 text-sm" disabled={busy} onClick={() => act({ type: 'extend', seconds: 30 })} aria-label="Add 30 seconds">
-              +30s
-            </button>
+            {view.settings.timers && (
+              <>
+                <button className="btn btn-ghost !min-h-10 text-sm" disabled={busy} onClick={() => act({ type: 'extend', seconds: -30 })} aria-label="Remove 30 seconds">
+                  −30s
+                </button>
+                <button className="btn btn-ghost !min-h-10 text-sm" disabled={busy} onClick={() => act({ type: 'extend', seconds: 30 })} aria-label="Add 30 seconds">
+                  +30s
+                </button>
+              </>
+            )}
             <button className="btn btn-ghost !min-h-10 text-sm" disabled={busy} onClick={() => act({ type: g.paused ? 'resume' : 'pause' })}>
               {g.paused ? '▶ Resume' : '⏸ Pause'}
             </button>
@@ -517,7 +514,7 @@ function HostGame({ view, send, serverNow }: GameProps) {
           </Section>
 
           {h.secrets && (g.phase === 'night' || g.phase === 'prenight') && h.nightActions && (
-            <Section title={g.phase === 'prenight' ? 'Before-nightfall actions (secret)' : 'Night actions (secret)'}>
+            <Section title={g.phase === 'prenight' ? 'Dawn actions (secret)' : 'Night actions (secret)'}>
               {h.nightActions.length === 0 ? (
                 <p className="text-sm text-mute">No actions yet.</p>
               ) : (

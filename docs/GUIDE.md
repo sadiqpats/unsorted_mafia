@@ -7,7 +7,7 @@ The same guide is built into the website at **`/guide`** (linked from the home p
 ## 1. Before guests arrive (5 minutes)
 
 1. Start the server (see the README) or open your deployed URL.
-2. On your phone or laptop, open the site and tap **Host a Game**.
+2. On your phone or laptop, open the site, tap **Host a Game** and enter the **host code** (only hosts have it; guests never need it).
 3. Enter your name and the number of players (any whole number from **5 to 22**).
 4. Choose:
    - **Game Master (default):** you don’t play. You can see every role (hidden behind a “Show roles” button) and fix mistakes.
@@ -25,14 +25,14 @@ The same guide is built into the website at **`/guide`** (linked from the home p
 
 The app proposes a balanced mix for your table size (see the table on `/guide`). Change it with **− / +**:
 
-| Players | Mafia team | Specials added |
+| Players | Mafia | Specials added |
 |---|---|---|
-| 5 | 1 Mafia | Detective, Doctor |
-| 6–8 | Godfather + 1 Mafia | + Jester (7+), Judge (8+) |
-| 9–12 | Godfather + 2 Mafia | + Priest (9+), Bodyguard (10+), Thief (12+) |
-| 13–16 | Godfather + 3 Mafia | all specials |
-| 17–19 | Godfather + 4 Mafia | all specials |
-| 20–22 | Godfather + 5 Mafia | all specials |
+| 5–6 | 1 | Detective, Doctor |
+| 7 | 2 | + Jester |
+| 8–11 | 2 | + Godfather (8+), Judge (9+), Thief (10+) |
+| 12–16 | 3 | + Imposter (12+) |
+| 17–21 | 4 | all specials |
+| 22 | 5 | all specials |
 
 Everyone else is a Villager. Red messages (e.g. “roles add up to 9, need 10”) block the start. Gold messages are only advice.
 
@@ -47,20 +47,22 @@ Everyone else is a Villager. Red messages (e.g. “roles add up to 9, need 10”
 
 ## 5. How a round flows
 
+**There are no timers by default.** Each phase ends as soon as everyone has acted. The host can press **Next phase** if someone has stepped away, or switch timers on in House rules → Timers.
+
 | Phase | What happens | Who acts |
 |---|---|---|
 | 🂠 Role reveal | Press and hold the card to see your role privately. Tap “I’ve seen my role”. | Everyone |
-| 🕯 Before Nightfall | *(Only if a Thief or Imposter is in the game.)* Everyone opens their panel. The Thief picks a **power** to steal, not a person, and never learns whose it was. They take over that job from that night on; only the victim is told, privately, and plays on as a Villager. The Imposter may revive a dead player or skip. Every phone then shows **that** it happened, never who. The round keeps running even after they die. | Everyone (others tap a decoy) |
-| (screens) | During Before Nightfall, Night and Voting, phones show **only the action**: no player list, feed or extra text. | |
-| 🌙 Night | Open the secret panel and lock in a choice. Powers resolve in secret. | Everyone (villagers pick a suspect) |
-| 🌅 Morning | Public announcement: deaths, revivals, who is silenced. Private results go to that player’s notebook. | — |
-| 🗣 Discussion | Talk, accuse, defend. | Living, not-silenced players |
-| 🗳 Voting | Secret ballot. Most (weighted) votes is eliminated. | Living, not-silenced players |
-| ⚖ Verdict | Result revealed, then night falls again. | — |
+| 🕯 Dawn | *(Only if a Thief or Imposter is in the game.)* The Thief picks a **power**, never a person, and uses it for this round. The owner is told privately and gets it back next Dawn. The same power can't be taken two rounds in a row. From round 2 the Imposter may revive a dead player or skip. Every phone is told **that** something happened, never who did it. | Everyone (others press the dummy button) |
+| 🌙 Night | Open the secret panel and lock in a choice. Mafia kill; Doctor protects (self too, never two rounds in a row); Detective investigates; Godfather silences. | Everyone (others press the dummy button) |
+| ☀ Day | The night's news appears, then talk and vote in secret. The Day ends when everyone has voted. | Living, not-silenced players |
 
-**Roles stay secret until the game is over.** Deaths are announced by name only; every role is revealed on the game-over screen (the host can change this).
+During Dawn, Night and Day, phones show **only the action**: no player list, feed or extra text.
 
-**Win conditions:** Town wins when all Mafia are gone. Mafia wins when they equal or outnumber everyone else. The Jester wins if voted out during the day. The Thief and Priest win if they’re alive at the end.
+**Roles stay secret until the game is over.** Deaths are announced by name only.
+
+**Win conditions:** the Town wins when every **Mafia** member is dead (the Godfather alive or dead doesn't matter). The Mafia side (Mafia + Godfather) wins when it equals or outnumbers everyone else. The Jester wins if voted out by Day. The Thief and Imposter win if they're alive at the end.
+
+**The Godfather** is not a Mafia member. He is privately shown who the Mafia are, they don't know him, and he silences one player each night and defends the Mafia by day.
 
 ## 6. Host controls during play
 

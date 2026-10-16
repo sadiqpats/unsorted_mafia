@@ -1,117 +1,79 @@
 # Rules, defaults & edge cases
 
-Every rule below is a **house rule** the host can change in the lobby (Host dashboard → House rules). Settings are validated (Zod) and **frozen into the game when it starts**, so they can't change mid-match. Code: `src/shared/settings.ts` (defaults), `src/shared/engine.ts` (behaviour).
+Every rule below can be changed by the host in the lobby (Host dashboard → House rules). Settings are checked by the server and **frozen when the game starts**, so they can't change mid-match. Code: `src/shared/settings.ts` (defaults), `src/shared/engine.ts` (behaviour).
 
-## Game lifecycle (server state machine)
+## A round: Dawn → Night → Day
 
 ```
-lobby → reveal → prenight* → night → [resolve] → morning → discussion → voting → [tally] → verdict → night …
-                                   ↘ game_over                      ↘ (runoff) voting
-                                                                     ↘ game_over
+lobby → role reveal → [Dawn] → Night → Day → [Dawn] → Night → Day … → game over
 ```
 
-- *`prenight` (“Before Nightfall”) happens before **every** night when `preNightRound` is on (default) **and** a Thief or Imposter is in the setup. It runs even after they die, so its presence reveals nothing. Every living player gets a choice (decoy for most). Order: Imposter revive (90), then Thief steal (95). Public announcement: `theft` template (no names) and/or `revived` (the revived player is named), otherwise `quietPreNight`. Victory is checked afterwards (a revival can hand the Mafia parity).
-- Each phase has a server deadline (`phaseEndsAt`). Clients only display it.
-- `advanceMode: auto` (default): the server advances when the timer expires. `manual`: only the host advances.
-- Early completion (auto mode): reveal ends when everyone has acknowledged. Night ends when every living player has locked in (`nightAutoResolve`, works in both modes). Voting ends when every eligible voter has voted (only when vote changes are off).
-- Every phase change increments `phaseSeq`. Night actions, votes and host “Next” must quote the current `phaseSeq`, or they are rejected (`phase_closed`). This blocks late, replayed and double-clicked actions.
-- **Nobody can freeze the game:** missing night actions are skipped when the timer expires, and missing votes simply don't count.
+- **No timers by default** (`timers: false`). Each phase ends **as soon as everyone has acted**:
+  - **Role reveal** ends when every player has tapped “I’ve seen my role”.
+  - **Dawn** and **Night** end when every living player has locked in a choice (players without a power press the dummy button).
+  - **Day** (news + discussion + secret vote) ends when every eligible player has voted.
+- The host can always press **Next phase** (for example if someone has left the table). The host can also turn **timers** on: Dawn, Night and Day then also end when their clock runs out.
+- **Dawn** happens before every night when a Thief or Imposter is in the setup (`preNightRound`, on by default). It keeps happening after they die, so its presence reveals nothing.
+- Each phase change increments `phaseSeq`. Actions must quote the current value, so late, replayed and double-clicked actions are rejected.
+- Phones show **only the action** during Dawn, Night and Day. Each phase opens with a short news card: Dawn shows yesterday's vote result, Night shows what happened at Dawn, and Day shows what happened in the night.
 
-## Night resolution order
+## Roles stay secret until the game is over
+Deaths and eliminations are announced by **name only**. Every role is revealed on the game-over screen. (House rule `revealRoleOnDeath` can turn reveal-on-death back on.)
 
-| Priority | Step | Notes |
-|---|---|---|
-| 10 | Doctor protect, Bodyguard guard, Villager *Barricade* | Build the protection set. Multiple protectors on one target are fine. |
-| 20 | Godfather silence | Target is silenced for the **next day** (discussion + vote). |
-| 50 | Mafia hit decided | See *Mafia decision* below. |
-| 55 | Attacks resolve | Protected → survives (one save is counted). Unprotected → dies. |
-| 80 | Detective investigate, Villager *Hunch* | Results go to the actor's private notebook. |
-| 90 | Priest revive | Only players who were dead **before** this night. |
-| 95 | Thief steal | Stolen ability is usable from the **next** night. |
+## Characters (9)
 
-Night actions are **simultaneous**: a player killed tonight still has their action resolve (a Detective killed tonight still gets their result). The exception is the Thief's steal, which fails if the Thief dies. Players without a night ability submit a **suspicion** (“decoy”) that has no effect except the end-game “most suspected” stat. This is the anti-cheat measure described in GUIDE.md.
-
-## Mafia decision (`mafiaDecision`)
-
-- **plurality (default):** each living Mafia-team member picks a target, and the most picks wins. Ties go to the **leader's** pick: the Godfather if they join the hit, otherwise the lowest-seated member. If the leader's pick isn't among the tied targets, the earliest submitted tied pick wins.
-- **leader:** the leader's pick is final. Others' picks are suggestions (used as a fallback only if the leader didn't pick).
-- Mafia members see each other's live picks and may change their own until the night ends.
-- The Mafia cannot target Mafia-team members. No picks means no kill.
-- `godfatherJoinsKill` (default **on**).
-
-## Roles — defaults and configuration
-
-| Role | Alignment | Default | Configurable |
+| Role | Side | Default | Configurable |
 |---|---|---|---|
-| Mafia | Mafia | Joins the nightly hit | decision mode |
-| Godfather | Mafia (not a separate faction) | Silence 1 player/night (unlimited) + joins hit + tie-breaker | joins hit; appears innocent to Detective |
-| Detective | Good | Investigate 1/night; result **Suspicious / Not suspicious** | `detectiveResult: alignment` shows Good/Mafia/Neutral |
-| Doctor | Good | Protect 1/night, **not** self | self-protect |
-| Bodyguard | Good | Protect **once per game**, not self; charge spent **when used** | charges; self; spent only `onSave` |
-| Judge | Good | Vote counts **×2**, applied by the server; still one ballot | weight 1–5 |
-| Villager | Good | No power; picks a suspect at night | up to 2 optional powers (below) |
-| Thief | Neutral | Steals **Before Nightfall** by naming a **power** (not a player) — the server takes it from whoever holds it and the Thief **never learns whose it was**; only the victim is told (privately). **1** steal, **taken over permanently**, usable that same night; the victim keeps their team but plays as a Villager; can steal passives | power vs player targeting (`thiefTargetMode`); alignment; copy vs take; one use vs permanent; charges; passives; repeat targets |
-| Priest | Neutral | **2** revivals, only while alive, not self | charges; alternate rounds only; acts when dead; self-revive; revived keep role / effects; can vote next day |
-| Imposter | **Mafia** (wins with them, but doesn't know them or join the hit) | Revives any dead player **Before Nightfall** (from round 2), or skips; **unlimited** revivals; dead Imposter can't act | side (mafia/neutral/good); revival limit (`imposterCharges`, 0 = unlimited) |
-| Jester | Neutral | Wins alone if **voted out by day**; ends the game | `jesterEndsGame: false` → credited, game continues |
+| **Mafia** | Mafia | Each night the Mafia pick one victim (most picks wins; ties go to the first-seated member). They know each other. | decision mode |
+| **Godfather** | Mafia side, **not** a Mafia member | Privately shown **who the Mafia are** (they don't know him). Silences one player each night for the next Day. Doesn't kill. Defends the Mafia in discussion. | Detective sees him as innocent |
+| **Detective** | Town | Investigates one player each night; private result: suspicious / not suspicious. | exact alignment instead |
+| **Doctor** | Town | Protects one player each night. **May save themselves, but never two rounds in a row.** | never / always self-save |
+| **Judge** | Town | Day vote counts ×2 (applied by the server). | weight 1–5 |
+| **Villager** | Town | No power; presses the dummy button at night. | up to 2 optional powers (off) |
+| **Thief** | Neutral | Every **Dawn** (from round 1) steals one **power**. He sees powers, never people, and never learns whose it was. It lasts **that round**; the owner gets it back next Dawn. He can't take the **same power two rounds in a row**. Wins by surviving. | side (neutral/town); may steal Judge vote |
+| **Imposter** | **Neutral** | From **round 2**, at **Dawn**, may revive one dead player, or skip. Everyone is told who came back, never who did it. Unlimited revivals. Wins by surviving. | side; revival limit |
+| **Jester** | Neutral | Wins alone if voted out by Day. | game continues instead |
 
-### Thief details (fully configurable)
-- **Blind steal (default `thiefTargetMode: power`):** the list shows every transferable power of every role in the *setup* (even if its holder is dead), so it reveals nothing. If several living players hold that power, one is picked at random. If nobody alive holds it, the attempt is spent and the Thief is told “Nobody could give up that power”. The public sees nothing in that case.
-- Default (with the pre-night round): steal in **Before Nightfall**, take the power **permanently**, use it that same night. Setting `preNightRound: false` moves stealing back to the night (stolen power usable from the next night).
-- **Transferable:** Silence, Investigate, Protect, Guard, Revive, Judge's weighted vote (if `thiefStealPassive`), and Villager powers.
-- **Never transferable:** the Mafia hit, win conditions, host privileges, and abilities the target is itself holding as stolen.
-- If the target has nothing transferable, the Thief is told “nothing to steal” and **the attempt is spent**.
-- The Thief can't steal while already holding a stolen ability.
-- **take** mode: the victim is told privately that their ability was stolen, and gets it back when the Thief's copy expires or the Thief dies.
-- The Detective sees the Thief's own alignment. Stealing never changes alignment.
-- A stolen ability keeps its rules (e.g. a stolen Protect uses the Doctor self-protect rule).
+Removed for good: **Priest** and **Bodyguard**.
 
-### Priest details
-- Can't revive a living player (living players are never offered as targets). A revival of someone revived by other means (e.g. a host restore) has no effect, and **no charge is used**.
-- A revived player returns with their original role and alignment (`revivedKeepRole`). Silence is cleared (`revivedKeepEffects: false`). They may vote the next day (`revivedCanActNextPhase`).
-- Revivals are always announced publicly: “{name} has returned to the game!”
+### Thief details
+- The power list shows every stealable power of every role **in the setup** (even if its holder is dead), so it reveals nothing.
+- If several living players hold that power, one is chosen at random. If nobody alive holds it, the attempt fails quietly and the Thief is told “Nobody could give up that power this round”.
+- The robbed player is told privately: *“Your power has been stolen for this round… just press the button on your screen.”* Their night screen shows the dummy button.
+- **Stealing the Mafia Hit:** that night the Thief chooses his own victim from **everyone else alive** (the list doesn't hide the Mafia, so he learns nothing). The robbed Mafia member presses the dummy button. Any other Mafia member still makes the Mafia kill, so two deaths are possible. Protection stops either kill.
+- Stealing the Judge's vote gives the Thief the ×2 vote that Day.
 
-### Villager optional powers (all **off** by default; suggestions; max two)
-- **Hunch** (information, once): learn whether a player has any night power.
-- **Barricade** (defensive, once): protect yourself for one night.
-- **Rally** (voting, once): one day vote counts double.
+## Night order (lower first)
+| Priority | Step |
+|---|---|
+| 10 | Doctor protect, Villager *Barricade* |
+| 20 | Godfather silence |
+| 50 | Mafia hit (team decision) and the Thief's stolen hit (solo) |
+| 55 | Attacks resolve: protected targets survive, others die |
+| 80 | Detective investigate, Villager *Hunch* |
 
-## Voting
-- Eligible: alive, not silenced today, not just revived with `revivedCanActNextPhase: false`.
-- One ballot per seat. Changing a vote only with `allowVoteChange`. No self-vote unless `allowSelfVote`. Abstain allowed by default.
-- **Weights are computed on the server when voting closes:** Judge × `judgeWeight`, Rally ×2. A dead or ineligible Judge's vote isn't counted.
-- **Abstentions** form a “nobody” pile. If it is **≥** the leading total, nobody is eliminated.
-- **Ties** (`tieRule`): `none` (default, nobody eliminated), `runoff` (one revote among the tied; a second tie means nobody), or `host` (the game waits for the host to pick one of the tied or spare everyone).
-- What's revealed (`voteReveal`): `outcome`, `tally` (default, weighted totals), or `full` (who voted for whom). All votes are shown at game over.
+Dawn order: Imposter revive (90), then Thief steal (95).
 
-## Victory (checked after every night, every elimination and every host correction)
-1. **Jester:** checked at the moment of a day elimination.
-2. **Nobody alive** → draw.
-3. **No Mafia-aligned players alive** → **Town** wins (all Good-aligned players win, alive or dead).
-4. **Mafia ≥ everyone else** (`parity`, default) or **Mafia > everyone else** (`majority`) → **Mafia** wins.
-5. Survivor neutrals (Thief, Priest) still alive **co-win** with whoever won. A Jester who won earlier (with `jesterEndsGame: false`) is also listed.
+## Voting (Day)
+- Eligible: alive, not silenced today, not just revived (if that house rule is on). The Day ends when **all eligible players** have voted.
+- One secret ballot per player; abstaining allowed; no self-vote by default.
+- Weights are counted on the server when the Day closes (Judge ×2, Rally ×2).
+- If “no one” (abstain) gets at least as many votes as the leader, nobody is eliminated.
+- Ties: nobody eliminated (default), a runoff, or the host decides.
 
-If a night produces both outcomes at once (e.g. the last Mafia and the last townsperson die together), rule 2 applies first, then 3, then 4.
+## Victory
+1. **Jester**: voted out by Day → wins alone (ends the game by default).
+2. Nobody alive → draw.
+3. **Town wins when every Mafia member is dead**, even if the Godfather is still alive.
+4. **Mafia side wins** when the Mafia plus the Godfather equal or outnumber everyone else alive.
+5. Thief and Imposter still alive at the end **co-win** with whoever won.
 
 ## Edge cases
 | Situation | Behaviour |
 |---|---|
-| Player targeted by several abilities | All resolve in priority order. Protection beats attacks. |
-| Doctor + Bodyguard on the same target | Saved once. The Bodyguard's charge is spent (in `onUse` mode). |
-| Silenced player tries to vote | Server rejects with “You are silenced today and cannot vote.” |
-| Dead player tries to act | No options are offered and the server rejects it (except a dead Priest with `priestActsWhenDead`). |
-| Priest targets a living player | Not offered. A forged request is rejected (`invalid_target`). |
-| Thief targets a role with nothing transferable | “Nothing to steal”, attempt spent. |
-| Killed and revived in the same night | Can't happen: revive targets must already be dead when the night starts. |
-| Two factions win at once | Order above. |
-| Player disconnects mid-phase | Their seat stays. Timers keep going and they rejoin with the same token. |
-| Host disconnects | The game continues on timers. The host reopens the link to regain control. |
-| Timer expires with actions pending | Pending actions are skipped. |
-| Restart / cancel | Restart returns everyone to the lobby (same seats, roles cleared, log kept). Close room ends all sessions. |
+| Someone leaves mid-phase | With no timers the host presses **Next phase**. Missing actions are skipped and missing votes don't count. |
+| Thief steals a power whose holder dies that night | The power still returns to nobody; next Dawn it's simply available again. |
+| Thief dies holding a stolen power | It returns to its owner immediately. |
+| Revival hands the Mafia side parity | The game ends immediately with a Mafia win. |
 | Host correction (eliminate/restore) | Always announced publicly and logged. Victory is re-checked. |
-| Late join (off by default) | Joiners enter as Villagers so the secret distribution can't be inferred or gamed. |
-
-## Role secrecy
-- **Default (`revealRoleOnDeath: false`): no role is revealed when someone dies.** Death, vote-out and host-correction announcements give only the name. The TV wall shows the cut photo with “Eliminated”. Every role is revealed on the **game-over** screen.
-- If the Jester is voted out and the game continues (`jesterEndsGame: false`), the “was the Jester” line is held back until game over.
-- The host can switch “Reveal role when a player dies” on in House rules → Information.
+| Late join (off by default) | Late joiners become Villagers. |

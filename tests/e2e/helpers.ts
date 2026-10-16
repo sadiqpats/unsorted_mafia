@@ -27,6 +27,7 @@ export async function newPhone(browser: Browser): Promise<Page> {
 export async function createRoom(browser: Browser, count: number): Promise<{ host: Page; code: string }> {
   const host = await newPhone(browser);
   await host.goto('/host');
+  await host.getByLabel('Host code').fill('e2e-host-code');
   await host.getByLabel('Your display name').fill('Gamemaster');
   await host.getByLabel('Type player count').fill(String(count));
   await host.getByRole('button', { name: 'Create room' }).click();
@@ -63,15 +64,9 @@ export async function setRoles(host: Page, counts: Record<string, number>) {
   }
 }
 
-export async function setupTable(browser: Browser, count: number, roles?: Record<string, number>, opts: { manual?: boolean } = { manual: true }): Promise<Table> {
+export async function setupTable(browser: Browser, count: number, roles?: Record<string, number>): Promise<Table> {
   const { host, code } = await createRoom(browser, count);
   if (roles) await setRoles(host, roles);
-  if (opts.manual) {
-    // Deterministic tests: the host advances phases instead of the timers.
-    await host.locator('summary', { hasText: 'Flow' }).click();
-    await host.getByLabel('Phase advance').selectOption('manual');
-    await expect(host.getByLabel('Phase advance')).toHaveValue('manual');
-  }
   const seats: Seat[] = [];
   for (let i = 1; i <= count; i++) seats.push({ name: `P${i}`, page: await joinRoom(browser, code, `P${i}`) });
   await expect(host.getByText(`${count} ready`)).toBeVisible();
@@ -118,10 +113,10 @@ export async function nightAct(seat: Seat, abilityId: string, target: string | n
   const p = seat.page;
   const card = p.locator(`[data-option="${abilityId}"]`);
   // If this was the last choice of the night, the server resolves immediately and the panel disappears.
-  const done = card.getByRole('button', { name: /✓ Locked|Change pick/ }).or(p.locator('h1', { hasText: /^(Morning|Game Over)$/ })).first();
+  const done = card.getByRole('button', { name: /✓ Locked|Change pick/ }).or(p.locator('h1', { hasText: /^(Day|Night|Game Over)$/ })).first();
   for (let attempt = 1; ; attempt++) {
     try {
-      const open = p.getByRole('button', { name: /Open your (pre-night|night) panel|Review your choice/ });
+      const open = p.getByRole('button', { name: /Open your (dawn|night) panel|Review your choice/ });
       if (await open.isVisible()) await open.click();
       if (target === null) {
         await card.getByRole('button', { name: 'Skip' }).click({ timeout: 8000 });
@@ -143,7 +138,7 @@ export async function skipRest(t: Table, done: Set<string>) {
   for (const s of await t.alive()) {
     if (done.has(s.name)) continue;
     const p = s.page;
-    const open = p.getByRole('button', { name: /Open your (pre-night|night) panel|Review your choice/ });
+    const open = p.getByRole('button', { name: /Open your (dawn|night) panel|Review your choice/ });
     if (await open.isVisible()) await open.click();
     const cards = p.locator('[data-option]');
     const n = await cards.count();
@@ -160,10 +155,12 @@ export async function skipRest(t: Table, done: Set<string>) {
  */
 export async function vote(seat: Seat, target: string | null) {
   const p = seat.page;
-  const done = p.getByText('Your vote is in.');
+  // The last vote ends the Day at once, so a phase change also proves the vote landed.
+  const done = p.getByText('Your vote is in.').or(p.locator('h1', { hasText: /^(Dawn|Night|Game Over)$/ })).first();
   for (let attempt = 1; ; attempt++) {
     try {
       const open = p.getByRole('button', { name: /Open your ballot|Review your vote/ });
+      if (await done.isVisible()) return;
       if (await open.isVisible()) await open.click();
       if (target === null) await p.getByRole('radio', { name: 'No one (abstain)' }).click({ timeout: 8000 });
       else await p.getByRole('radio', { name: target, exact: true }).click({ timeout: 8000 });
@@ -193,3 +190,11 @@ export async function advanceTo(t: Table, phase: string) {
 }
 
 export { nameRole };
+
+/** Host presses "Next phase" only if the phase is still the given one (it may have ended by itself). */
+export async function nextIfStill(t: Table, phase: string) {
+  if ((await hostPhase(t)) === phase) {
+    await t.host.getByRole('button', { name: /Next phase/ }).click();
+    await expect(t.host.getByTestId('host-phase')).not.toHaveText(phase);
+  }
+}

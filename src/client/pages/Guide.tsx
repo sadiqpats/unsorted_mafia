@@ -57,7 +57,7 @@ export default function Guide() {
         <Section title="Hosting a game" className="scroll-mt-20" aside={<Link className="btn btn-primary !min-h-9 !py-1 text-sm" to="/host">Host now</Link>}>
           <ol id="host" className="space-y-4">
             <Step n={1} title="Create the room">
-              Tap <b>Host a Game</b>, enter your name and how many people are playing (any number from 5 to 22). Decide whether you are <b>playing</b> or just running the
+              Tap <b>Host a Game</b>, enter the <b>host code</b> (only Unsorted Plans hosts have it — guests never need it), your name and how many people are playing (any number from 5 to 22). Decide whether you are <b>playing</b> or just running the
               game as <b>Game Master</b>.
             </Step>
             <Step n={2} title="Let people in">
@@ -107,37 +107,31 @@ export default function Guide() {
         <Section title="A round, step by step">
           <ol id="round" className="space-y-3 text-sm">
             <li>
-              <b className="text-gold">🕯 Before Nightfall.</b> (Only when a Thief or Imposter is in the game.) Everyone opens their panel and makes a choice. The Thief
-              picks a <i>power</i> to steal (not a person) and never learns whose it was — they take over that job, and only the victim is told, privately. The Imposter may bring a dead player back,
-              or skip. Every phone then shows <i>that</i> something happened — never who did it. The round keeps running even after they die, so nobody can tell.
+              <b className="text-gold">⏱ No timers.</b> Each phase ends as soon as everyone has acted. The host can press <b>Next phase</b> if someone has
+              stepped away, or switch timers on in the house rules.
             </li>
             <li>
-              <b className="text-gold">🌙 Night.</b> Everyone opens their secret panel and locks in a choice. Players with a power use it (kill, protect, investigate,
-              silence, steal, revive). Players without one simply choose who they suspect — so the whole table is tapping at once.
+              <b className="text-gold">🕯 Dawn.</b> (Only when a Thief or Imposter is in the game.) Everyone opens their panel and makes a choice. The Thief picks a{' '}
+              <i>power</i> (never a person) to use for this round. From round 2 the Imposter may bring a dead player back. Every phone is told what happened, never who did it.
             </li>
             <li>
-              <b className="text-gold">🌅 Morning.</b> The app announces what happened: who died, who came back, who was silenced. Private results (like the Detective’s)
-              arrive in your own notebook — check it under your privacy shield.
+              <b className="text-gold">🌙 Night.</b> Everyone locks in a choice. The Mafia pick a victim; the Doctor protects (themselves too, but not two rounds in a row);
+              the Detective investigates; the Godfather silences someone. Everyone else presses the dummy button, so the whole table is tapping at once.
             </li>
             <li>
-              <b className="text-gold">🗣 Discussion.</b> Talk! Accuse, defend, bluff. Silenced players must stay quiet. Dead players stay silent for the rest of the game.
-            </li>
-            <li>
-              <b className="text-gold">🗳 Voting.</b> Vote in secret on your phone. Most votes is eliminated (the Judge counts double). Ties follow the house rule.
-            </li>
-            <li>
-              <b className="text-gold">⚖ Verdict.</b> The result is revealed — then night falls again, until one side wins.
+              <b className="text-gold">☀ Day.</b> The night’s news appears, then you talk and vote in secret. The Day ends when everyone has voted. Most votes is out (the
+              Judge counts double). Roles are never revealed until the game is over.
             </li>
           </ol>
           <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
             <p className="rounded-xl border border-good/40 p-3">
-              <b className="text-good">⛨ Town wins</b> when every Mafia member is gone.
+              <b className="text-good">⛨ Town wins</b> when every Mafia member is gone (the Godfather doesn’t count).
             </p>
             <p className="rounded-xl border border-crimson/50 p-3">
-              <b className="text-ember">🗡 Mafia wins</b> when they equal or outnumber everyone else.
+              <b className="text-ember">🗡 Mafia wins</b> when the Mafia + Godfather equal or outnumber everyone else.
             </p>
             <p className="rounded-xl border border-neutral/40 p-3">
-              <b className="text-neutral">◆ Neutrals</b> win their own way: Jester by being voted out; Thief & Priest by surviving.
+              <b className="text-neutral">◆ Neutrals</b> win their own way: Jester by being voted out; Thief & Imposter by surviving.
             </p>
           </div>
         </Section>

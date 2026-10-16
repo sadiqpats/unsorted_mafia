@@ -56,6 +56,11 @@ export interface Player {
   silencedRound: number | null;
   noVoteRound: number | null;
   lastReviveRound: number | null;
+  /** Doctor: last round they protected themselves (self-save is blocked the following round). */
+  lastSelfProtectRound?: number | null;
+  /** Thief: last power taken and when (the same power can't be taken two rounds in a row). */
+  lastStolenAbility?: string | null;
+  lastStealRound?: number | null;
   revivedCount: number;
   lateJoiner: boolean;
 }

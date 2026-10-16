@@ -56,12 +56,11 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
       )}
       {phase === 'reveal' && <RevealPanel view={view} send={send} />}
       {(phase === 'night' || phase === 'prenight') && <NightPanel key={phase} view={view} send={send} />}
-      {phase === 'morning' && <MorningPanel view={view} />}
-      {phase === 'discussion' && <DiscussionPanel view={view} />}
-      {phase === 'voting' && <VotingPanel view={view} send={send} />}
+      {phase === 'voting' && <DayPanel view={view} send={send} />}
       {phase === 'verdict' && <VerdictPanel view={view} />}
       {phase === 'game_over' && <GameOverPanel view={view} />}
       {/* Action phases show ONLY the action — no lists, feeds or extra buttons. */}
+      {phase === 'voting' && <MyRoleButton view={view} />}
       {!ACTION_PHASES.includes(phase) && (
         <>
           {phase !== 'reveal' && phase !== 'game_over' && <MyRoleButton view={view} />}
@@ -81,7 +80,7 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
 
 function PhaseHeader({ view, serverNow }: { view: ClientView; serverNow: () => number }) {
   const g = view.game!;
-  const roundLabel = g.phase === 'night' || g.phase === 'prenight' ? `Night ${g.round}` : g.round > 0 && g.phase !== 'game_over' ? `Day ${g.round}` : '';
+  const roundLabel = g.round > 0 && g.phase !== 'game_over' ? `Round ${g.round}` : '';
   return (
     <div className="card flex items-center justify-between gap-3 p-4">
       <div>
@@ -223,6 +222,7 @@ function RevealPanel({ view, send }: { view: ClientView; send: Send }) {
       <HoldToReveal>
         <RoleDetails roleId={me.roleId!} alignment={me.alignment!} abilities={me.abilities} settings={view.settings} />
         {me.mafia && <MafiaTeam view={view} />}
+        {me.knownMafia && <GodfatherKnows view={view} />}
       </HoldToReveal>
       <button className="btn btn-gold w-full text-lg" disabled={busy || me.revealAck} onClick={() => act({ type: 'ack_role' })}>
         {me.revealAck ? `Waiting for others… ${prog ? `${prog.done}/${prog.total}` : ''}` : 'I’ve seen my role'}
@@ -251,6 +251,25 @@ function MafiaTeam({ view }: { view: ClientView }) {
   );
 }
 
+/** Godfather only: who the Mafia are. They do not know him. */
+function GodfatherKnows({ view }: { view: ClientView }) {
+  const list = view.me!.knownMafia!;
+  return (
+    <div className="mt-4 rounded-xl border border-crimson/50 bg-crimson/10 p-3 text-left text-sm">
+      <div className="eyebrow mb-2 !text-ember">🌹 The Mafia (only you know this)</div>
+      <ul className="space-y-1">
+        {list.map((m) => (
+          <li key={m.id}>
+            {m.name}
+            {!view.players.find((p) => p.id === m.id)?.alive && <span className="ml-2 text-xs text-mute">(eliminated)</span>}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-mute">They don’t know you are the Godfather. Defend them by day.</p>
+    </div>
+  );
+}
+
 function MyRoleButton({ view }: { view: ClientView }) {
   const me = view.me!;
   const [open, setOpen] = useState(false);
@@ -264,6 +283,7 @@ function MyRoleButton({ view }: { view: ClientView }) {
         <HoldToReveal minHeight={460}>
           <RoleDetails roleId={me.roleId} alignment={me.alignment!} abilities={me.abilities} stolen={me.stolen} settings={view.settings} compact />
           {me.mafia && <MafiaTeam view={view} />}
+          {me.knownMafia && <GodfatherKnows view={view} />}
           <Notebook view={view} />
         </HoldToReveal>
         <button className="btn btn-ghost mt-3 w-full" onClick={() => setOpen(false)}>
@@ -312,8 +332,8 @@ function NightPanel({ view, send }: { view: ClientView; send: Send }) {
   const pre = view.game!.phase === 'prenight';
   return (
     <div className="space-y-3">
-      {!pre && <PreNightNews view={view} />}
-      <PrivacyShield label={allDone ? 'Review your choice' : pre ? 'Open your pre-night panel' : 'Open your night panel'}>
+      <PhaseNews view={view} />
+      <PrivacyShield label={allDone ? 'Review your choice' : pre ? 'Open your dawn panel' : 'Open your night panel'}>
         <div className="space-y-6 pt-6">
           {me.privateResults
             .filter((r) => r.round === view.game!.round)
@@ -337,13 +357,19 @@ function NightPanel({ view, send }: { view: ClientView; send: Send }) {
   );
 }
 
-/** What happened "Before Nightfall" — shown on every phone at the start of the night. */
-function PreNightNews({ view }: { view: ClientView }) {
-  const lines = view.feed.filter((f) => f.kind === 'prenight' && f.round === view.game!.round);
+/**
+ * The news every phone sees at the top of each phase:
+ *  Dawn  → yesterday's vote result;  Night → what happened at Dawn (theft, revivals);
+ *  Day   → what happened in the night.
+ */
+function PhaseNews({ view }: { view: ClientView }) {
+  const g = view.game!;
+  const want = g.phase === 'prenight' ? { kinds: ['verdict'], round: g.round - 1, title: 'Yesterday' } : g.phase === 'night' ? { kinds: ['prenight'], round: g.round, title: 'At dawn' } : { kinds: ['morning'], round: g.round, title: 'Last night' };
+  const lines = view.feed.filter((f) => want.kinds.includes(f.kind) && f.round === want.round);
   if (!lines.length) return null;
   return (
-    <div className="card border-gold/40 p-4 text-center anim-fade-up" role="status">
-      <p className="eyebrow">Before nightfall</p>
+    <div className="card border-gold/40 p-4 text-center anim-fade-up" role="status" data-testid="phase-news">
+      <p className="eyebrow">{want.title}</p>
       {lines.map((l) => (
         <p key={l.seq} className="mt-2 font-[family-name:var(--font-serif)] text-xl leading-snug">
           {l.text}
@@ -398,7 +424,7 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
 
 function MafiaVotes({ view }: { view: ClientView }) {
   const m = view.me!.mafia!;
-  const living = m.team.filter((t) => view.players.find((p) => p.id === t.id)?.alive);
+  const living = m.team.filter((t) => t.canAct);
   return (
     <div className="rounded-xl border border-crimson/50 bg-crimson/10 p-3 text-sm">
       <div className="eyebrow mb-2 !text-ember">🗡 Family picks tonight</div>
@@ -411,7 +437,7 @@ function MafiaVotes({ view }: { view: ClientView }) {
         ))}
       </ul>
       <p className="mt-2 text-xs text-mute">
-        {view.settings.mafiaDecision === 'leader' ? 'The Godfather (or senior member) makes the final call.' : 'Most picks wins. Ties go to the Godfather.'} You can change your pick until the night ends.
+        {view.settings.mafiaDecision === 'leader' ? 'The first-seated Mafia member makes the final call.' : 'Most picks wins; ties go to the first-seated member.'} You can change your pick until the night ends.
       </p>
     </div>
   );
@@ -419,54 +445,15 @@ function MafiaVotes({ view }: { view: ClientView }) {
 
 // ======================================================================= day
 
-function MorningPanel({ view }: { view: ClientView }) {
-  const m = view.game!.lastMorning;
-  const morningLines = view.feed.filter((f) => f.kind === 'morning' && f.round === view.game!.round);
-  const fresh = view.me!.privateResults.filter((r) => r.round === view.game!.round);
+/** Day = news + discussion + secret ballot. The day ends once every eligible player has voted. */
+function DayPanel({ view, send }: { view: ClientView; send: Send }) {
+  const silenced = view.players.filter((p) => p.silenced);
   return (
-    <div className="space-y-3 anim-fade-up">
-      <div className="card p-6 text-center">
-        <p className="eyebrow">Dawn breaks</p>
-        <ul className="mt-3 space-y-2">
-          {morningLines.map((l) => (
-            <li key={l.seq} className="font-[family-name:var(--font-serif)] text-2xl leading-snug text-bone">
-              {l.text}
-            </li>
-          ))}
-        </ul>
-        {m && m.deaths.length === 0 && morningLines.length === 0 && <p className="text-xl">Nobody died tonight.</p>}
-      </div>
-      {fresh.length > 0 && (
-        <PrivacyShield label="You have a private message">
-          <div className="pt-6">
-            <div className="eyebrow mb-2">Private — for your eyes only</div>
-            <ul className="space-y-2">
-              {fresh.map((r) => (
-                <li key={r.id} className="text-lg">
-                  {r.text}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </PrivacyShield>
-      )}
-      {fresh.length === 0 && view.me!.alive && (
-        <PrivacyShield label="You have a private message">
-          <div className="pt-6 text-mute">Nothing new for you this morning.</div>
-        </PrivacyShield>
-      )}
-    </div>
-  );
-}
-
-function DiscussionPanel({ view }: { view: ClientView }) {
-  return (
-    <div className="card p-5 text-center anim-fade-up">
-      <p className="font-[family-name:var(--font-serif)] text-2xl italic">The floor is open.</p>
-      <p className="mt-2 text-sm text-mute">Talk it out. Who’s lying? Voting opens when the timer ends.</p>
-      {view.players.some((p) => p.silenced) && (
-        <p className="mt-3 text-sm text-gold">🤐 Silenced today: {view.players.filter((p) => p.silenced).map((p) => p.name).join(', ')}</p>
-      )}
+    <div className="space-y-3">
+      <PhaseNews view={view} />
+      {silenced.length > 0 && <p className="text-center text-sm text-gold">🤐 Silenced today: {silenced.map((p) => p.name).join(', ')}</p>}
+      <p className="text-center text-sm text-mute">Discuss, then vote. The day ends when everyone has voted.</p>
+      <VotingPanel view={view} send={send} />
     </div>
   );
 }
@@ -486,6 +473,19 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
       <div className="space-y-3">
         {header}
         <div className="card p-5 text-center text-sm text-mute">{v?.reason ?? 'You cannot vote right now.'}</div>
+        {me.alive && me.privateResults.some((r) => r.round === view.game!.round) && (
+          <PrivacyShield label="You have a private message">
+            <div className="space-y-2 pt-6">
+              {me.privateResults
+                .filter((r) => r.round === view.game!.round)
+                .map((r) => (
+                  <p key={r.id} className="rounded-xl border border-gold/40 bg-gold/5 p-3 text-sm" data-testid="private-note">
+                    {r.text}
+                  </p>
+                ))}
+            </div>
+          </PrivacyShield>
+        )}
       </div>
     );
   }
@@ -493,7 +493,14 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
     <div className="space-y-3">
       {header}
       <PrivacyShield label={voted ? 'Review your vote' : 'Open your ballot'}>
-        <div className="pt-6">
+        <div className="space-y-4 pt-6">
+          {me.privateResults
+            .filter((r) => r.round === view.game!.round)
+            .map((r) => (
+              <p key={r.id} className="rounded-xl border border-gold/40 bg-gold/5 p-3 text-sm" data-testid="private-note">
+                {r.text}
+              </p>
+            ))}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Vote to eliminate">
             {v.targets.map((t) => (
               <button

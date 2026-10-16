@@ -78,7 +78,10 @@ export interface MeView {
     options: NightOption[];
     submitted: Record<string, string | null>;
   } | null;
-  mafia: { team: { id: string; name: string; roleId: string }[]; votes: Record<string, string | null> } | null;
+  /** Mafia members only: teammates (canAct = still holds the Mafia Hit this round) and their live picks. */
+  mafia: { team: { id: string; name: string; roleId: string; canAct: boolean }[]; votes: Record<string, string | null> } | null;
+  /** Godfather only: who the Mafia are (the Mafia never learn who the Godfather is). */
+  knownMafia: { id: string; name: string }[] | null;
   privateResults: { id: string; round: number; kind: string; text: string }[];
   allRoles: Record<string, string> | null;
 }

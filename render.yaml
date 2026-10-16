@@ -18,5 +18,7 @@ services:
         value: "true"
       - key: DATABASE_PATH
         value: ./data/mafia.db
+      - key: HOST_CODE
+        sync: false # the secret code needed to host — set it in the Render dashboard
       - key: CLIENT_ORIGIN
         sync: false # your Vercel URL, e.g. https://unsorted-mafia.vercel.app

@@ -105,6 +105,9 @@ function freshPlayerState(): Omit<Player, 'id' | 'name' | 'seat' | 'tokenHash' |
     silencedRound: null,
     noVoteRound: null,
     lastReviveRound: null,
+    lastSelfProtectRound: null,
+    lastStolenAbility: null,
+    lastStealRound: null,
     revivedCount: 0,
     lateJoiner: false,
   };
@@ -306,7 +309,9 @@ export function startGame(room: Room, now: number, rng: Rng, opts: { force?: boo
 
 // ---------------------------------------------------------------- phases
 
+/** With timers off (default) no phase has a clock: it ends when everyone has acted (or the host moves on). */
 function phaseDuration(s: Settings, phase: Phase): number | null {
+  if (!s.timers) return null;
   switch (phase) {
     case 'reveal':
       return s.revealSeconds;
@@ -314,14 +319,8 @@ function phaseDuration(s: Settings, phase: Phase): number | null {
       return s.preNightSeconds;
     case 'night':
       return s.nightSeconds;
-    case 'morning':
-      return s.morningSeconds;
-    case 'discussion':
-      return s.discussionSeconds;
     case 'voting':
-      return s.votingSeconds;
-    case 'verdict':
-      return s.verdictSeconds;
+      return s.daySeconds;
     default:
       return null;
   }
@@ -338,27 +337,32 @@ function enterPhase(room: Room, phase: Phase, now: number) {
 }
 
 /**
- * The pre-night round runs whenever the Thief or Imposter is in the SETUP — even
+ * The Dawn round runs whenever the Thief or Imposter is in the SETUP — even
  * after they die — so its presence never reveals who is still alive.
  */
 export function hasPreNight(s: Settings): boolean {
   return s.preNightRound && ((s.roles.thief ?? 0) > 0 || (s.roles.imposter ?? 0) > 0);
 }
 
-/** Phase in which an ability is used: pre-night abilities move to 'prenight' when that round is on. */
+/** Phase in which an ability is used: Dawn abilities move to 'prenight' when that round is on. */
 export function abilityPhase(abilityId: string, s: Settings): 'prenight' | 'night' | 'other' {
   const def = ABILITIES[abilityId];
   if (!def || def.kind !== 'night') return 'other';
   return def.preNight && hasPreNight(s) ? 'prenight' : 'night';
 }
 
+/**
+ * ROUND = Dawn → Night → Day. A new round starts here: anything the Thief stole
+ * last round goes back to its owner, then Dawn (if in play) or Night begins.
+ */
 function beginNightCycle(room: Room, now: number) {
   const g = room.game!;
+  for (const p of room.players) if (p.stolen) expireStolen(room, p);
   g.round += 1;
+  g.night.actions = {};
   if (hasPreNight(g.settings)) {
-    g.night.actions = {};
     enterPhase(room, 'prenight', now);
-    addLog(room, now, 'phase', `Before nightfall ${g.round}: everyone open your secret panel and make a choice.`);
+    addLog(room, now, 'phase', `Dawn ${g.round}: everyone open your panel and make a choice.`);
     return;
   }
   startNight(room, now);
@@ -368,22 +372,20 @@ function startNight(room: Room, now: number) {
   const g = room.game!;
   g.night.actions = {};
   enterPhase(room, 'night', now);
-  addLog(room, now, 'phase', `Night ${g.round} falls. Everyone: open your secret panel and lock in a choice.`);
+  addLog(room, now, 'phase', `Night ${g.round} falls. Everyone: open your panel and make a choice.`);
 }
 
-function startDiscussion(room: Room, now: number) {
+/** Day = morning news + discussion + voting in one phase. It ends when every eligible player has voted. */
+function startDay(room: Room, now: number, runoff: string[] | null) {
   const g = room.game!;
-  g.day = { votes: {}, runoff: null, runoffUsed: false };
-  enterPhase(room, 'discussion', now);
-  addLog(room, now, 'phase', `Day ${g.round}: discussion is open.`);
-}
-
-function startVoting(room: Room, now: number, runoff: string[] | null) {
-  const g = room.game!;
-  g.day.votes = {};
-  g.day.runoff = runoff;
+  g.day = { votes: {}, runoff, runoffUsed: runoff ? true : false };
   enterPhase(room, 'voting', now);
-  addLog(room, now, 'phase', runoff ? `Runoff vote between ${runoff.map((id) => getPlayer(room, id).name).join(' and ')}.` : `Day ${g.round}: voting is open.`);
+  addLog(
+    room,
+    now,
+    'phase',
+    runoff ? `Runoff vote between ${runoff.map((id) => getPlayer(room, id).name).join(' and ')}.` : `Day ${g.round}: discuss, then vote. The day ends when everyone has voted.`,
+  );
 }
 
 /** Advance to the next phase. `by` is recorded in the log. */
@@ -398,9 +400,8 @@ export function advancePhase(room: Room, now: number, rng: Rng, by: 'timer' | 'h
     case 'night':
       return resolveNight(room, now, rng);
     case 'morning':
-      return startDiscussion(room, now);
     case 'discussion':
-      return startVoting(room, now, null);
+      return startDay(room, now, null);
     case 'voting':
       return resolveVotes(room, now);
     case 'verdict':
@@ -417,20 +418,20 @@ export function tick(room: Room, now: number, rng: Rng): boolean {
   const g = room.game;
   if (g.pausedRemainingMs !== null || g.phase === 'game_over') return false;
   const s = g.settings;
-  const auto = s.advanceMode === 'auto';
-  if (g.phase === 'reveal' && auto && room.players.every((p) => p.revealAck)) {
+  // Everyone has acted → move on (this is the whole flow when timers are off).
+  if (g.phase === 'reveal' && room.players.every((p) => p.revealAck)) {
     advancePhase(room, now, rng, 'auto');
     return true;
   }
-  if ((g.phase === 'night' || g.phase === 'prenight') && s.nightAutoResolve && nightComplete(room)) {
+  if ((g.phase === 'night' || g.phase === 'prenight') && nightComplete(room)) {
     advancePhase(room, now, rng, 'auto');
     return true;
   }
-  if (g.phase === 'voting' && auto && !s.allowVoteChange && votingComplete(room)) {
+  if (g.phase === 'voting' && !s.allowVoteChange && votingComplete(room)) {
     advancePhase(room, now, rng, 'auto');
     return true;
   }
-  if (auto && g.phaseEndsAt !== null && now >= g.phaseEndsAt && !(g.phase === 'verdict' && g.pendingTie)) {
+  if (s.timers && g.phaseEndsAt !== null && now >= g.phaseEndsAt && !(g.phase === 'verdict' && g.pendingTie)) {
     advancePhase(room, now, rng, 'timer');
     return true;
   }
@@ -466,7 +467,7 @@ export function heldAbilities(room: Room, p: Player): HeldAbility[] {
   return out;
 }
 
-function hasUsable(room: Room, p: Player, abilityId: string): HeldAbility | undefined {
+export function hasUsable(room: Room, p: Player, abilityId: string): HeldAbility | undefined {
   return heldAbilities(room, p).find((h) => h.abilityId === abilityId && (h.charges === null || h.charges > 0));
 }
 
@@ -506,8 +507,8 @@ export interface NightOption {
 
 const DECOY_PROMPT = 'Who do you suspect most tonight?';
 
-function actsWhileDead(room: Room, p: Player): boolean {
-  return !p.alive && p.roleId === 'priest' && settingsOf(room).priestActsWhenDead;
+function actsWhileDead(_room: Room, _p: Player): boolean {
+  return false;
 }
 
 function targetsFor(room: Room, p: Player, def: AbilityDef): string[] {
@@ -520,20 +521,21 @@ function targetsFor(room: Room, p: Player, def: AbilityDef): string[] {
       break;
     case 'alive-any':
       list = players.filter((x) => x.alive);
-      if (def.id === 'protect' && !s.doctorSelfProtect) list = list.filter((x) => x.id !== p.id);
-      if (def.id === 'guard' && !s.bodyguardSelfProtect) list = list.filter((x) => x.id !== p.id);
+      if (def.id === 'protect') {
+        const blocked = s.doctorSelfProtect === 'never' || (s.doctorSelfProtect === 'alternate' && p.lastSelfProtectRound != null && p.lastSelfProtectRound === (room.game?.round ?? 0) - 1);
+        if (blocked) list = list.filter((x) => x.id !== p.id);
+      }
       break;
     case 'alive-non-mafia':
       list = players.filter((x) => x.alive && !isMafiaTeam(x.roleId, s));
       break;
     case 'dead':
-      list = players.filter((x) => !x.alive && (x.id !== p.id || s.priestSelfRevive));
+      list = players.filter((x) => !x.alive && x.id !== p.id);
       break;
     case 'self':
       list = p.alive ? [p] : [];
       break;
   }
-  if (def.id === 'steal' && !s.thiefRepeatTarget) list = list.filter((x) => !p.thiefTargets.includes(x.id));
   return list.map((x) => x.id);
 }
 
@@ -551,7 +553,8 @@ export function stealablePowers(room: Room, thief: Player): string[] {
       if (!def || !def.transferable || a.id === 'steal' || out.includes(a.id)) continue;
       if (a.enabled && !a.enabled(s)) continue;
       if (def.kind === 'passive' && !s.thiefStealPassive) continue;
-      if (!s.thiefRepeatTarget && thief.thiefTargets.includes(a.id)) continue;
+      // Never the same power two rounds in a row (alternate rounds are fine).
+      if (thief.lastStolenAbility === a.id && thief.lastStealRound === (room.game?.round ?? 0) - 1) continue;
       out.push(a.id);
     }
   }
@@ -570,11 +573,17 @@ export function nightOptions(room: Room, playerId: string): NightOption[] {
     const def = ABILITIES[h.abilityId];
     if (!def || abilityPhase(def.id, s) !== phase) continue;
     if (h.charges !== null && h.charges <= 0) continue;
-    if (!p.alive && def.id !== 'revive') continue;
+    if (!p.alive) continue;
     if (def.id === 'steal' && p.stolen) continue;
-    if (def.id === 'revive' && s.priestAlternateRounds && p.lastReviveRound !== null && p.lastReviveRound === g.round - 1) continue;
-    const powerMode = def.id === 'steal' && s.thiefTargetMode === 'power';
-    const targets = powerMode ? stealablePowers(room, p) : targetsFor(room, p, def);
+    if (def.id === 'imposter_revive' && g.round < 2) continue; // revivals start from round 2
+    const powerMode = def.id === 'steal';
+    // A Thief with the stolen Mafia Hit may target anyone else alive — excluding the Mafia would reveal them.
+    const soloKill = def.id === 'mafia_kill' && h.source === 'stolen';
+    const targets = powerMode
+      ? stealablePowers(room, p)
+      : soloKill
+        ? room.players.filter((x) => x.alive && x.id !== p.id).sort(bySeat).map((x) => x.id)
+        : targetsFor(room, p, def);
     if (!targets.length) continue;
     opts.push({
       abilityId: def.id,
@@ -584,8 +593,8 @@ export function nightOptions(room: Room, playerId: string): NightOption[] {
       targets,
       targetKind: powerMode ? 'power' : 'player',
       charges: h.charges,
-      team: !!def.team,
-      changeable: !!def.team,
+      team: !!def.team && !soloKill,
+      changeable: !!def.team && !soloKill,
     });
   }
   if (!opts.length && p.alive) {
@@ -595,7 +604,7 @@ export function nightOptions(room: Room, playerId: string): NightOption[] {
       abilityId: 'decoy',
       source: 'decoy',
       name: 'Suspicion',
-      prompt: phase === 'prenight' ? 'Before nightfall: who do you suspect most?' : DECOY_PROMPT,
+      prompt: phase === 'prenight' ? 'Dawn: who do you suspect most?' : DECOY_PROMPT,
       targets: room.players.filter((x) => x.alive && x.id !== p.id).sort(bySeat).map((x) => x.id),
       targetKind: 'player',
       charges: null,
@@ -631,8 +640,8 @@ export function nightComplete(room: Room): boolean {
 /** Leader breaks Mafia ties: the Godfather if they join the hit, otherwise the lowest-seated living member. */
 export function mafiaLeader(room: Room): Player | null {
   const members = room.players
-    .filter((p) => p.alive && hasUsable(room, p, 'mafia_kill'))
-    .sort((a, b) => (a.roleId === 'godfather' ? -1 : b.roleId === 'godfather' ? 1 : a.seat - b.seat));
+    .filter((p) => p.alive && isMafiaTeam(p.roleId, settingsOf(room)) && hasUsable(room, p, 'mafia_kill'))
+    .sort((a, b) => a.seat - b.seat);
   return members[0] ?? null;
 }
 
@@ -643,7 +652,7 @@ export function mafiaDecision(room: Room): string | null {
     if (a.abilityId !== 'mafia_kill' || a.targetId === null) return false;
     const actor = room.players.find((p) => p.id === a.actorId);
     const target = room.players.find((p) => p.id === a.targetId);
-    return !!actor && actor.alive && !!target && target.alive && !isMafiaTeam(target.roleId, s);
+    return !!actor && actor.alive && isMafiaTeam(actor.roleId, s) && !!hasUsable(room, actor, 'mafia_kill') && !!target && target.alive && !isMafiaTeam(target.roleId, s);
   });
   if (!votes.length) return null;
   const leader = mafiaLeader(room);
@@ -697,15 +706,9 @@ export const NIGHT_RESOLVERS: Record<string, Resolver> = {
   protect(room, ctx, a, now) {
     const actor = getPlayer(room, a.actorId);
     protect(ctx, a.targetId!, a.actorId);
+    if (a.targetId === actor.id) actor.lastSelfProtectRound = room.game!.round;
     useCharge(room, actor, 'protect');
     addLog(room, now, 'night', `${actor.name} protected ${getPlayer(room, a.targetId!).name}.`, 'host');
-  },
-  guard(room, ctx, a, now) {
-    const actor = getPlayer(room, a.actorId);
-    protect(ctx, a.targetId!, a.actorId);
-    if (room.game!.settings.bodyguardConsume === 'onUse') useCharge(room, actor, 'guard');
-    else ctx.guardOnSave.push({ actorId: a.actorId, targetId: a.targetId! });
-    addLog(room, now, 'night', `${actor.name} guarded ${getPlayer(room, a.targetId!).name}.`, 'host');
   },
   v_shield(room, ctx, a, now) {
     const actor = getPlayer(room, a.actorId);
@@ -744,82 +747,43 @@ export const NIGHT_RESOLVERS: Record<string, Resolver> = {
     useCharge(room, actor, 'v_hunch');
     addLog(room, now, 'night', `${actor.name} used Hunch on ${t.name}.`, 'host');
   },
-  revive(room, ctx, a, now, rng) {
-    doRevive(room, ctx, a, now, rng, 'revive');
-  },
   imposter_revive(room, ctx, a, now, rng) {
     doRevive(room, ctx, a, now, rng, 'imposter_revive');
   },
+  /**
+   * The Thief names a POWER; the server takes it from a random living holder. The
+   * Thief never learns whose it was; only the victim is told. It lasts this round
+   * only — beginNightCycle() hands it back at the next Dawn.
+   */
   steal(room, ctx, a, now, rng) {
     const s = room.game!.settings;
     const thief = getPlayer(room, a.actorId);
-    useCharge(room, thief, 'steal');
-    thief.thiefTargets.push(a.targetId!);
     if (!thief.alive || ctx.deaths.includes(thief.id)) return;
-    const stealable = (h: HeldAbility) => {
-      const def = ABILITIES[h.abilityId];
-      if (!def || !def.transferable || h.source !== 'role') return false;
-      if (h.charges !== null && h.charges <= 0) return false;
-      return def.kind !== 'passive' || s.thiefStealPassive;
-    };
-    let t: Player | undefined;
-    let pick: HeldAbility | undefined;
-    if (s.thiefTargetMode === 'power') {
-      // Blind steal: the Thief names a power; the server finds who holds it. The Thief never learns who.
-      const holders = room.players
-        .filter((x) => x.alive && x.id !== thief.id)
-        .map((x) => ({ x, h: heldAbilities(room, x).find((h) => h.abilityId === a.targetId && stealable(h)) }))
-        .filter((c) => !!c.h);
-      const chosen = holders.length ? holders[rng.int(holders.length)] : undefined;
-      t = chosen?.x;
-      pick = chosen?.h;
-      if (!t || !pick) {
-        addPrivate(room, rng, now, thief.id, 'steal', `Nobody could give up the ${ABILITIES[a.targetId!]?.name ?? ''} power. Your attempt was spent.`);
-        addLog(room, now, 'night', `${thief.name} tried to steal ${ABILITIES[a.targetId!]?.name} — no living holder.`, 'host');
-        return;
-      }
-    } else {
-      t = getPlayer(room, a.targetId!);
-      const candidates = heldAbilities(room, t).filter(stealable);
-      candidates.sort((x, y) => (ABILITIES[x.abilityId].kind === 'night' ? -1 : 0) - (ABILITIES[y.abilityId].kind === 'night' ? -1 : 0));
-      pick = candidates[0];
-      if (!pick) {
-        addPrivate(room, rng, now, thief.id, 'steal', `${t.name} had nothing you could steal. Your attempt was spent.`);
-        addLog(room, now, 'night', `${thief.name} tried to steal from ${t.name} — nothing transferable.`, 'host');
-        return;
-      }
+    const powerId = a.targetId!;
+    const power = ABILITIES[powerId];
+    thief.lastStolenAbility = powerId;
+    thief.lastStealRound = room.game!.round;
+    const holders = room.players
+      .filter((x) => x.alive && x.id !== thief.id)
+      .map((x) => ({ x, h: heldAbilities(room, x).find((h) => h.abilityId === powerId && h.source === 'role' && (h.charges === null || h.charges > 0)) }))
+      .filter((c) => !!c.h && (power.kind !== 'passive' || s.thiefStealPassive));
+    if (!holders.length) {
+      addPrivate(room, rng, now, thief.id, 'steal', `Nobody could give up the ${power?.name ?? ''} power this round.`);
+      addLog(room, now, 'night', `${thief.name} tried to steal ${power?.name} — no living holder.`, 'host');
+      return;
     }
-    const def = ABILITIES[pick.abilityId];
-    thief.stolen = {
-      abilityId: pick.abilityId,
-      fromId: t.id,
-      charges: s.thiefDuration === 'oneUse' ? 1 : pick.charges,
-      mode: s.thiefMode,
-      duration: s.thiefDuration,
-    };
-    ctx.stolen.push(t.id);
-    const preNight = room.game!.phase === 'prenight';
-    if (s.thiefMode === 'take') {
-      t.lostAbilities.push(pick.abilityId);
-      addPrivate(
-        room,
-        rng,
-        now,
-        t.id,
-        'stolen',
-        s.thiefDuration === 'permanent'
-          ? `The Thief stole your ${def.name} power. From now on you play as a Villager — you are still on the same team.`
-          : `Someone stole your ${def.name} ability. You cannot use it until it is returned.`,
-      );
-    }
-    const when = def.kind !== 'night' ? 'It applies automatically.' : preNight ? 'Use it in your night panel — starting tonight.' : 'It appears in your night panel from tomorrow night.';
-    const from = s.thiefTargetMode === 'power' ? 'You don’t know whose it was.' : `It was ${t.name}’s.`;
-    addPrivate(room, rng, now, thief.id, 'steal', `You stole the ${def.name} power. ${from} ${when}`);
-    addLog(room, now, 'night', `${thief.name} stole ${def.name} from ${t.name} (${s.thiefMode}, ${s.thiefDuration}).`, 'host');
+    const { x: victim, h } = holders[rng.int(holders.length)];
+    thief.stolen = { abilityId: powerId, fromId: victim.id, charges: h!.charges, mode: 'take', duration: 'oneUse' };
+    victim.lostAbilities.push(powerId);
+    ctx.stolen.push(victim.id);
+    addPrivate(room, rng, now, victim.id, 'stolen', `Your ${power.name} power has been stolen for this round. You can’t use it — just press the button on your screen. You get it back next Dawn.`);
+    const how = power.kind !== 'night' ? 'It applies automatically today.' : powerId === 'mafia_kill' ? 'Tonight you choose someone to kill — on your own.' : 'Use it in your night panel tonight.';
+    addPrivate(room, rng, now, thief.id, 'steal', `You stole the ${power.name} power for this round. You don’t know whose it was. ${how}`);
+    addLog(room, now, 'night', `${thief.name} stole ${power.name} from ${victim.name} for round ${room.game!.round}.`, 'host');
   },
 };
 
-function doRevive(room: Room, ctx: NightCtx, a: NightAction, now: number, rng: Rng, abilityId: 'revive' | 'imposter_revive') {
+function doRevive(room: Room, ctx: NightCtx, a: NightAction, now: number, rng: Rng, abilityId: 'imposter_revive') {
   const g = room.game!;
   const s = g.settings;
   const actor = getPlayer(room, a.actorId);
@@ -841,7 +805,6 @@ function doRevive(room: Room, ctx: NightCtx, a: NightAction, now: number, rng: R
   if (!s.revivedKeepEffects) t.silencedRound = null;
   if (!s.revivedCanActNextPhase) t.noVoteRound = g.round;
   useCharge(room, actor, abilityId);
-  if (abilityId === 'revive') actor.lastReviveRound = g.round;
   ctx.revived.push(t.id);
   g.stats.revives++;
   addPrivate(room, rng, now, actor.id, 'revive', `It worked — ${t.name} is back in the game.`);
@@ -851,7 +814,7 @@ function doRevive(room: Room, ctx: NightCtx, a: NightAction, now: number, rng: R
 
 /**
  * NIGHT ORDER (lower first)
- *   10 protect / guard / barricade   — build the protection set
+ *   10 protect / barricade            — build the protection set
  *   20 silence                        — mark tomorrow's silenced player
  *   50 Mafia hit                      — team decision becomes an attack
  *   55 attacks resolve                — protected targets survive, others die
@@ -883,7 +846,22 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
   const steps: Step[] = [];
   let order = 0;
   for (const a of actions) {
-    if (a.abilityId === 'mafia_kill') continue;
+    if (a.abilityId === 'mafia_kill') {
+      const actor = getPlayer(room, a.actorId);
+      // A Thief holding the stolen Mafia Hit kills on his own, alongside the Mafia's choice.
+      if (!isMafiaTeam(actor.roleId, s)) {
+        steps.push({
+          priority: ABILITIES.mafia_kill.priority,
+          order: order++,
+          run: () => {
+            ctx.attacks.push({ targetId: a.targetId!, source: 'thief' });
+            useCharge(room, actor, 'mafia_kill');
+            addLog(room, now, 'night', `${actor.name} (with the stolen Mafia Hit) targeted ${getPlayer(room, a.targetId!).name}.`, 'host');
+          },
+        });
+      }
+      continue;
+    }
     const def = ABILITIES[a.abilityId];
     const resolver = NIGHT_RESOLVERS[a.abilityId];
     if (!def || !resolver) continue;
@@ -948,11 +926,11 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
 
   const win = checkWin(room);
   if (win) return endGame(room, win, now);
-  enterPhase(room, 'morning', now);
+  startDay(room, now, null);
 }
 
 /**
- * BEFORE NIGHTFALL: the Imposter's revival (90) then the Thief's steal (95).
+ * DAWN: the Imposter's revival (90) then the Thief's steal (95).
  * Everyone else submitted a decoy. The public learns only THAT something happened
  * (a revived player is necessarily named — they are visibly back).
  */
@@ -1077,7 +1055,7 @@ export function resolveVotes(room: Room, now: number) {
   if (top === 0 || abstain >= top) {
     g.lastVerdict = verdict;
     addLog(room, now, 'verdict', s.announcements.noElimination);
-    enterPhase(room, 'verdict', now);
+    beginNightCycle(room, now);
     return;
   }
   if (leaders.length > 1) {
@@ -1087,7 +1065,7 @@ export function resolveVotes(room: Room, now: number) {
       g.day.runoffUsed = true;
       g.lastVerdict = verdict;
       addLog(room, now, 'verdict', `It's a tie between ${names}. A runoff vote begins.`);
-      startVoting(room, now, leaders);
+      startDay(room, now, leaders);
       return;
     }
     if (s.tieRule === 'host') {
@@ -1100,7 +1078,7 @@ export function resolveVotes(room: Room, now: number) {
     }
     g.lastVerdict = verdict;
     addLog(room, now, 'verdict', `It's a tie between ${names}. ${s.announcements.noElimination}`);
-    enterPhase(room, 'verdict', now);
+    beginNightCycle(room, now);
     return;
   }
   eliminateByVote(room, leaders[0], verdict, now);
@@ -1127,7 +1105,7 @@ function eliminateByVote(room: Room, targetId: string, verdict: Verdict, now: nu
   }
   const win = checkWin(room);
   if (win) return endGame(room, win, now);
-  enterPhase(room, 'verdict', now);
+  beginNightCycle(room, now);
 }
 
 export function resolveTie(room: Room, targetId: string | null, now: number) {
@@ -1140,7 +1118,7 @@ export function resolveTie(room: Room, targetId: string | null, now: number) {
   addLog(room, now, 'host', `Game Master broke the tie: ${targetId ? getPlayer(room, targetId).name : 'nobody'}.`, 'host');
   if (targetId === null) {
     addLog(room, now, 'verdict', `The Game Master spared everyone. ${g.settings.announcements.noElimination}`);
-    enterPhase(room, 'verdict', now);
+    beginNightCycle(room, now);
     return;
   }
   eliminateByVote(room, targetId, verdict, now);
@@ -1151,23 +1129,26 @@ export function resolveTie(room: Room, targetId: string | null, now: number) {
 /**
  * Evaluation order: (1) Jester (checked at day elimination), (2) everyone dead → draw,
  * (3) no Mafia-aligned alive → Good, (4) Mafia reach parity/majority → Mafia.
- * Survivor neutrals (Thief, Priest) co-win if alive; an earlier Jester win (when the
+ * Survivor neutrals (Thief, Imposter) co-win if alive; an earlier Jester win (when the
  * game continued) is also listed.
  */
 export function checkWin(room: Room): WinResult | null {
   const s = settingsOf(room);
   const alive = alivePlayers(room);
-  const mafia = alive.filter((p) => roleAlignment(p.roleId, s) === 'mafia').length;
-  const others = alive.length - mafia;
+  // The Town wins when every MAFIA member (the killers) is dead — the Godfather does not count.
+  const killers = alive.filter((p) => isMafiaTeam(p.roleId, s)).length;
+  // For a Mafia takeover, everyone on the Mafia side counts (Mafia + Godfather).
+  const mafiaSide = alive.filter((p) => roleAlignment(p.roleId, s) === 'mafia').length;
+  const others = alive.length - mafiaSide;
   let faction: WinResult['faction'] | null = null;
   let reason = '';
   if (alive.length === 0) {
     faction = 'draw';
     reason = 'Nobody is left standing.';
-  } else if (mafia === 0) {
+  } else if (killers === 0) {
     faction = 'good';
     reason = 'Every member of the Mafia has been eliminated.';
-  } else if (s.mafiaWin === 'parity' ? mafia >= others : mafia > others) {
+  } else if (s.mafiaWin === 'parity' ? mafiaSide >= others : mafiaSide > others) {
     faction = 'mafia';
     reason = 'The Mafia now control the town.';
   }

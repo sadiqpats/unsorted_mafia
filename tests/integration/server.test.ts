@@ -155,7 +155,7 @@ describe('secret role privacy', () => {
         expectOk(await p.client.send({ type: 'night_action', abilityId: opt.abilityId, targetId: null, phaseSeq: v.game!.phaseSeq }));
       }
     }
-    await g.host.waitFor((v) => v.game?.phase === 'morning');
+    await g.host.waitFor((v) => v.game?.phase === 'voting');
     await toPhase(g.host, g.host, 'voting');
 
     for (const p of g.players) {
@@ -218,7 +218,7 @@ describe('gameplay over the network', () => {
       expectOk(await p.client.send({ type: 'night_action', abilityId: v.me!.night!.options[0].abilityId, targetId: null, phaseSeq: seq }));
     }
     // last action resolves the night immediately (nightAutoResolve)
-    const morning = await others[1].client.waitFor((v) => v.game?.phase === 'morning');
+    const morning = await others[1].client.waitFor((v) => v.game?.phase === 'voting');
     expect(morning.players.find((p) => p.id === others[0].id)!.alive).toBe(false);
     expect(morning.feed.map((f) => f.text).join()).toContain(`${others[0].name} was found dead`);
     // dead player cannot vote
@@ -289,7 +289,7 @@ describe('reconnection & persistence', () => {
 
   it('the game survives a full server restart', async () => {
     const g = await startedGame(5);
-    await toPhase(g.host, g.host, 'discussion');
+    await toPhase(g.host, g.host, 'voting');
     const before = g.host.view!;
     for (const c of clients.splice(0)) c.close();
     await srv.server.close();
@@ -300,7 +300,7 @@ describe('reconnection & persistence', () => {
     await host.connected();
     await pl.connected();
     const hv = await host.waitFor((v) => !!v.game);
-    expect(hv.game!.phase).toBe('discussion');
+    expect(hv.game!.phase).toBe('voting');
     expect(hv.game!.round).toBe(before.game!.round);
     expect(hv.host!.roles).toEqual(before.host!.roles);
     const pv = await pl.waitFor((v) => !!v.me);

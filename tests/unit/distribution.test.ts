@@ -84,7 +84,7 @@ describe('invalid and unbalanced configurations', () => {
   });
   it('requires a Mafia-team role', () => {
     const r = analyzeDistribution(settingsWith(5, { villager: 4, jester: 1 }));
-    expect(r.errors.join()).toMatch(/Mafia-team/);
+    expect(r.errors.join()).toMatch(/At least one Mafia/);
   });
   it('rejects a Mafia that would win immediately', () => {
     const r = analyzeDistribution(settingsWith(6, { mafia: 3, villager: 3 }));
@@ -102,5 +102,19 @@ describe('invalid and unbalanced configurations', () => {
   it('rejects unknown roles', () => {
     const r = analyzeDistribution(settingsWith(5, { mafia: 1, wizard: 1, villager: 3 }));
     expect(r.errors.join()).toMatch(/Unknown role/);
+  });
+});
+
+describe('new default mix', () => {
+  it('two Mafia from 7 players; Godfather from 8; no Priest or Bodyguard', () => {
+    expect(suggestDistribution(6).mafia).toBe(1);
+    expect(suggestDistribution(7).mafia).toBe(2);
+    expect(suggestDistribution(7).godfather).toBe(0);
+    expect(suggestDistribution(8).godfather).toBe(1);
+    for (let n = 5; n <= 22; n++) {
+      const d = suggestDistribution(n);
+      expect(d.priest ?? 0).toBe(0);
+      expect(d.bodyguard ?? 0).toBe(0);
+    }
   });
 });

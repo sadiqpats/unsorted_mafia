@@ -333,11 +333,11 @@ export function Section({ title, children, aside, className = '' }: { title: str
 export const PHASE_LABEL: Record<string, string> = {
   lobby: 'Lobby',
   reveal: 'Role Reveal',
-  prenight: 'Before Nightfall',
+  prenight: 'Dawn',
   night: 'Night',
   morning: 'Morning',
   discussion: 'Discussion',
-  voting: 'Voting',
+  voting: 'Day',
   verdict: 'Verdict',
   game_over: 'Game Over',
 };

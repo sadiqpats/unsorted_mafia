@@ -9,6 +9,7 @@ import { saveSession } from '../lib/session';
 export default function HostCreate() {
   const nav = useNavigate();
   const [name, setName] = useState('');
+  const [hostCode, setHostCode] = useState('');
   const [count, setCount] = useState(8);
   const [hostPlays, setHostPlays] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -21,7 +22,7 @@ export default function HostCreate() {
     if (count < MIN_PLAYERS || count > MAX_PLAYERS) return setError(`Player count must be ${MIN_PLAYERS}–${MAX_PLAYERS}.`);
     setBusy(true);
     try {
-      const r = await api<{ code: string; token: string }>('/api/rooms', { hostName: name.trim(), playerCount: count, hostPlays });
+      const r = await api<{ code: string; token: string }>('/api/rooms', { hostName: name.trim(), playerCount: count, hostPlays, hostCode: hostCode.trim() });
       saveSession({ code: r.code, token: r.token, kind: 'host', name: name.trim() });
       nav(`/r/${r.code}`);
     } catch (err) {
@@ -40,8 +41,23 @@ export default function HostCreate() {
         </div>
         <div className="card space-y-5 p-5">
           <label className="block">
+            <span className="mb-1.5 block text-sm font-medium">Host code</span>
+            <input
+              className="field tracking-[0.3em]"
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              value={hostCode}
+              maxLength={32}
+              onChange={(e) => setHostCode(e.target.value)}
+              placeholder="••••••"
+              autoFocus
+            />
+            <span className="mt-1 block text-xs text-mute">Only Unsorted Plans hosts have this. Guests don’t need it — they just join.</span>
+          </label>
+          <label className="block">
             <span className="mb-1.5 block text-sm font-medium">Your display name</span>
-            <input className="field" value={name} maxLength={20} autoComplete="nickname" onChange={(e) => setName(e.target.value)} placeholder="e.g. Sadie" autoFocus />
+            <input className="field" value={name} maxLength={20} autoComplete="nickname" onChange={(e) => setName(e.target.value)} placeholder="e.g. Sadie" />
           </label>
           <PlayerCountInput value={count} onChange={setCount} />
           <Toggle

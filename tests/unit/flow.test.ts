@@ -78,7 +78,7 @@ describe('voting rules', () => {
     const g = setup(['mafia', V, V, V, V]);
     g.goToVoting();
     tieVotes(g);
-    expect(g.room.game!.phase).toBe('verdict');
+    expect(g.room.game!.phase).toBe('night'); // straight on to the next round
     expect(g.room.game!.lastVerdict).toMatchObject({ tie: true, eliminatedId: null });
     expect(g.room.players.every((p) => p.alive)).toBe(true);
   });
@@ -91,7 +91,7 @@ describe('voting rules', () => {
     expect(g.room.game!.day.runoff!.sort()).toEqual(['p0', 'p1']);
     expect(() => g.vote(2, 3)).toThrow();
     tieVotes(g);
-    expect(g.room.game!.phase).toBe('verdict');
+    expect(g.room.game!.phase).toBe('night');
     expect(g.room.players.every((p) => p.alive)).toBe(true);
   });
 
@@ -108,7 +108,7 @@ describe('voting rules', () => {
   });
 
   it('silenced players are reported with a reason', () => {
-    const g = setup(['godfather', V, V, V, V]);
+    const g = setup(['godfather', 'mafia', V, V, V, V, V]);
     g.goToNight();
     g.act(0, 'silence', 3);
     g.goToVoting();
@@ -144,7 +144,7 @@ describe('win conditions', () => {
   });
 
   it('survivor neutrals co-win with the winning faction', () => {
-    const g = setup(['mafia', 'priest', 'thief', V, V, V]);
+    const g = setup(['mafia', 'imposter', 'thief', V, V, V]);
     g.goToVoting();
     hostEliminate(g.room, 'p0', T0);
     const w = g.room.game!.winner!;
@@ -190,7 +190,7 @@ describe('night flow & anti-cheat', () => {
     expect(tick(g.room, g.clock(), g.rng)).toBe(false);
     g.act(4, 'decoy', null);
     expect(tick(g.room, g.clock(), g.rng)).toBe(true);
-    expect(g.room.game!.phase).toBe('morning');
+    expect(g.room.game!.phase).toBe('voting'); // Day
     expect(g.room.game!.stats.suspicion.p0).toBe(2);
   });
 
@@ -215,20 +215,37 @@ describe('night flow & anti-cheat', () => {
 });
 
 describe('timers, pause and host corrections', () => {
-  it('advances when the server timer expires, not before', () => {
+  it('no timers by default: nothing ever advances on time, only when everyone has acted', () => {
     const g = setup(['mafia', V, V, V, V]);
+    expect(g.room.game!.settings.timers).toBe(false);
+    expect(g.room.game!.phaseEndsAt).toBeNull();
+    expect(tick(g.room, T0 + 1e12, g.rng)).toBe(false);
+    for (const p of g.room.players) acknowledgeRole(g.room, p.id);
+    expect(tick(g.room, g.clock(), g.rng)).toBe(true);
+    expect(g.room.game!.phase).toBe('night');
+    expect(g.room.game!.phaseEndsAt).toBeNull();
+  });
+
+  it('the day ends as soon as every eligible player has voted', () => {
+    const g = setup(['mafia', V, V, V, V]);
+    g.goToVoting();
+    for (const i of [0, 1, 2, 3]) g.vote(i, 4);
+    expect(tick(g.room, g.clock(), g.rng)).toBe(false); // P4 hasn't voted
+    g.vote(4, 0);
+    expect(tick(g.room, g.clock(), g.rng)).toBe(true);
+    expect(g.P(4).alive).toBe(false);
+    expect(g.room.game!.phase).toBe('night');
+  });
+
+  it('with timers on, a phase also ends when the clock runs out (a disconnected player cannot freeze it)', () => {
+    const g = setup(['mafia', V, V, V, V], { timers: true });
     const ends = g.room.game!.phaseEndsAt!;
     expect(tick(g.room, ends - 1, g.rng)).toBe(false);
     expect(tick(g.room, ends + 1, g.rng)).toBe(true);
     expect(g.room.game!.phase).toBe('night');
-  });
-
-  it('a disconnected player cannot freeze the night — the timer resolves it', () => {
-    const g = setup(['mafia', V, V, V, V]);
-    g.goToNight();
     g.act(0, 'mafia_kill', 1);
     tick(g.room, g.room.game!.phaseEndsAt! + 1, g.rng);
-    expect(g.room.game!.phase).toBe('morning');
+    expect(g.room.game!.phase).toBe('voting');
     expect(g.P(1).alive).toBe(false);
   });
 
@@ -240,7 +257,7 @@ describe('timers, pause and host corrections', () => {
   });
 
   it('pause freezes the clock and rejects actions; resume restores remaining time', () => {
-    const g = setup(['mafia', V, V, V, V]);
+    const g = setup(['mafia', V, V, V, V], { timers: true });
     g.goToNight();
     const now = g.room.game!.phaseStartedAt;
     pauseGame(g.room, now + 10_000);
@@ -253,9 +270,8 @@ describe('timers, pause and host corrections', () => {
     expect(g.room.game!.phaseEndsAt).toBe(now + 180_000);
   });
 
-  it('manual mode never advances on its own', () => {
-    const g = setup(['mafia', V, V, V, V], { advanceMode: 'manual' });
-    expect(tick(g.room, T0 + 999_999_999, g.rng)).toBe(false);
+  it('the host can always move a stuck phase on', () => {
+    const g = setup(['mafia', V, V, V, V]);
     advancePhase(g.room, T0, g.rng, 'host');
     expect(g.room.game!.phase).toBe('night');
   });

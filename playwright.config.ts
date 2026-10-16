@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4173;
+/** Test-only host code (the real one lives in Render's HOST_CODE setting). */
+export const E2E_HOST_CODE = 'e2e-host-code';
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -19,6 +21,6 @@ export default defineConfig({
     url: `http://localhost:${PORT}/api/health`,
     reuseExistingServer: false,
     timeout: 180_000,
-    env: { PORT: String(PORT), DATABASE_PATH: './data/e2e-test.db', NODE_ENV: 'production' },
+    env: { PORT: String(PORT), DATABASE_PATH: './data/e2e-test.db', NODE_ENV: 'production', HOST_CODE: E2E_HOST_CODE },
   },
 });

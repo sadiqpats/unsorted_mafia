@@ -51,7 +51,7 @@ export default function Display() {
       ) : (
         <div className="mx-auto mt-10 grid max-w-7xl gap-8 lg:grid-cols-[1.4fr_1fr]">
           <div>
-            <p className="eyebrow">{night ? `Night ${g.round}` : g.round ? `Day ${g.round}` : ''}</p>
+            <p className="eyebrow">{g.round ? `Round ${g.round}` : ''}</p>
             <h2 className="font-[family-name:var(--font-display)] text-6xl md:text-7xl">{PHASE_LABEL[g.phase]}</h2>
             <div className="mt-4">
               <Timer endsAt={g.phaseEndsAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />
@@ -60,11 +60,11 @@ export default function Display() {
               {
                 {
                   reveal: 'Check your phone — privately.',
-                  prenight: 'Before nightfall — everyone makes a choice on their phone.',
+                  prenight: 'Dawn — everyone makes a choice on their phone.',
                   night: 'Everyone, eyes on your own screen. Make your choice.',
                   morning: 'The town wakes…',
                   discussion: 'Discuss. Accuse. Defend.',
-                  voting: 'Vote on your phone. Votes are secret.',
+                  voting: 'Discuss, then vote on your phones. Votes are secret.',
                   verdict: 'The town has spoken.',
                   game_over: g.winner?.reason ?? '',
                   lobby: '',

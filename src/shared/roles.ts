@@ -33,7 +33,7 @@ export interface AbilityDef {
   /** Short prompt shown in the private action panel. */
   prompt: string;
   description: string;
-  /** With the pre-night round on, this ability is used 'Before Nightfall' instead of at night. */
+  /** With the Dawn round on, this ability is used at Dawn instead of at night. */
   preNight?: boolean;
   /** Can this be used while silenced? (Silence only restricts the day; night abilities default to true.) */
   usableWhenSilenced: boolean;
@@ -46,7 +46,8 @@ export const ABILITIES: Record<string, AbilityDef> = {
     kind: 'night',
     priority: 50,
     team: true,
-    transferable: false,
+    /** A Thief who steals it makes his own kill that night (without learning who the Mafia are). */
+    transferable: true,
     target: 'alive-non-mafia',
     charges: () => null,
     prompt: 'Vote with your family: who gets hit tonight?',
@@ -89,18 +90,6 @@ export const ABILITIES: Record<string, AbilityDef> = {
     description: 'Your target survives a night attack.',
     usableWhenSilenced: true,
   },
-  guard: {
-    id: 'guard',
-    name: 'Bodyguard',
-    kind: 'night',
-    priority: 10,
-    transferable: true,
-    target: 'alive-any',
-    charges: (s) => s.bodyguardCharges,
-    prompt: 'Spend your protection on someone tonight? (limited)',
-    description: 'Shield one player from a night attack. Limited uses.',
-    usableWhenSilenced: true,
-  },
   steal: {
     id: 'steal',
     name: 'Steal',
@@ -108,22 +97,10 @@ export const ABILITIES: Record<string, AbilityDef> = {
     priority: 95,
     transferable: false,
     target: 'alive-other',
-    charges: (s) => s.thiefCharges,
+    charges: () => null,
     preNight: true,
     prompt: 'Which power will you steal?',
     description: "Steal another player's ability and take over their job.",
-    usableWhenSilenced: true,
-  },
-  revive: {
-    id: 'revive',
-    name: 'Revive',
-    kind: 'night',
-    priority: 90,
-    transferable: true,
-    target: 'dead',
-    charges: (s) => s.priestCharges,
-    prompt: 'Bring someone back from the dead?',
-    description: 'Return an eliminated player to the game. Limited uses.',
     usableWhenSilenced: true,
   },
   imposter_revive: {
@@ -135,8 +112,8 @@ export const ABILITIES: Record<string, AbilityDef> = {
     transferable: false,
     target: 'dead',
     charges: (s) => (s.imposterCharges === 0 ? null : s.imposterCharges),
-    prompt: 'Bring someone back from the dead before nightfall — or skip.',
-    description: 'Before nightfall, return any eliminated player to the game.',
+    prompt: 'Bring someone back from the dead — or skip.',
+    description: 'At Dawn (from round 2), return any eliminated player to the game.',
     usableWhenSilenced: true,
   },
   judge_vote: {
@@ -204,6 +181,8 @@ export interface RoleDef {
   winCondition: string;
   /** Abilities this role holds. `enabled` lets settings switch an ability on/off for the role. */
   abilities: { id: string; enabled?: (s: Settings) => boolean }[];
+  /** Is shown who the Mafia members are (the Godfather). */
+  knowsMafia?: boolean;
   /** Survivor-style neutrals co-win with whoever wins if they are alive at the end. */
   winsBySurviving?: boolean;
   /** What a Detective sees. Defaults to the role's alignment. */
@@ -224,22 +203,24 @@ export const ROLES: Record<string, RoleDef> = {
     description: 'A made member of the family. You know your fellow Mafia and hunt together after dark.',
     abilityText: 'Each night, vote with the Mafia on one player to eliminate.',
     howTo: 'At night, open your secret panel and pick a target. Your teammates see your pick. The family decision follows the room rule (default: most votes; ties go to the Godfather).',
-    winCondition: 'Win when the Mafia equal or outnumber everyone else still alive.',
+    winCondition: 'Win when the Mafia side equals or outnumbers everyone else still alive.',
     abilities: [{ id: 'mafia_kill' }],
     art: 'fedora',
   },
   godfather: {
     id: 'godfather',
     name: 'Godfather',
-    alignment: fixed('mafia'),
-    mafiaTeam: () => true,
+    alignment: () => 'mafia',
+    // Not a Mafia member: does not kill, and the Mafia do not know who he is.
+    mafiaTeam: () => false,
+    knowsMafia: true,
     unique: true,
     tagline: 'A whisper is louder than a gunshot.',
-    description: 'Head of the family. You decide who keeps quiet tomorrow.',
-    abilityText: 'Each night, silence one player for the next day. You also join the Mafia hit (configurable) and break its ties.',
-    howTo: 'At night, choose who to silence. A silenced player cannot speak or vote the next day and is never told who did it.',
-    winCondition: 'Win with the Mafia.',
-    abilities: [{ id: 'silence' }, { id: 'mafia_kill', enabled: (s) => s.godfatherJoinsKill }],
+    description: 'The Mafia’s silent patron. You know exactly who the Mafia are — they have no idea who you are.',
+    abilityText: 'You privately know who the Mafia are. Each night, silence one player for the next day. Defend the Mafia in discussion.',
+    howTo: 'Your role card lists the Mafia. At night, choose someone to silence — they cannot speak or vote the next day and never learn who did it. By day, protect the Mafia without giving yourself away.',
+    winCondition: 'Win with the Mafia. The Town wins once every Mafia member is dead, even if you are still alive.',
+    abilities: [{ id: 'silence' }],
     investigatesAs: (s) => (s.godfatherAppearsInnocent ? 'good' : 'mafia'),
     art: 'rose',
   },
@@ -265,25 +246,11 @@ export const ROLES: Record<string, RoleDef> = {
     unique: true,
     tagline: 'Not tonight.',
     description: 'You patch up the town, one late-night house call at a time.',
-    abilityText: 'Each night, protect one player from being killed.',
-    howTo: 'At night, choose who to protect. If the Mafia hit that player, they survive. Self-protection depends on the house rules.',
+    abilityText: 'Each night, protect one player from being killed. You may protect yourself — but never two rounds in a row.',
+    howTo: 'At night, choose who to protect. If the Mafia hit that player, they survive. If you protected yourself last round, your own name is unavailable this round.',
     winCondition: 'Win when every Mafia member is eliminated.',
     abilities: [{ id: 'protect' }],
     art: 'cross',
-  },
-  bodyguard: {
-    id: 'bodyguard',
-    name: 'Bodyguard',
-    alignment: fixed('good'),
-    mafiaTeam: () => false,
-    unique: true,
-    tagline: 'One shot at being a hero.',
-    description: 'A professional protector with a single perfect save in them.',
-    abilityText: 'Once per game (configurable), shield one player from a night attack.',
-    howTo: 'At night you may spend your protection, or skip to save it for later. Once it is used up, it is gone.',
-    winCondition: 'Win when every Mafia member is eliminated.',
-    abilities: [{ id: 'guard' }],
-    art: 'shield',
   },
   judge: {
     id: 'judge',
@@ -324,28 +291,13 @@ export const ROLES: Record<string, RoleDef> = {
     mafiaTeam: () => false,
     unique: true,
     tagline: 'What’s yours is mine.',
-    description: 'A light-fingered opportunist who borrows other people’s talents.',
-    abilityText: 'Before nightfall, steal another player’s power and take over their job. They are left playing as a Villager. Exact rules are set by the host.',
-    howTo: 'In the “Before Nightfall” round, pick someone to rob. If they have a power you can take, it is yours from that night on and they lose it. Some powers (the Mafia hit, win conditions) cannot be stolen.',
+    description: 'A light-fingered opportunist who borrows other people’s talents, one night at a time.',
+    abilityText: 'Every Dawn, steal one POWER (you see powers, never people). You use it that round; its owner loses it until the next Dawn. You can’t take the same power two rounds in a row.',
+    howTo: 'At Dawn, pick a power from the list. You never learn whose it was. Steal the Mafia Hit and you make your own kill that night. Next Dawn the power goes back and you steal again — just not the same one.',
     winCondition: 'Neutral: win by surviving to the end of the game (alongside whoever wins).',
     abilities: [{ id: 'steal' }],
     winsBySurviving: true,
     art: 'mask',
-  },
-  priest: {
-    id: 'priest',
-    name: 'Priest',
-    alignment: fixed('neutral'),
-    mafiaTeam: () => false,
-    unique: true,
-    tagline: 'Not everyone stays buried.',
-    description: 'A keeper of candles with a few miracles left to give.',
-    abilityText: 'At night, revive an eliminated player. Limited charges (default 2).',
-    howTo: 'When someone is dead, your panel lets you choose them. If the revival succeeds, the whole town is told they are back.',
-    winCondition: 'Neutral: win by surviving to the end of the game (alongside whoever wins).',
-    abilities: [{ id: 'revive' }],
-    winsBySurviving: true,
-    art: 'candle',
   },
   imposter: {
     id: 'imposter',
@@ -354,11 +306,12 @@ export const ROLES: Record<string, RoleDef> = {
     mafiaTeam: () => false,
     unique: true,
     tagline: 'Death is just a costume change.',
-    description: 'Nobody is quite sure who you really are — or how you keep bringing people back.',
-    abilityText: 'Before nightfall, revive anyone who has been eliminated — or skip. Default: wins with the Mafia (without knowing who they are).',
-    howTo: 'In the “Before Nightfall” round, pick a dead player to bring back, or skip. Choose wisely: reviving the wrong person can lose you the game.',
-    winCondition: 'Default: win with the Mafia (the host can change your side).',
+    description: 'Nobody is quite sure whose side you are on — maybe not even you.',
+    abilityText: 'From the second round, at Dawn, you may bring one dead player back — or skip. Everyone sees who returned, never who did it.',
+    howTo: 'At Dawn (from round 2), pick a dead player to revive, or skip. Play it however you like.',
+    winCondition: 'Neutral: win by surviving to the end of the game (alongside whoever wins).',
     abilities: [{ id: 'imposter_revive' }],
+    winsBySurviving: true,
     art: 'imposter',
   },
   jester: {
@@ -382,11 +335,9 @@ export const ROLE_ORDER = [
   'godfather',
   'detective',
   'doctor',
-  'bodyguard',
   'judge',
   'villager',
   'thief',
-  'priest',
   'imposter',
   'jester',
 ];

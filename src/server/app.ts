@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { GameError } from '../shared/engine';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../shared/settings';
 import { RoomService, type Identity } from './rooms';
-import { RateLimiter, hashToken, secureRng } from './security';
+import { RateLimiter, hashToken, safeEqualHex, secureRng } from './security';
 import { Store } from './store';
 import { buildView } from './views';
 
@@ -19,6 +19,11 @@ export interface AppOptions {
   tickMs?: number;
   roomTtlHours?: number;
   httpBurst?: number;
+  /**
+   * Code required to HOST a game. string = required; null = hosting disabled (production
+   * with HOST_CODE missing); undefined = no code needed (local dev / tests).
+   */
+  hostCode?: string | null;
   httpPerSec?: number;
 }
 
@@ -32,6 +37,7 @@ interface SocketData {
 const NameSchema = z.string().min(1).max(40);
 const CreateSchema = z.object({
   hostName: NameSchema,
+  hostCode: z.string().max(64).optional(),
   hostPlays: z.boolean().optional(),
   playerCount: z.number().int().min(MIN_PLAYERS).max(MAX_PLAYERS).optional(),
 });
@@ -152,11 +158,31 @@ export function createApp(opts: AppOptions) {
   const startedAt = new Date().toISOString();
   app.get('/api/health', (_req, res) => res.json({ ok: true, rooms: service.rooms.size, startedAt }));
 
+  // Only people with the host code can open rooms. 5 wrong codes lock that address out for 10 minutes.
+  const hostCodeFails = new Map<string, { count: number; until: number }>();
+  const checkHostCode = (ip: string, given: string | undefined): { status: number; code: string; message: string } | null => {
+    if (opts.hostCode === undefined) return null;
+    if (opts.hostCode === null) return { status: 503, code: 'hosting_disabled', message: 'Hosting is not set up on this server yet (HOST_CODE is missing).' };
+    const now = Date.now();
+    const rec = hostCodeFails.get(ip);
+    if (rec && rec.until > now) return { status: 429, code: 'locked', message: 'Too many wrong host codes. Try again in a few minutes.' };
+    if (safeEqualHex(hashToken(given ?? ''), hashToken(opts.hostCode))) {
+      hostCodeFails.delete(ip);
+      return null;
+    }
+    const count = (rec && rec.until <= now && rec.until !== 0 ? 0 : (rec?.count ?? 0)) + 1;
+    hostCodeFails.set(ip, count >= 5 ? { count: 0, until: now + 10 * 60_000 } : { count, until: 0 });
+    if (hostCodeFails.size > 5000) hostCodeFails.clear();
+    return { status: 403, code: 'bad_host_code', message: 'That host code is not correct.' };
+  };
+
   app.post('/api/rooms', limit, (req, res) => {
     const body = CreateSchema.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: { code: 'bad_request', message: 'Enter a display name (1–20 characters).' } });
+    const denied = checkHostCode(req.ip ?? 'unknown', body.data.hostCode);
+    if (denied) return res.status(denied.status).json({ error: { code: denied.code, message: denied.message } });
     try {
-      res.status(201).json(service.createRoom(body.data));
+      res.status(201).json(service.createRoom({ hostName: body.data.hostName, hostPlays: body.data.hostPlays, playerCount: body.data.playerCount }));
     } catch (e) {
       sendError(res, e);
     }

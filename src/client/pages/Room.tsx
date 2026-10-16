@@ -28,12 +28,11 @@ export default function Room() {
     if (first) return;
     if (!prefs.muted) {
       if (phase === 'night' || phase === 'prenight') sounds.night();
-      if (phase === 'morning') sounds.morning();
-      if (phase === 'voting') sounds.vote();
+      if (phase === 'voting') sounds.morning();
       if (phase === 'verdict' || phase === 'game_over') sounds.verdict();
     }
-    if (phase === 'prenight' || phase === 'night' || phase === 'morning' || phase === 'game_over') {
-      setCurtain(phase === 'prenight' ? 'Before nightfall…' : phase === 'night' ? 'Night falls…' : phase === 'morning' ? 'Dawn breaks' : 'The game is over');
+    if (phase === 'prenight' || phase === 'night' || phase === 'voting' || phase === 'game_over') {
+      setCurtain(phase === 'prenight' ? 'Dawn…' : phase === 'night' ? 'Night falls…' : phase === 'voting' ? 'Day breaks' : 'The game is over');
       const t = setTimeout(() => setCurtain(null), 2300);
       return () => clearTimeout(t);
     }

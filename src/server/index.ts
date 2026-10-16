@@ -16,7 +16,13 @@ const dbPath = process.env.DATABASE_PATH ?? join(root, 'data', 'mafia.db');
 const staticDir = process.env.STATIC_DIR ?? join(root, 'dist', 'client');
 const corsOrigin = resolveClientOrigins(process.env.CLIENT_ORIGIN);
 
+// Required to host. Set HOST_CODE in Render → Environment (never commit it: the repo is public).
+const hostCode = process.env.HOST_CODE?.trim() || (process.env.NODE_ENV === 'production' ? null : undefined);
+if (hostCode === null) console.warn('⚠ HOST_CODE is not set — hosting is disabled until you add it.');
+if (hostCode === undefined) console.warn('⚠ HOST_CODE is not set — dev mode: anyone can host.');
+
 const server = createApp({
+  hostCode,
   dbPath,
   staticDir,
   corsOrigin,
