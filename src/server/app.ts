@@ -157,7 +157,16 @@ export function createApp(opts: AppOptions) {
   };
 
   const startedAt = new Date().toISOString();
-  app.get('/api/health', (_req, res) => res.json({ ok: true, rooms: service.rooms.size, startedAt }));
+  app.get('/api/health', (_req, res) =>
+    res.json({
+      ok: true,
+      rooms: service.rooms.size,
+      // Rooms with a game in progress right now (handy before a deploy: a restart ends them).
+      liveGames: [...service.rooms.values()].filter((r) => r.status === 'active').length + [...charades.rooms.values()].filter((r) => r.status === 'playing').length,
+      charadesRooms: charades.rooms.size,
+      startedAt,
+    }),
+  );
   // Lets the Host page know whether to show the host-code box.
   app.get('/api/config', (_req, res) => res.json({ hostCodeRequired: opts.hostCode !== undefined }));
 

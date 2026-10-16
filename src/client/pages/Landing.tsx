@@ -2,11 +2,12 @@ import { Link } from 'react-router-dom';
 import { ROLES, ROLE_ORDER } from '../../shared/roles';
 import { defaultSettings } from '../../shared/settings';
 import { RoleArt } from '../components/RoleArt';
-import { AlignmentBadge, BrandMark, LOGO, PrefsMenu } from '../components/ui';
+import { AlignmentBadge, BrandMark, LOGO, PrefsMenu, useTitle } from '../components/ui';
 
 const settings = { ...defaultSettings(10), roles: {} };
 
 export default function Landing() {
+  useTitle('Mafia Night · Unsorted');
   return (
     <div className="grain vignette min-h-dvh overflow-x-hidden">
       <header className="relative z-40 mx-auto flex h-16 max-w-6xl items-center justify-between px-4">

@@ -88,6 +88,29 @@ describe('a game', () => {
     expect(g.history.map((h) => h.result)).toEqual(['correct', 'pass', 'timeout', 'correct']);
   });
 
+  it('“one more round” after ending early finishes the cut-short round, then plays one more', () => {
+    const g = started({ rounds: 5 });
+    E.reveal(g, 0, ctx());
+    E.judge(g, 'correct', clock);
+    E.nextTurn(g, clock);
+    E.reveal(g, 1, ctx(1));
+    E.judge(g, 'pass', clock);
+    E.nextTurn(g, clock); // turn 3 (round 2, team 0) is picking
+    E.endGame(g, clock);
+    E.oneMoreRound(g, clock);
+    // Turn 3 never happened: restart it; play out round 2 only.
+    expect(g.turn).toMatchObject({ n: 3, round: 2, team: 0, stage: 'picking' });
+    expect(g.settings.rounds).toBe(2);
+
+    const h = started({ rounds: 5 });
+    E.reveal(h, 0, ctx());
+    E.judge(h, 'correct', clock);
+    E.endGame(h, clock); // team 1 never acted in round 1
+    E.oneMoreRound(h, clock);
+    expect(h.turn).toMatchObject({ n: 2, round: 1, team: 1 });
+    expect(h.settings.rounds).toBe(2); // finish round 1, then one more
+  });
+
   it('only the acting captain can flip, swap or give up', () => {
     const g = started();
     expect(() => E.reveal(g, 1, ctx())).toThrow(/other team/);
@@ -227,6 +250,18 @@ describe('the rival picks a movie (server)', () => {
     expect(view(none.room, { kind: 'host' }).turn!.pending!.title).toBe('Made Up Movie');
     none.s.handle(none.code, none.host, { type: 'approve', seq: none.room.seq, ok: true });
     expect(none.room.turn).toMatchObject({ stage: 'ready', card: { title: 'Made Up Movie', verified: false } });
+  });
+
+  it('the host can flip the card for a captain whose phone died; a captain’s swap never bounces the host’s judgement', () => {
+    const x = svc(async () => null);
+    x.s.handle(x.code, x.host, { type: 'update_settings', patch: { picker: 'deck' } });
+    expect(x.s.handle(x.code, x.host, { type: 'reveal_here', seq: x.room.seq }).ok).toBe(true);
+    expect(x.room.turn!.stage).toBe('acting');
+    const old = x.room.seq;
+    const actor = { kind: 'captain' as const, team: 0 as TeamIdx, id: x.room.teams[0].captain!.id, sessionVersion: 1 };
+    expect(x.s.handle(x.code, actor, { type: 'swap', seq: x.room.seq }).ok).toBe(true);
+    expect(x.s.handle(x.code, x.host, { type: 'judge', seq: old, result: 'correct' }).ok).toBe(true);
+    expect(x.room.teams[0].score).toBe(1);
   });
 
   it('the acting team cannot pick its own movie', () => {

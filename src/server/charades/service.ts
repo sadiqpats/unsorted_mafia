@@ -148,7 +148,9 @@ export class CharadesService {
       const p = CHostCommandSchema.safeParse(raw);
       if (!p.success) throw new CharadesError('bad_command', 'That command isn’t valid.');
       const c = p.data;
-      if ('seq' in c) E.checkSeq(room, c.seq);
+      // Judging and pausing are guarded by the turn's stage instead: a captain's swap a
+      // split second earlier must not bounce the host's ✅.
+      if ('seq' in c && c.type !== 'judge' && c.type !== 'pause' && c.type !== 'resume') E.checkSeq(room, c.seq);
       switch (c.type) {
         case 'update_settings':
           return E.updateSettings(room, c.patch, ctx.now);
@@ -162,6 +164,9 @@ export class CharadesService {
           return;
         case 'random_card':
           return E.randomForTurn(room, ctx);
+        case 'reveal_here':
+          if (!room.turn) throw new CharadesError('not_playing', 'The game isn’t running.');
+          return E.reveal(room, room.turn.team, ctx);
         case 'approve':
           return E.approve(room, c.ok, ctx.now);
         case 'judge':

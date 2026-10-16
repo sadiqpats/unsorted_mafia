@@ -41,6 +41,7 @@ async function table(browser: Browser, setup?: (host: Page) => Promise<void>) {
   await host.getByLabel('Rounds (each team acts once per round)').selectOption('3');
   if (setup) await setup(host);
   await shot(host, 'host-lobby');
+  await shot(a, 'captain-lobby');
   await shot(tv, 'tv-lobby');
   await host.getByRole('button', { name: /Start the show/ }).click();
   return { host, tv, a, b, code };
@@ -136,12 +137,50 @@ test('Dumb Charades, rival picks: the other captain types a movie (checked) or s
   await host.getByRole('button', { name: '❌ Pass' }).click();
   await expect(tv.getByTestId('movie-title')).toHaveText('Jab We Met');
 
-  // Team 2 acts: Team 1's captain sends a random card.
+  // Team 2 acts: Team 1's captain tries a few things.
   await host.getByRole('button', { name: /Next: Team 2/ }).click();
+  await shot(b, 'captain-waiting-rival');
+  const pickA = a.getByPlaceholder('Type a movie…');
+  // A real film, looked up online, but from 1975 → refused with the reason.
+  await pickA.fill('Sholay');
+  await a.getByRole('button', { name: 'Send this movie' }).click();
+  await expect(a.getByRole('alert')).toContainText(/1975/, { timeout: 20_000 });
+  // Something nobody can find → the host decides.
+  await pickA.fill('Qwzx Blorp Filmy');
+  await a.getByRole('button', { name: 'Send this movie' }).click();
+  await expect(host.getByText(/“Qwzx Blorp Filmy”/)).toBeVisible({ timeout: 20_000 });
+  await shot(host, 'host-approval');
+  await host.getByRole('button', { name: '❌ Refuse' }).click();
+  await expect(a.getByRole('alert')).toContainText('didn’t accept');
   await a.getByRole('button', { name: /Surprise them/ }).click();
   await expect(b.getByTestId('card-back')).toBeVisible();
+  await shot(b, 'captain-ready');
   await b.getByTestId('card-back').click();
   await expect(b.getByTestId('movie-card')).toBeVisible();
+  await shot(a, 'captain-their-turn');
   await host.getByRole('button', { name: '✅ Guessed it!' }).click();
   await expect(tv.getByTestId('score-1')).toHaveText('1');
+  await shot(b, 'captain-result');
+});
+
+test('Dumb Charades: a captain whose phone dies can be replaced, and the host can flip the card meanwhile', async ({ browser }) => {
+  const { host, tv, a, code } = await table(browser);
+  await a.context().close(); // Team 1's captain phone is gone
+  await host.getByRole('button', { name: /Flip it here/ }).click();
+  await host.getByRole('button', { name: 'Flip it here' }).last().click();
+  await expect(host.getByTestId('movie-card')).toBeVisible();
+  await expect(tv.getByRole('timer')).toBeVisible();
+  await host.getByRole('button', { name: '✅ Guessed it!' }).click();
+  await expect(tv.getByTestId('score-0')).toHaveText('1');
+  // Free the seat; a new captain joins mid-game.
+  await host.getByRole('button', { name: /Next: Team 2/ }).click();
+  await host.getByRole('list', { name: 'Captains' }).getByRole('button', { name: 'Free seat' }).first().click();
+  await host.getByRole('button', { name: 'Free the seat' }).click();
+  const fresh = await newPhone(browser);
+  await fresh.goto(`/charades/join/${code}?team=1`);
+  await expect(fresh.getByText('Seat free')).toBeVisible();
+  await fresh.getByLabel('Your name').fill('Neha');
+  await fresh.getByRole('button', { name: 'Join as captain' }).click();
+  await expect(fresh.getByTestId('scoreboard')).toContainText('Captain Neha');
+  await expect(tv.getByTestId('scoreboard')).toContainText('Captain Neha');
 });

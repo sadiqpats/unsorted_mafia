@@ -1,14 +1,11 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Clapper } from '../charades/art';
 import { RoleArt } from '../components/RoleArt';
-import { BrandMark, LOGO, PrefsMenu } from '../components/ui';
+import { BrandMark, LOGO, PrefsMenu, useTitle } from '../components/ui';
 
 /** The front door of Unsorted: pick tonight's game. */
 export default function Hub() {
-  useEffect(() => {
-    document.title = 'Unsorted';
-  }, []);
+  useTitle('Unsorted');
   return (
     <div className="grain vignette min-h-dvh overflow-x-hidden">
       <header className="relative z-40 mx-auto flex h-16 max-w-5xl items-center justify-between px-4">

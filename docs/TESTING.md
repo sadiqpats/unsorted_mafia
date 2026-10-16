@@ -5,15 +5,15 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 | Suite | Command | Result |
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ no errors |
-| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 152 / 152 |
+| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 154 / 154 |
 | Integration (real server + socket/HTTP clients) | `npm test` | ✅ 32 / 32 |
-| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 17 / 17 |
+| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 18 / 18 |
 | Production build | `npm run build` | ✅ |
 
 ## Dumb Charades
-- **Unit — `tests/unit/charades.test.ts` (17):** the deck (≥ 950 films, all 2000+, ≤ 4 words, no duplicates, every card has genre and leads; difficulty counts in sync); word counting; turn order, rounds, scoring, timeout, tie → one more round; only the acting captain can flip/swap/pass; limited swaps with the clock still running; no movie dealt twice; pause/resume; host fixes a wrong call; stale taps refused; **who sees the movie** (deck mode: host + acting captain only; rival mode: the picker too; TV only after the turn); rival picks (deck title accepted, > 4 words refused, found online, too old / not Hindi refused, not found → host approves, acting team can't pick its own).
+- **Unit — `tests/unit/charades.test.ts` (19):** "one more round" after an early end finishes the cut-short round; the host can flip the card for a captain whose phone died; a captain's swap never bounces the host's ✅; the deck (≥ 950 films, all 2000+, ≤ 4 words, no duplicates, every card has genre and leads; difficulty counts in sync); word counting; turn order, rounds, scoring, timeout, tie → one more round; only the acting captain can flip/swap/pass; limited swaps with the clock still running; no movie dealt twice; pause/resume; host fixes a wrong call; stale taps refused; **who sees the movie** (deck mode: host + acting captain only; rival mode: the picker too; TV only after the turn); rival picks (deck title accepted, > 4 words refused, found online, too old / not Hindi refused, not found → host approves, acting team can't pick its own).
 - **Integration — `tests/integration/charades.test.ts`:** host code required, one captain per team (409 `seat_taken`), room info, title suggestions.
-- **End-to-end — `tests/e2e/charades.spec.ts` (2):** a full game with host, two captains and the TV in **deck** mode (flip, swap, judge, pass, fix a call, end, tie-breaker) and in **rival** mode (word-limit check, suggestion, rival's pick revealed only on flip, random card).
+- **End-to-end — `tests/e2e/charades.spec.ts` (3):** a full game with host, two captains and the TV in **deck** mode (flip, swap, judge, pass, fix a call, end, tie-breaker); **rival** mode (word-limit check, suggestion, rival's pick revealed only on flip, a real Wikidata lookup refusing a 1975 film, an unknown title going to the host who refuses it, random card); and a **dead captain phone** (host flips the card, frees the seat, a new captain joins mid-game).
 - **Deck check — `npx tsx scripts/verify-movies.ts`:** looks up every card on Wikidata. Last run: 976 checked; the 4 real mistakes were removed. Remaining flags are Wikidata gaps (films missing a Hindi-language tag) or festival premiere dates a year before the cinema release.
 
 ## Unit — `tests/unit/`

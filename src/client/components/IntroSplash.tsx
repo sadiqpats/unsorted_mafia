@@ -8,7 +8,8 @@ const SEEN_KEY = 'mafia-night:intro-seen';
 /** Show the welcome once per visit, on the public pages (never inside a running game or on the TV). */
 function shouldShow() {
   if (typeof window === 'undefined') return false;
-  if (/^\/(r|tv|c|ctv)\//.test(window.location.pathname)) return false;
+  // Never inside a game or on a TV, and not on join links with a room code (people scanning a QR mid-setup).
+  if (/^\/(r|tv|c|ctv|join|charades\/join)\/[A-Za-z0-9]+/.test(window.location.pathname)) return false;
   try {
     return sessionStorage.getItem(SEEN_KEY) !== '1';
   } catch {

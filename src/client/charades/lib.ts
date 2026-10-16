@@ -122,19 +122,19 @@ export function useCharades(code: string, auth: { token?: string; display?: bool
   return { view, status, endedReason, send, serverNow };
 }
 
-/** Seconds left on the turn clock, updated a few times a second. */
+/** Seconds left on the turn clock. Computed on every render (no first-frame "0:00"), re-rendered 4×/s while running. */
 export function useTurnClock(view: CView | null, serverNow: () => number): number | null {
   const t = view?.turn;
-  const [left, setLeft] = useState<number | null>(null);
+  const running = t?.stage === 'acting' && t.pausedLeft === null;
+  const [, tick] = useState(0);
   useEffect(() => {
-    if (!t || t.stage !== 'acting') return setLeft(null);
-    if (t.pausedLeft !== null) return setLeft(Math.ceil(t.pausedLeft / 1000));
-    const up = () => setLeft(Math.max(0, Math.ceil(((t.endsAt ?? 0) - serverNow()) / 1000)));
-    up();
-    const id = setInterval(up, 200);
+    if (!running) return;
+    const id = setInterval(() => tick((x) => x + 1), 250);
     return () => clearInterval(id);
-  }, [t?.stage, t?.endsAt, t?.pausedLeft, serverNow]);
-  return left;
+  }, [running, t?.endsAt]);
+  if (!t || t.stage !== 'acting') return null;
+  if (t.pausedLeft !== null) return Math.ceil(t.pausedLeft / 1000);
+  return Math.max(0, Math.ceil(((t.endsAt ?? 0) - serverNow()) / 1000));
 }
 
 export const fmtClock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;

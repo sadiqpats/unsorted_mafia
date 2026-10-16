@@ -31,7 +31,7 @@ Each round = one turn per team. After the last round the higher score wins; on a
 | Word blanks on the TV | on / off | on |
 | Who goes first | coin toss / Team 1 / Team 2 | coin toss |
 
-Team names are editable. Mid-game the host can add a round or end the game.
+Team names are editable. Mid-game the host can add a round, end the game, **free a captain's seat** (a new captain joins with the room code) and, if the acting captain's phone died, **flip the card on the host's screen**.
 
 ## The deck
 `src/server/charades/data/*.ts`: one line per film, `Title|Year|Genre|Lead;Lead|Tier`. The loader (`movies.ts`) drops anything before 2000, longer than four words, or duplicated. Tier 1 = everyone knows it, 2 = well known, 3 = film buffs. The deck lives only on the server, so phones never hold upcoming cards.

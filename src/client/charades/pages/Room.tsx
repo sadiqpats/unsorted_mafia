@@ -180,8 +180,8 @@ function HostLobby({ view, send }: { view: CView; send: Send }) {
 
       <section className="card space-y-4 p-5">
         <h2 className="charades-title text-3xl">House rules</h2>
-        <Choice label="Rounds (each team acts once per round)" value={s.rounds} options={ROUND_OPTIONS.map((r) => [r, `${r} rounds`])} onChange={(v) => set({ rounds: Number(v) })} disabled={busy} />
-        <Choice label="Time per turn" value={s.turnSeconds} options={TIMER_OPTIONS.map((t) => [t, fmtClock(t)])} onChange={(v) => set({ turnSeconds: Number(v) })} disabled={busy} />
+        <Choice label="Rounds (each team acts once per round)" value={s.rounds} options={withCurrent(ROUND_OPTIONS, s.rounds).map((r) => [r, `${r} rounds`])} onChange={(v) => set({ rounds: Number(v) })} disabled={busy} />
+        <Choice label="Time per turn" value={s.turnSeconds} options={withCurrent(TIMER_OPTIONS, s.turnSeconds).map((t) => [t, fmtClock(t)])} onChange={(v) => set({ turnSeconds: Number(v) })} disabled={busy} />
         <Choice
           label="Who picks the movie?"
           value={s.picker}
@@ -203,7 +203,7 @@ function HostLobby({ view, send }: { view: CView; send: Send }) {
           onChange={(v) => set({ difficulty: v as CSettings['difficulty'] })}
           disabled={busy}
         />
-        <Choice label="Card swaps per turn (clock keeps running)" value={s.swaps} options={SWAP_OPTIONS.map((n) => [n, n === 0 ? 'No swaps' : `${n} swap${n > 1 ? 's' : ''}`])} onChange={(v) => set({ swaps: Number(v) })} disabled={busy} />
+        <Choice label="Card swaps per turn (clock keeps running)" value={s.swaps} options={withCurrent(SWAP_OPTIONS, s.swaps).map((n) => [n, n === 0 ? 'No swaps' : `${n} swap${n > 1 ? 's' : ''}`])} onChange={(v) => set({ swaps: Number(v) })} disabled={busy} />
         <Choice
           label="Who goes first?"
           value={s.firstTeam}
@@ -229,6 +229,9 @@ function HostLobby({ view, send }: { view: CView; send: Send }) {
     </div>
   );
 }
+
+/** Keep a value the host set some other way (e.g. "+ Add a round") selectable in its dropdown. */
+const withCurrent = (opts: readonly number[], v: number) => [...new Set([...opts, v])].sort((a, b) => a - b);
 
 function Choice({ label, value, options, onChange, disabled }: { label: string; value: string | number; options: (readonly [string | number, string])[]; onChange: (v: string) => void; disabled?: boolean }) {
   return (
@@ -304,6 +307,7 @@ function HostTurn({ view, send, left }: { view: CView; send: Send; left: number 
               Waiting for <b>{acting.captain?.name ?? acting.name}</b> to flip the card.
             </p>
             <p className="text-sm text-white/70">The clock starts the moment they reveal it.</p>
+            <FlipHere seq={seq} send={send} />
           </>
         ) : (
           <>
@@ -343,6 +347,7 @@ function HostTurn({ view, send, left }: { view: CView; send: Send; left: number 
           <p className="text-lg">
             Movie chosen. Waiting for <b>{acting.captain?.name ?? acting.name}</b> to flip it.
           </p>
+          <FlipHere seq={seq} send={send} />
         </Panel>
         {t.card && <MovieCard card={t.card} />}
       </div>
@@ -386,6 +391,24 @@ function HostTurn({ view, send, left }: { view: CView; send: Send; left: number 
   );
 }
 
+/** Backup when the acting captain's phone is gone: the host reveals the card and shows the actor. */
+function FlipHere({ seq, send }: { seq: number; send: Send }) {
+  const { act, busy } = useAct(send);
+  const confirm = useConfirm();
+  return (
+    <button
+      className="text-xs text-white/60 underline underline-offset-4"
+      disabled={busy}
+      onClick={async () =>
+        (await confirm({ title: 'Flip the card on your screen?', body: 'Use this if the captain’s phone died. You’ll see the movie — show it to the actor only. The clock starts now.', confirm: 'Flip it here' })) &&
+        act({ type: 'reveal_here', seq })
+      }
+    >
+      Captain’s phone died? Flip it here
+    </button>
+  );
+}
+
 function HostOver({ view, send }: { view: CView; send: Send }) {
   const { act, busy } = useAct(send);
   return (
@@ -422,6 +445,27 @@ function HostTools({ view, send }: { view: CView; send: Send }) {
         <li>
           {pickLabel(s)} · {s.swaps} swap{s.swaps === 1 ? '' : 's'} · {s.difficulty === 'easy' ? 'Easy' : s.difficulty === 'mixed' ? 'Mixed' : 'Film buff'}
         </li>
+      </ul>
+      <ul className="space-y-1.5" aria-label="Captains">
+        {view.teams.map((tm, i) => (
+          <li key={i} className="flex items-center justify-between gap-2 rounded-lg bg-black/20 px-3 py-2">
+            <span className="min-w-0 truncate">
+              <span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${tm.captain?.online ? 'bg-[#6fe39b]' : 'bg-white/30'}`} aria-hidden="true" />
+              {tm.name}: {tm.captain ? <b>{tm.captain.name}</b> : <i className="text-white/60">seat free — scan to join</i>}
+            </span>
+            {tm.captain && (
+              <button
+                className="shrink-0 text-xs text-white/70 underline"
+                onClick={async () =>
+                  (await confirm({ title: `Free ${tm.name}’s captain seat?`, body: `${tm.captain!.name} is signed out. A new captain can join from the Join page with code ${view.code}.`, confirm: 'Free the seat', danger: true })) &&
+                  act({ type: 'kick_captain', team: i as TeamIdx })
+                }
+              >
+                Free seat
+              </button>
+            )}
+          </li>
+        ))}
       </ul>
       {view.status === 'playing' && (
         <div className="grid grid-cols-2 gap-2">

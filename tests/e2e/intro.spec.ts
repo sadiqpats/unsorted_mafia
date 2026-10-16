@@ -18,7 +18,7 @@ test('welcome intro: shows on first open, tap to enter opens the site, not shown
 
 test('welcome intro never interrupts a game room or the TV display', async ({ browser }) => {
   const p = await newPhone(browser, { intro: true });
-  for (const path of ['/tv/ABCDE', '/ctv/ABCDE', '/c/ABCDE', '/r/ABCDE']) {
+  for (const path of ['/tv/ABCDE', '/ctv/ABCDE', '/c/ABCDE', '/r/ABCDE', '/join/ABCDE', '/charades/join/ABCDE?team=1']) {
     await p.goto(path);
     await expect(p.getByRole('dialog')).toHaveCount(0);
   }

@@ -116,6 +116,8 @@ export const CHostCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('start') }),
   z.object({ type: z.literal('kick_captain'), team: z.union([z.literal(0), z.literal(1)]) }),
   z.object({ type: z.literal('random_card'), seq }),
+  /** Captain's phone died: the host flips the card on their own screen. */
+  z.object({ type: z.literal('reveal_here'), seq }),
   z.object({ type: z.literal('approve'), seq, ok: z.boolean() }),
   z.object({ type: z.literal('judge'), seq, result: z.enum(['correct', 'pass']) }),
   z.object({ type: z.literal('pause'), seq }),

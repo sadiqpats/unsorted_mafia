@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { QR } from '../../components/ui';
+import { QR, useTitle } from '../../components/ui';
 import { sounds } from '../../lib/sound';
 import { Clapper, Reel } from '../art';
 import { RESULT_LINE, useCharades, useTurnClock } from '../lib';
@@ -11,6 +11,7 @@ const DISPLAY = { display: true };
 
 /** The big screen: scores, the clock, word blanks and the reveal. Never shows the movie until the turn is over. */
 export default function CharadesTV() {
+  useTitle('Dumb Charades · TV · Unsorted');
   const code = (useParams().code ?? '').toUpperCase();
   const { view, status, endedReason, serverNow } = useCharades(code, DISPLAY);
   const left = useTurnClock(view, serverNow);

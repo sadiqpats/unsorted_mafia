@@ -5,11 +5,12 @@ import { useParams } from 'react-router-dom';
 import { ROLES, roleAlignment } from '../../shared/roles';
 import { Avatar } from '../components/Avatar';
 import type { PublicPlayer } from '../../shared/view-types';
-import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, QR, Timer } from '../components/ui';
+import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, QR, Timer, useTitle } from '../components/ui';
 import { useRoom } from '../lib/useRoom';
 
 /** TV / projector view. Connects as a read-only "display" and receives only public data. */
 export default function Display() {
+  useTitle('Mafia Night · TV · Unsorted');
   const { code = '' } = useParams();
   const upper = code.toUpperCase();
   const auth = useMemo(() => ({ display: true }), []);

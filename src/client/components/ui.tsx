@@ -29,7 +29,15 @@ export function BrandMark({ compact = false, label = 'MAFIA NIGHT', to = '/mafia
   );
 }
 
+/** Sets the browser tab title while a page is shown (the site hosts more than one game). */
+export function useTitle(title: string) {
+  useEffect(() => {
+    document.title = title;
+  }, [title]);
+}
+
 export function Shell({ children, right, wide = false }: { children: ReactNode; right?: ReactNode; wide?: boolean }) {
+  useTitle('Mafia Night · Unsorted');
   return (
     <div className="grain vignette min-h-dvh">
       <div className="ambient" aria-hidden="true" />

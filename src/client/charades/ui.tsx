@@ -55,7 +55,7 @@ export function genreLook(genre: string): { cls: string; emoji: string } {
 export function MovieCard({ card, big = false, tv = false }: { card: CardView; big?: boolean; tv?: boolean }) {
   const look = genreLook(card.genre);
   return (
-    <article className={`movie-card ${look.cls} ${big ? 'movie-card-big' : ''} ${tv ? 'movie-card-tv' : ''}`} data-testid="movie-card" aria-label={`Movie: ${card.title}`}>
+    <article key={card.title} className={`movie-card ${look.cls} ${big ? 'movie-card-big' : ''} ${tv ? 'movie-card-tv' : ''}`} data-testid="movie-card" aria-label={`Movie: ${card.title}`}>
       <div className="movie-card-shine" aria-hidden="true" />
       <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
         <span>{card.year ? card.year : 'Your pick'}</span>

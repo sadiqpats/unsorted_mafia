@@ -92,7 +92,12 @@ function newTurn(room: CRoom, n: number, team: TeamIdx): Turn {
 }
 
 /** The team that acts on turn n (teams alternate; `first` acts on odd turns). */
-const firstTeamOf = (room: CRoom): TeamIdx => (room.history[0]?.team ?? room.turn?.team ?? 0) as TeamIdx;
+/** The team that acted on turn 1 (odd turns), worked out from the current turn. */
+const firstTeamOf = (room: CRoom): TeamIdx => {
+  const t = room.turn;
+  if (!t) return 0;
+  return (t.n % 2 === 1 ? t.team : 1 - t.team) as TeamIdx;
+};
 
 function requireTurn(room: CRoom, ...stages: Turn['stage'][]): Turn {
   if (room.status !== 'playing' || !room.turn) return fail('not_playing', 'The game isn’t running.');
@@ -325,14 +330,19 @@ export function endGame(room: CRoom, now: number) {
   touch(room, now);
 }
 
-/** Tie-breaker (or just more fun): add a round and carry on. */
+/**
+ * Tie-breaker (or just more fun). After a finished game: one more round. After the
+ * host ended early: finish the round that was cut short (so both teams get the same
+ * number of turns) and then play one more.
+ */
 export function oneMoreRound(room: CRoom, now: number) {
   if (room.status !== 'over' || !room.turn) fail('not_over', 'Finish the game first.');
-  room.settings.rounds = Math.max(room.settings.rounds, room.turn!.round) + 1;
-  room.status = 'playing';
+  const t = room.turn!;
   const first = firstTeamOf(room);
-  const n = room.turn!.round * 2 + 1;
-  room.turn = newTurn(room, n, first);
+  const n = t.stage === 'done' ? t.n + 1 : t.n;
+  room.settings.rounds = Math.ceil(n / 2) + (n % 2 === 0 ? 1 : 0);
+  room.status = 'playing';
+  room.turn = newTurn(room, n, (n % 2 === 1 ? first : 1 - first) as TeamIdx);
   touch(room, now);
 }
 
