@@ -5,9 +5,9 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 | Suite | Command | Result |
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ no errors |
-| Unit (engine, rules, deploy config) | `npm test` | ✅ 125 / 125 |
+| Unit (engine, rules, announcements, deploy config) | `npm test` | ✅ 133 / 133 |
 | Integration (real server + socket clients) | `npm test` | ✅ 31 / 31 |
-| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 12 / 12 (3.7 min) |
+| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 12 / 12 (3.9 min) |
 | Production build | `npm run build` | ✅ |
 
 ## Unit — `tests/unit/`
@@ -25,6 +25,7 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
   - Every living player gets an action.
   - **No timers by default:** nothing advances on time, only when everyone has acted; the Day ends when everyone has voted; optional timers still work.
   - Pause/resume; host can always advance; public host corrections; lobby rules.
+- **announcements (8)**, regression tests for glitches seen in a live game: no public phase chatter; each phase's news shows exactly what happened since the previous phase (Day = last night, Night = the vote or Dawn, Dawn = the vote), never repeated; runoff announced once; Game Master announcements reach everyone; two attackers on one victim = one death line.
 - **deploy-config (5):** Vercel → Render fallback; allowed origins.
 
 ## Integration — `tests/integration/`

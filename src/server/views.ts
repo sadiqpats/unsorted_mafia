@@ -28,6 +28,8 @@ import type { ClientView, HostPanel, MeView, PublicGame, PublicPlayer, PublicVie
 export type Viewer = { kind: 'public' } | { kind: 'player'; playerId: string } | { kind: 'host' };
 
 const FEED_LIMIT = 80;
+/** Announcement kinds that belong in a phase's news card (not joins, phase chatter, etc.). */
+const NEWS_KINDS = new Set(['morning', 'prenight', 'verdict', 'gm', 'correction', 'pause']);
 
 function publicSilenced(room: Room, silencedRound: number | null): boolean {
   const g = room.game;
@@ -98,6 +100,8 @@ export function buildPublic(room: Room, connected: Set<string>, now: number): Pu
       winner: g.winner,
       stats: over ? g.stats : null,
       aliveCount: room.players.filter((p) => p.alive).length,
+      news: room.log.filter((l) => l.visibility === 'public' && NEWS_KINDS.has(l.kind) && l.seq > (g.newsFromSeq ?? 0)),
+      newsFromAt: g.newsFromAt ?? 0,
     };
   }
 
@@ -175,7 +179,7 @@ function buildMe(room: Room, playerId: string): MeView | null {
     night,
     mafia,
     knownMafia,
-    privateResults: room.privateResults.filter((r) => r.playerId === p.id).map((r) => ({ id: r.id, round: r.round, kind: r.kind, text: r.text })),
+    privateResults: room.privateResults.filter((r) => r.playerId === p.id).map((r) => ({ id: r.id, round: r.round, kind: r.kind, text: r.text, at: r.at })),
     allRoles,
   };
 }

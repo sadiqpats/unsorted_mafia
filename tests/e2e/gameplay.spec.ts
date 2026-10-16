@@ -17,10 +17,12 @@ test('5 players, no timers: full match — Mafia kill, Detective result, refresh
   await nightAct(doc, 'protect', other.name);
   await nightAct(other, 'decoy', mafia.name);
   await nightAct(victim, 'decoy', null);
+  // No pop-up duplicating the on-screen ✓ confirmation.
+  expect(await det.page.getByText('Choice locked in.').count()).toBe(0);
 
   // Night → Day the moment everyone has acted; every phone sees the same news, with no role revealed.
   await expect(t.host.getByTestId('host-phase')).toHaveText('Day');
-  for (const s of t.seats) await expect(s.page.getByTestId('phase-news')).toContainText(`${victim.name} was found dead at dawn.`);
+  for (const s of t.seats) await expect(s.page.getByTestId('phase-news')).toContainText(`${victim.name} was killed during the night.`);
   await expect(victim.page.getByText('You have been eliminated')).toBeVisible();
   expect(await other.page.locator('body').innerText()).not.toMatch(/They were the/);
 
@@ -77,6 +79,8 @@ test('Godfather knows the Mafia, silences a player, who is then blocked from vot
   await expect(t.host.getByTestId('host-phase')).toHaveText('Day');
   await expect(silenced.page.getByTestId('phase-news')).toContainText(`${silenced.name} has been silenced`);
   await expect(silenced.page.getByText('You are silenced today and cannot vote.')).toBeVisible();
+  // Announced once — not repeated in a second line.
+  expect(await silenced.page.getByText(/has been silenced/).count()).toBe(1);
   await expect(silenced.page.getByRole('button', { name: /Open your ballot/ })).toHaveCount(0);
 });
 

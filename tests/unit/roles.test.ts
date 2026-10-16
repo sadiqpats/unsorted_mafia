@@ -26,7 +26,7 @@ describe('Mafia', () => {
     g.advance();
     expect(g.P(1).alive).toBe(false);
     expect(g.room.game!.phase).toBe('voting'); // Day starts straight after the night
-    expect(news(g, 'morning')).toEqual(['P1 was found dead at dawn.']);
+    expect(news(g, 'morning')).toEqual(['P1 was killed during the night.']);
   });
 
   it('cannot target its own members', () => {

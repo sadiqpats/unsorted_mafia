@@ -153,6 +153,12 @@ export interface Game {
   };
   startedAt: number;
   endedAt: number | null;
+  /** News for the current phase = public log entries after this seq (announcements since the previous phase began). */
+  newsFromSeq?: number;
+  /** Private notes newer than this time belong to the current phase. */
+  newsFromAt?: number;
+  /** Log seq / time at which the current phase began. */
+  phaseLogSeq?: number;
 }
 
 export interface Room {

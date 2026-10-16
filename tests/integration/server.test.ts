@@ -220,7 +220,7 @@ describe('gameplay over the network', () => {
     // last action resolves the night immediately (nightAutoResolve)
     const morning = await others[1].client.waitFor((v) => v.game?.phase === 'voting');
     expect(morning.players.find((p) => p.id === others[0].id)!.alive).toBe(false);
-    expect(morning.feed.map((f) => f.text).join()).toContain(`${others[0].name} was found dead`);
+    expect(morning.feed.map((f) => f.text).join()).toContain(`${others[0].name} was killed during the night`);
     // dead player cannot vote
     await toPhase(others[1].client, g.host, 'voting');
     const vseq = g.host.view!.game!.phaseSeq;

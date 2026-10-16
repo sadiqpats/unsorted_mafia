@@ -74,6 +74,15 @@ export default function Display() {
                 }[g.phase]
               }
             </p>
+            {g.news.length > 0 && (
+              <div className="mt-5 space-y-1 rounded-2xl border border-gold/30 bg-black/30 p-4" data-testid="tv-news">
+                {g.news.map((n) => (
+                  <p key={n.seq} className="font-[family-name:var(--font-serif)] text-2xl leading-snug text-bone">
+                    {n.text.replace(/^📣\s*/, '')}
+                  </p>
+                ))}
+              </div>
+            )}
             {g.nightProgress && <p className="mt-3 text-xl text-mute">{g.nightProgress.done} / {g.nightProgress.total} locked in</p>}
             {g.votingProgress && <p className="mt-3 text-xl text-mute">{g.votingProgress.done} / {g.votingProgress.total} votes in</p>}
             <div className="mt-8">

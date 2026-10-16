@@ -55,8 +55,8 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
         </div>
       )}
       {phase === 'reveal' && <RevealPanel view={view} send={send} />}
-      {(phase === 'night' || phase === 'prenight') && <NightPanel key={phase} view={view} send={send} />}
-      {phase === 'voting' && <DayPanel view={view} send={send} />}
+      {(phase === 'night' || phase === 'prenight') && <NightPanel key={g.phaseSeq} view={view} send={send} />}
+      {phase === 'voting' && <DayPanel key={g.phaseSeq} view={view} send={send} />}
       {phase === 'verdict' && <VerdictPanel view={view} />}
       {phase === 'game_over' && <GameOverPanel view={view} />}
       {/* Action phases show ONLY the action — no lists, feeds or extra buttons. */}
@@ -305,7 +305,7 @@ function Notebook({ view }: { view: ClientView }) {
         <ul className="space-y-1.5">
           {[...results].reverse().map((r) => (
             <li key={r.id}>
-              <span className="mr-2 text-xs text-mute">Night {r.round}</span>
+              <span className="mr-2 text-xs text-mute">Round {r.round}</span>
               {r.text}
             </li>
           ))}
@@ -335,13 +335,7 @@ function NightPanel({ view, send }: { view: ClientView; send: Send }) {
       <PhaseNews view={view} />
       <PrivacyShield label={allDone ? 'Review your choice' : pre ? 'Open your dawn panel' : 'Open your night panel'}>
         <div className="space-y-6 pt-6">
-          {me.privateResults
-            .filter((r) => r.round === view.game!.round)
-            .map((r) => (
-              <p key={r.id} className="rounded-xl border border-gold/40 bg-gold/5 p-3 text-sm" data-testid="private-note">
-                {r.text}
-              </p>
-            ))}
+          <PrivateNotes view={view} />
           {night.options.map((o) => (
             <NightOptionCard key={o.abilityId} view={view} option={o} submitted={night.submitted} send={send} />
           ))}
@@ -357,25 +351,61 @@ function NightPanel({ view, send }: { view: ClientView; send: Send }) {
   );
 }
 
+const NEWS_TITLE: Record<string, string> = {
+  verdict: 'The vote',
+  prenight: 'At dawn',
+  morning: 'Last night',
+  gm: 'From the Game Master',
+  correction: 'Game Master correction',
+  pause: 'Game Master',
+};
+
 /**
- * The news every phone sees at the top of each phase:
- *  Dawn  → yesterday's vote result;  Night → what happened at Dawn (theft, revivals);
- *  Day   → what happened in the night.
+ * The news every phone sees at the top of a phase: exactly the public announcements
+ * made since the previous phase began — never older ones, never repeated.
  */
 function PhaseNews({ view }: { view: ClientView }) {
-  const g = view.game!;
-  const want = g.phase === 'prenight' ? { kinds: ['verdict'], round: g.round - 1, title: 'Yesterday' } : g.phase === 'night' ? { kinds: ['prenight'], round: g.round, title: 'At dawn' } : { kinds: ['morning'], round: g.round, title: 'Last night' };
-  const lines = view.feed.filter((f) => want.kinds.includes(f.kind) && f.round === want.round);
-  if (!lines.length) return null;
+  const news = view.game!.news ?? [];
+  if (!news.length) return null;
+  const groups: { kind: string; lines: typeof news }[] = [];
+  for (const n of news) {
+    const title = NEWS_TITLE[n.kind] ?? 'News';
+    const last = groups[groups.length - 1];
+    if (last && NEWS_TITLE[last.kind] === title) last.lines.push(n);
+    else groups.push({ kind: n.kind, lines: [n] });
+  }
   return (
-    <div className="card border-gold/40 p-4 text-center anim-fade-up" role="status" data-testid="phase-news">
-      <p className="eyebrow">{want.title}</p>
-      {lines.map((l) => (
-        <p key={l.seq} className="mt-2 font-[family-name:var(--font-serif)] text-xl leading-snug">
-          {l.text}
-        </p>
+    <div className="card space-y-3 border-gold/40 p-4 text-center anim-fade-up" role="status" data-testid="phase-news">
+      {groups.map((grp) => (
+        <div key={grp.lines[0].seq}>
+          <p className="eyebrow">{NEWS_TITLE[grp.kind] ?? 'News'}</p>
+          {grp.lines.map((l) => (
+            <p key={l.seq} className="mt-1.5 font-[family-name:var(--font-serif)] text-xl leading-snug">
+              {l.text.replace(/^📣\s*/, '')}
+            </p>
+          ))}
+        </div>
       ))}
     </div>
+  );
+}
+
+/** Private notes that arrived for this phase (shown once — older ones live in the notebook). */
+function freshNotes(view: ClientView) {
+  const from = view.game?.newsFromAt ?? 0;
+  return view.me!.privateResults.filter((r) => r.at > from);
+}
+
+function PrivateNotes({ view }: { view: ClientView }) {
+  const notes = freshNotes(view);
+  return (
+    <>
+      {notes.map((r) => (
+        <p key={r.id} className="rounded-xl border border-gold/40 bg-gold/5 p-3 text-sm" data-testid="private-note">
+          {r.text}
+        </p>
+      ))}
+    </>
   );
 }
 
@@ -385,7 +415,7 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
   const [pick, setPick] = useState<string | null>(done ? submitted[option.abilityId] : null);
   const locked = done && !option.changeable;
   const submit = (target: string | null) =>
-    act({ type: 'night_action', abilityId: option.abilityId, targetId: target, phaseSeq: view.game!.phaseSeq }, target ? 'Choice locked in.' : 'Skipped.');
+    act({ type: 'night_action', abilityId: option.abilityId, targetId: target, phaseSeq: view.game!.phaseSeq });
   return (
     <div data-option={option.abilityId}>
       <p className="text-base text-bone">{option.prompt}</p>
@@ -447,11 +477,9 @@ function MafiaVotes({ view }: { view: ClientView }) {
 
 /** Day = news + discussion + secret ballot. The day ends once every eligible player has voted. */
 function DayPanel({ view, send }: { view: ClientView; send: Send }) {
-  const silenced = view.players.filter((p) => p.silenced);
   return (
     <div className="space-y-3">
       <PhaseNews view={view} />
-      {silenced.length > 0 && <p className="text-center text-sm text-gold">🤐 Silenced today: {silenced.map((p) => p.name).join(', ')}</p>}
       <p className="text-center text-sm text-mute">Discuss, then vote. The day ends when everyone has voted.</p>
       <VotingPanel view={view} send={send} />
     </div>
@@ -473,16 +501,10 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
       <div className="space-y-3">
         {header}
         <div className="card p-5 text-center text-sm text-mute">{v?.reason ?? 'You cannot vote right now.'}</div>
-        {me.alive && me.privateResults.some((r) => r.round === view.game!.round) && (
+        {me.alive && freshNotes(view).length > 0 && (
           <PrivacyShield label="You have a private message">
             <div className="space-y-2 pt-6">
-              {me.privateResults
-                .filter((r) => r.round === view.game!.round)
-                .map((r) => (
-                  <p key={r.id} className="rounded-xl border border-gold/40 bg-gold/5 p-3 text-sm" data-testid="private-note">
-                    {r.text}
-                  </p>
-                ))}
+              <PrivateNotes view={view} />
             </div>
           </PrivacyShield>
         )}
@@ -494,13 +516,7 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
       {header}
       <PrivacyShield label={voted ? 'Review your vote' : 'Open your ballot'}>
         <div className="space-y-4 pt-6">
-          {me.privateResults
-            .filter((r) => r.round === view.game!.round)
-            .map((r) => (
-              <p key={r.id} className="rounded-xl border border-gold/40 bg-gold/5 p-3 text-sm" data-testid="private-note">
-                {r.text}
-              </p>
-            ))}
+          <PrivateNotes view={view} />
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Vote to eliminate">
             {v.targets.map((t) => (
               <button
@@ -535,7 +551,7 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
           <button
             className="btn btn-primary mt-4 w-full"
             disabled={busy || pick === undefined || (voted && (!canChange || pick === v.myVote))}
-            onClick={() => act({ type: 'vote', targetId: pick ?? null, rally, phaseSeq: view.game!.phaseSeq }, 'Vote cast.')}
+            onClick={() => act({ type: 'vote', targetId: pick ?? null, rally, phaseSeq: view.game!.phaseSeq })}
           >
             {voted ? (canChange ? 'Change vote' : `✓ Voted: ${pick === null ? 'abstain' : nameOf(view, v.myVote)}`) : pick === undefined ? 'Choose a player' : `Vote ${pick === null ? 'to abstain' : `for ${nameOf(view, pick)}`}`}
           </button>

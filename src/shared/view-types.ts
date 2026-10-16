@@ -38,6 +38,10 @@ export interface PublicGame {
   winner: WinResult | null;
   stats: { suspicion: Record<string, number>; nightKills: number; saves: number; revives: number; voteEliminations: number; investigations: number } | null;
   aliveCount: number;
+  /** What every phone shows at the top of this phase: public announcements since the previous phase began. */
+  news: LogEntry[];
+  /** Private notes created after this moment are new for this phase. */
+  newsFromAt: number;
 }
 
 export interface PublicView {
@@ -82,7 +86,7 @@ export interface MeView {
   mafia: { team: { id: string; name: string; roleId: string; canAct: boolean }[]; votes: Record<string, string | null> } | null;
   /** Godfather only: who the Mafia are (the Mafia never learn who the Godfather is). */
   knownMafia: { id: string; name: string }[] | null;
-  privateResults: { id: string; round: number; kind: string; text: string }[];
+  privateResults: { id: string; round: number; kind: string; text: string; at: number }[];
   allRoles: Record<string, string> | null;
 }
 

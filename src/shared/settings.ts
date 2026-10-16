@@ -104,7 +104,7 @@ export type Settings = z.infer<typeof SettingsSchema>;
 export type Announcements = z.infer<typeof AnnouncementsSchema>;
 
 export const DEFAULT_ANNOUNCEMENTS: Announcements = {
-  nightDeath: '{name} was found dead at dawn.',
+  nightDeath: '{name} was killed during the night.',
   noDeath: 'The town wakes. Nobody died tonight.',
   revived: '{name} has been revived and is back in the game!',
   theft: 'At dawn, the Thief struck — someone’s power was stolen for this round.',

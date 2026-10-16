@@ -233,7 +233,7 @@ export const ROLES: Record<string, RoleDef> = {
     tagline: 'Everyone lies. The evidence doesn’t.',
     description: 'A sharp-eyed investigator working the case from the inside.',
     abilityText: 'Each night, investigate one player and privately learn if they are suspicious.',
-    howTo: 'At night, pick someone to investigate. Your result appears in your private notebook at dawn. Nobody else ever sees it — share it (or don’t) by talking.',
+    howTo: 'At night, pick someone to investigate. Your result appears privately when the Day begins (and stays in your notebook). Nobody else ever sees it — share it (or don’t) by talking.',
     winCondition: 'Win when every Mafia member is eliminated.',
     abilities: [{ id: 'investigate' }],
     art: 'lens',

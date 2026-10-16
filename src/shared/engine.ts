@@ -328,6 +328,10 @@ function phaseDuration(s: Settings, phase: Phase): number | null {
 
 function enterPhase(room: Room, phase: Phase, now: number) {
   const g = room.game!;
+  // News window: everything announced since the PREVIOUS phase began (its results + any host messages).
+  g.newsFromSeq = g.phaseLogSeq ?? room.logSeq;
+  g.newsFromAt = g.phaseStartedAt;
+  g.phaseLogSeq = room.logSeq;
   g.phase = phase;
   g.phaseSeq += 1;
   g.phaseStartedAt = now;
@@ -362,7 +366,7 @@ function beginNightCycle(room: Room, now: number) {
   g.night.actions = {};
   if (hasPreNight(g.settings)) {
     enterPhase(room, 'prenight', now);
-    addLog(room, now, 'phase', `Dawn ${g.round}: everyone open your panel and make a choice.`);
+    addLog(room, now, 'phase', `Dawn ${g.round} began.`, 'host');
     return;
   }
   startNight(room, now);
@@ -372,7 +376,7 @@ function startNight(room: Room, now: number) {
   const g = room.game!;
   g.night.actions = {};
   enterPhase(room, 'night', now);
-  addLog(room, now, 'phase', `Night ${g.round} falls. Everyone: open your panel and make a choice.`);
+  addLog(room, now, 'phase', `Night ${g.round} began.`, 'host');
 }
 
 /** Day = morning news + discussion + voting in one phase. It ends when every eligible player has voted. */
@@ -384,7 +388,8 @@ function startDay(room: Room, now: number, runoff: string[] | null) {
     room,
     now,
     'phase',
-    runoff ? `Runoff vote between ${runoff.map((id) => getPlayer(room, id).name).join(' and ')}.` : `Day ${g.round}: discuss, then vote. The day ends when everyone has voted.`,
+    runoff ? `Runoff vote began between ${runoff.map((id) => getPlayer(room, id).name).join(' and ')}.` : `Day ${g.round} began.`,
+    'host', // phase changes are shown on screen; they don't clutter the public announcements
   );
 }
 
@@ -884,9 +889,11 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
     priority: 55,
     order: order++,
     run: () => {
+      const handled = new Set<string>();
       for (const atk of ctx.attacks) {
         const t = getPlayer(room, atk.targetId);
-        if (!t.alive) continue;
+        if (!t.alive || handled.has(t.id)) continue; // two attackers on one target → one outcome, one announcement
+        handled.add(t.id);
         const protectors = ctx.protectedBy.get(t.id);
         if (protectors?.length) {
           ctx.saved.push(t.id);
