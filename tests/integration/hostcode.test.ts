@@ -41,3 +41,14 @@ it('production without HOST_CODE refuses to host instead of letting anyone in', 
   expect(r.status).toBe(503);
   expect((await r.json()).error.code).toBe('hosting_disabled');
 });
+
+it('with no HOST_CODE set, anyone can host and the Host page is told no code is needed', async () => {
+  const base = await start(undefined);
+  expect(await (await fetch(`${base}/api/config`)).json()).toEqual({ hostCodeRequired: false });
+  expect((await create(base)).status).toBe(201);
+});
+
+it('with HOST_CODE set, the Host page is told to ask for it', async () => {
+  const base = await start('135246');
+  expect(await (await fetch(`${base}/api/config`)).json()).toEqual({ hostCodeRequired: true });
+});

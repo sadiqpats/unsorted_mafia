@@ -6,7 +6,7 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ no errors |
 | Unit (engine, rules, deploy config) | `npm test` | ✅ 125 / 125 |
-| Integration (real server + socket clients) | `npm test` | ✅ 29 / 29 |
+| Integration (real server + socket clients) | `npm test` | ✅ 31 / 31 |
 | End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 12 / 12 (3.7 min) |
 | Production build | `npm run build` | ✅ |
 
@@ -29,7 +29,7 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 
 ## Integration — `tests/integration/`
 - **server (20):** room create/join; errors; forged tokens; host-only commands; payload-level role privacy; private Detective results; full 5-player match over the network; replay and stale-phase protection; rate limits; refresh; full server restart; rejoin codes; audit log.
-- **hostcode (3):** hosting needs the code (players never do); 5 wrong codes lock the address out; production without `HOST_CODE` refuses to host.
+- **hostcode (5):** with `HOST_CODE` set, hosting needs the code (players never do) and 5 wrong codes lock the address out; without it, anyone can host and the Host page hides the code box.
 - **photos (4)**, **cors (2)**.
 
 ## End-to-end — `tests/e2e/` (one browser context per player)
@@ -50,4 +50,4 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 - The live camera path (`getUserMedia`) can't be tested headless; the file-input path is tested.
 - Not yet tested on physical phones or iOS Safari.
 - Render free plan: a restart (deploy or sleep) wipes rooms. See DEPLOYMENT.md.
-- `HOST_CODE` must be set in Render before hosting works in production.
+- Host code is optional: until `HOST_CODE` is set in Render, anyone with the link can host.

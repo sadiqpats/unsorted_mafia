@@ -157,6 +157,8 @@ export function createApp(opts: AppOptions) {
 
   const startedAt = new Date().toISOString();
   app.get('/api/health', (_req, res) => res.json({ ok: true, rooms: service.rooms.size, startedAt }));
+  // Lets the Host page know whether to show the host-code box.
+  app.get('/api/config', (_req, res) => res.json({ hostCodeRequired: opts.hostCode !== undefined }));
 
   // Only people with the host code can open rooms. 5 wrong codes lock that address out for 10 minutes.
   const hostCodeFails = new Map<string, { count: number; until: number }>();

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../../shared/settings';
 import { PlayerCountInput } from '../components/PlayerCountInput';
@@ -10,6 +10,11 @@ export default function HostCreate() {
   const nav = useNavigate();
   const [name, setName] = useState('');
   const [hostCode, setHostCode] = useState('');
+  // The code box only appears when the server has HOST_CODE set.
+  const [codeRequired, setCodeRequired] = useState(false);
+  useEffect(() => {
+    api<{ hostCodeRequired: boolean }>('/api/config').then((c) => setCodeRequired(c.hostCodeRequired), () => undefined);
+  }, []);
   const [count, setCount] = useState(8);
   const [hostPlays, setHostPlays] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -40,24 +45,25 @@ export default function HostCreate() {
           <p className="mt-2 text-sm text-mute">You’ll fine-tune characters and house rules in the lobby while people join.</p>
         </div>
         <div className="card space-y-5 p-5">
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium">Host code</span>
-            <input
-              className="field tracking-[0.3em]"
-              type="password"
-              inputMode="numeric"
-              autoComplete="off"
-              value={hostCode}
-              maxLength={32}
-              onChange={(e) => setHostCode(e.target.value)}
-              placeholder="••••••"
-              autoFocus
-            />
-            <span className="mt-1 block text-xs text-mute">Only Unsorted Plans hosts have this. Guests don’t need it — they just join.</span>
-          </label>
+          {codeRequired && (
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium">Host code</span>
+              <input
+                className="field tracking-[0.3em]"
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                value={hostCode}
+                maxLength={32}
+                onChange={(e) => setHostCode(e.target.value)}
+                placeholder="••••••"
+              />
+              <span className="mt-1 block text-xs text-mute">Only Unsorted Plans hosts have this. Guests don’t need it — they just join.</span>
+            </label>
+          )}
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium">Your display name</span>
-            <input className="field" value={name} maxLength={20} autoComplete="nickname" onChange={(e) => setName(e.target.value)} placeholder="e.g. Sadie" />
+            <input className="field" value={name} maxLength={20} autoComplete="nickname" onChange={(e) => setName(e.target.value)} placeholder="e.g. Sadie" autoFocus />
           </label>
           <PlayerCountInput value={count} onChange={setCount} />
           <Toggle

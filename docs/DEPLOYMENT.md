@@ -24,8 +24,8 @@ Vercel serves the website. Render runs the live game server (WebSockets, rooms, 
    `VITE_SERVER_URL` = `https://<your-service>.onrender.com` (no trailing slash) → **Deploy**.
 4. **Render** → your service → **Environment** → set `CLIENT_ORIGIN` = your Vercel URL, e.g. `https://unsorted-mafia.vercel.app`
    (exact, with `https://`, no trailing slash; add more separated by commas) → **Save** (it redeploys).
-5. **Render** → your service → **Environment** → add `HOST_CODE` = your secret host code → **Save**. Without it, hosting is switched off in production. Never put the code in the repository: it is public.
-6. Open the Vercel URL → **Host a Game** → enter the host code.
+5. *(Optional)* **Render** → your service → **Environment** → add `HOST_CODE` = your secret host code → **Save**. While it is **not** set, anyone can host and the Host page shows no code box. Once set, hosting requires it. Never put the code in the repository: it is public.
+6. Open the Vercel URL → **Host a Game**.
 
 ### What the free plan means for your events
 | Free-plan limit | What happens | What the app does about it |
@@ -93,7 +93,7 @@ Phones on the **same Wi-Fi** open `http://<laptop-LAN-IP>:3001` (find the IP wit
 | `ROOM_TTL_HOURS` | `12` | Delete rooms idle this long |
 | `TRUST_PROXY` | `false` | Set `true` behind a proxy/load balancer |
 | `CLIENT_ORIGIN` | — | Only if the client is hosted on another origin (CORS) |
-| `HOST_CODE` | — (hosting disabled in production) | Secret code needed to **host** a game; players never need it. 5 wrong tries lock that address out for 10 minutes |
+| `HOST_CODE` | — (optional; unset = anyone can host) | Secret code needed to **host** a game; players never need it. 5 wrong tries lock that address out for 10 minutes |
 | `HTTP_RATE_BURST` / `HTTP_RATE_PER_SEC` | `150` / `3` | Per-IP limit for create/join requests |
 
 ## Scaling notes
