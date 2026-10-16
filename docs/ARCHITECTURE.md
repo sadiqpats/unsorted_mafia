@@ -25,7 +25,7 @@
 src/shared/           ← used by server, tests and (data-only parts) client
   roles.ts            character + ability registry (data-driven)
   settings.ts         every house rule, defaults, Zod schema
-  distribution.ts     default role table for 5–22 players + validation/warnings
+  distribution.ts     default role table for 5–26 players + validation/warnings
   engine.ts           the authoritative state machine (server-only at runtime)
   protocol.ts         Zod schemas for every client command
   types.ts            Room / Player / Game types
@@ -37,7 +37,7 @@ src/server/
   store.ts            SQLite persistence + append-only audit log
   security.ts         secure RNG, tokens, hashing, rate limiter
 src/client/           React app (pages/, components/, lib/)
-tests/unit            engine tests (every role, rule and edge case, 5–22 players)
+tests/unit            engine tests (every role, rule and edge case, 5–26 players)
 tests/integration     real server + socket clients (auth, privacy, persistence…)
 tests/e2e             Playwright, one browser context per player
 ```

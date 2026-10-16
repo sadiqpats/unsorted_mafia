@@ -3,7 +3,7 @@
 
 A real-time, multiplayer Mafia party game played on everyone's own phone. The server deals secret roles, runs the night and day phases, resolves every ability, counts the (weighted) votes and decides who wins. Nobody has to sit out as narrator.
 
-- **5–22 players**, any number, with balanced role suggestions and a full role editor
+- **5–26 players**, any number, with balanced role suggestions and a full role editor
 - **9 characters:** Mafia, Godfather, Detective, Doctor, Judge, Villager (+ optional powers), Thief, Imposter, Jester, all built on a data-driven engine you can extend
 - **Built for players sitting together:** everyone acts every night, identical privacy shields, hold-to-reveal cards, secrets never sent to other phones (see [docs/GUIDE.md](docs/GUIDE.md#7-how-the-app-stops-people-sitting-together-from-cheating))
 - **Player photos** (selfie or gallery) on a **TV photo wall**. Eliminated players' photos get cut in two.

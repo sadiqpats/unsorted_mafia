@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { ROLES, roleAlignment } from '../../shared/roles';
 import { Avatar } from '../components/Avatar';
 import type { PublicPlayer } from '../../shared/view-types';
-import { ConnectionBadge, Feed, PHASE_LABEL, QR, Timer } from '../components/ui';
+import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, QR, Timer } from '../components/ui';
 import { useRoom } from '../lib/useRoom';
 
 /** TV / projector view. Connects as a read-only "display" and receives only public data. */
@@ -23,8 +23,11 @@ export default function Display() {
     <div className={`grain min-h-dvh p-6 md:p-10 ${night ? 'bg-[#05060a]' : ''}`}>
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         <div>
-          <p className="eyebrow">Unsorted Plans presents</p>
-          <h1 className="brand-title text-4xl font-black md:text-5xl">Mafia Night</h1>
+          <div className="flex items-end gap-3">
+            <img src={LOGO.wordmark} alt="Unsorted" className="h-9 w-auto md:h-11" />
+            <span className="eyebrow pb-1">presents</span>
+          </div>
+          <h1 className="brand-title mt-1 text-4xl font-black md:text-5xl">Mafia Night</h1>
         </div>
         <div className="flex items-center gap-3">
           <span className="font-[family-name:var(--font-display)] text-3xl tracking-[0.3em] text-gold">{upper}</span>
@@ -41,7 +44,7 @@ export default function Display() {
             <p className="mt-2 font-[family-name:var(--font-display)] text-5xl tracking-[0.35em]">{upper}</p>
           </div>
           <div>
-            <p className="font-[family-name:var(--font-serif)] text-3xl italic text-mute">Plans worth showing up for.</p>
+            <img src={LOGO.full} alt="Unsorted — Plans worth showing up for." className="h-auto w-80 max-w-full" />
             <p className="mt-6 text-xl">
               {view.players.length} / {view.settings.playerCount} players
             </p>
@@ -90,7 +93,7 @@ export default function Display() {
 /** The big-screen wall of faces. Eliminated players' photos are cut in two. */
 function PhotoWall({ players, lobby = false, settings }: { players: PublicPlayer[]; lobby?: boolean; settings: Parameters<typeof roleAlignment>[1] }) {
   const n = players.length;
-  const size = n <= 8 ? 150 : n <= 12 ? 128 : n <= 16 ? 112 : 96;
+  const size = n <= 8 ? 150 : n <= 12 ? 128 : n <= 16 ? 112 : n <= 22 ? 96 : 84;
   if (!n) return <p className="mt-6 text-xl text-mute">Waiting for the first guest…</p>;
   return (
     <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-6" aria-label="Players">

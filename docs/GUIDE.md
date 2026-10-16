@@ -8,7 +8,7 @@ The same guide is built into the website at **`/guide`** (linked from the home p
 
 1. Start the server (see the README) or open your deployed URL.
 2. On your phone or laptop, open the site, tap **Host a Game** and enter the **host code** (only hosts have it; guests never need it).
-3. Enter your name and the number of players (any whole number from **5 to 22**).
+3. Enter your name and the number of players (any whole number from **5 to 26**).
 4. Choose:
    - **Game Master (default):** you don’t play. You can see every role (hidden behind a “Show roles” button) and fix mistakes.
    - **“I’m also playing”:** you get a secret role too. Your dashboard then shows **no secrets** and the app narrates everything.
@@ -32,7 +32,8 @@ The app proposes a balanced mix for your table size (see the table on `/guide`).
 | 8–11 | 2 | + Godfather (8+), Judge (9+), Thief (10+) |
 | 12–16 | 3 | + Imposter (12+) |
 | 17–21 | 4 | all specials |
-| 22 | 5 | all specials |
+| 22–24 | 5 | all specials |
+| 25–26 | 6 | all specials |
 
 Everyone else is a Villager. Red messages (e.g. “roles add up to 9, need 10”) block the start. Gold messages are only advice.
 

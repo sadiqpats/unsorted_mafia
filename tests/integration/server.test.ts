@@ -79,7 +79,7 @@ describe('rooms over HTTP', () => {
 
   it('validates input', async () => {
     expect((await api(srv.base, '/api/rooms', { hostName: '' })).status).toBe(400);
-    expect((await api(srv.base, '/api/rooms', { hostName: 'A', playerCount: 23 })).status).toBe(400);
+    expect((await api(srv.base, '/api/rooms', { hostName: 'A', playerCount: 27 })).status).toBe(400);
     expect((await api(srv.base, '/api/rooms', { hostName: 'A', playerCount: 4 })).status).toBe(400);
   });
 });

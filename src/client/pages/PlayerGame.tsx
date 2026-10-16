@@ -10,7 +10,7 @@ import { PhotoPicker } from '../components/PhotoPicker';
 import { RoleArt } from '../components/RoleArt';
 import { uploadPhoto } from '../lib/photo';
 import { loadSession } from '../lib/session';
-import { AlignmentBadge, Feed, Modal, PHASE_LABEL, PlayerRow, Section, Timer, useToast } from '../components/ui';
+import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, PlayerRow, Section, Timer, useToast } from '../components/ui';
 
 type Send = (c: CommandInput) => Promise<Ack>;
 
@@ -662,6 +662,7 @@ export function GameOverPanel({ view, hostControls }: { view: ClientView; hostCo
           {topSuspect && <p className="mt-3 text-center text-sm text-mute">Most suspected by the town at night: {nameOf(view, topSuspect[0])}</p>}
         </Section>
       )}
+      <img src={LOGO.full} alt="Unsorted — Plans worth showing up for." className="mx-auto h-auto w-56 opacity-80" />
       {!hostControls && (
         <p className="text-center text-sm text-mute">
           Waiting for the host to start another round… or{' '}

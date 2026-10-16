@@ -3,7 +3,7 @@ import { MAX_PLAYERS, MIN_PLAYERS } from '../../shared/settings';
 
 const OPTIONS = Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => MIN_PLAYERS + i);
 
-/** Dropdown + editable number field, kept in sync and validated (any integer 5–22). */
+/** Dropdown + editable number field, kept in sync and validated (any integer 5–26). */
 export function PlayerCountInput({ value, onChange, disabled, min = MIN_PLAYERS }: { value: number; onChange: (n: number) => void; disabled?: boolean; min?: number }) {
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);

@@ -7,7 +7,7 @@ import { z } from 'zod';
  */
 
 export const MIN_PLAYERS = 5;
-export const MAX_PLAYERS = 22;
+export const MAX_PLAYERS = 26;
 
 const seconds = (min: number, max: number) => z.number().int().min(min).max(max);
 

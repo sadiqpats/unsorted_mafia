@@ -25,9 +25,10 @@ describe('default role distribution', () => {
     });
   }
 
-  it('rejects counts outside 5–22 and non-integers', () => {
+  it('rejects counts outside 5–26 and non-integers', () => {
     expect(() => suggestDistribution(4)).toThrow();
-    expect(() => suggestDistribution(23)).toThrow();
+    expect(() => suggestDistribution(27)).toThrow();
+    expect(() => suggestDistribution(26)).not.toThrow();
     expect(() => suggestDistribution(7.5)).toThrow();
   });
 
@@ -106,12 +107,21 @@ describe('invalid and unbalanced configurations', () => {
 });
 
 describe('new default mix', () => {
+  it('keeps the Mafia at roughly a quarter of the table from 7 to 26 players', () => {
+    for (let n = 7; n <= 26; n++) {
+      const ratio = suggestDistribution(n).mafia / n;
+      expect(ratio).toBeGreaterThanOrEqual(0.18);
+      expect(ratio).toBeLessThanOrEqual(0.29);
+    }
+    expect(suggestDistribution(26).mafia).toBe(6);
+  });
+
   it('two Mafia from 7 players; Godfather from 8; no Priest or Bodyguard', () => {
     expect(suggestDistribution(6).mafia).toBe(1);
     expect(suggestDistribution(7).mafia).toBe(2);
     expect(suggestDistribution(7).godfather).toBe(0);
     expect(suggestDistribution(8).godfather).toBe(1);
-    for (let n = 5; n <= 22; n++) {
+    for (let n = 5; n <= 26; n++) {
       const d = suggestDistribution(n);
       expect(d.priest ?? 0).toBe(0);
       expect(d.bodyguard ?? 0).toBe(0);

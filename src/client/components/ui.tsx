@@ -10,18 +10,17 @@ import { Avatar } from './Avatar';
 
 // ------------------------------------------------------------------ brand
 
+/** Unsorted brand assets (light lettering for the dark site; yellow ring kept). */
+export const LOGO = {
+  wordmark: '/brand/unsorted-wordmark-light.png',
+  full: '/brand/unsorted-logo-light.png',
+};
+
 export function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
-    <Link to="/" className="flex items-center gap-2.5 focus-ring rounded-lg" aria-label="Unsorted Plans — home">
-      <svg viewBox="0 0 64 64" width={compact ? 28 : 34} height={compact ? 28 : 34} aria-hidden="true">
-        <path d="M14 40c6 3 30 3 36 0" stroke="#c9a45c" strokeWidth="3" fill="none" strokeLinecap="round" />
-        <path d="M20 39l3-15c1-4 17-4 18 0l3 15" fill="#7d1416" stroke="#c9a45c" strokeWidth="2.5" />
-        <path d="M21 33h22" stroke="#c9a45c" strokeWidth="2.5" />
-      </svg>
-      <span className="leading-tight">
-        <span className="block font-[family-name:var(--font-display)] text-[0.62rem] tracking-[0.35em] text-mute">UNSORTED PLANS</span>
-        {!compact && <span className="block font-[family-name:var(--font-display)] text-sm tracking-[0.18em] text-gold">MAFIA NIGHT</span>}
-      </span>
+    <Link to="/" className="flex items-center gap-3 focus-ring rounded-lg" aria-label="Unsorted — Mafia Night home">
+      <img src={LOGO.wordmark} alt="Unsorted" className={compact ? 'h-5 w-auto' : 'h-7 w-auto'} />
+      <span className={`whitespace-nowrap border-l border-line pl-3 font-[family-name:var(--font-display)] tracking-[0.16em] text-gold ${compact ? 'hidden text-[0.7rem] sm:inline' : 'text-xs sm:text-sm'}`}>MAFIA NIGHT</span>
     </Link>
   );
 }

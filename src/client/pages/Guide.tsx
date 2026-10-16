@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { suggestDistribution } from '../../shared/distribution';
 import { ROLES, ROLE_ORDER } from '../../shared/roles';
-import { defaultSettings } from '../../shared/settings';
+import { MAX_PLAYERS, MIN_PLAYERS, defaultSettings } from '../../shared/settings';
 import { RoleDetails } from '../components/RoleCard';
 import { Section, Shell } from '../components/ui';
 
@@ -49,7 +49,7 @@ export default function Guide() {
             <li>🧑‍⚖️ One host device (phone, tablet or laptop). The host can also play.</li>
             <li>📶 Everyone online (Wi-Fi or mobile data).</li>
             <li>📺 Optional: a TV or projector for the public display.</li>
-            <li>👥 5 to 22 players. 8–14 is the sweet spot.</li>
+            <li>👥 5 to 26 players. 8–16 is the sweet spot.</li>
             <li>⏱ 20–45 minutes per game.</li>
           </ul>
         </Section>
@@ -57,7 +57,7 @@ export default function Guide() {
         <Section title="Hosting a game" className="scroll-mt-20" aside={<Link className="btn btn-primary !min-h-9 !py-1 text-sm" to="/host">Host now</Link>}>
           <ol id="host" className="space-y-4">
             <Step n={1} title="Create the room">
-              Tap <b>Host a Game</b>, enter the <b>host code</b> (only Unsorted Plans hosts have it — guests never need it), your name and how many people are playing (any number from 5 to 22). Decide whether you are <b>playing</b> or just running the
+              Tap <b>Host a Game</b>, enter the <b>host code</b> (only Unsorted Plans hosts have it — guests never need it), your name and how many people are playing (any number from 5 to 26). Decide whether you are <b>playing</b> or just running the
               game as <b>Game Master</b>.
             </Step>
             <Step n={2} title="Let people in">
@@ -195,7 +195,7 @@ export default function Guide() {
                 </tr>
               </thead>
               <tbody>
-                {Array.from({ length: 18 }, (_, i) => i + 5).map((n) => {
+                {Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => i + MIN_PLAYERS).map((n) => {
                   const d = suggestDistribution(n);
                   return (
                     <tr key={n} className="border-t border-line/40">

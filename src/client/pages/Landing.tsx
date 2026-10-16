@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ROLES, ROLE_ORDER } from '../../shared/roles';
 import { defaultSettings } from '../../shared/settings';
 import { RoleArt } from '../components/RoleArt';
-import { AlignmentBadge, BrandMark, PrefsMenu } from '../components/ui';
+import { AlignmentBadge, BrandMark, LOGO, PrefsMenu } from '../components/ui';
 
 const settings = { ...defaultSettings(10), roles: {} };
 
@@ -22,7 +22,8 @@ export default function Landing() {
       <main className="relative z-10">
         {/* HERO */}
         <section className="mx-auto flex max-w-6xl flex-col items-center px-4 pb-20 pt-10 text-center md:pt-20">
-          <p className="eyebrow anim-fade-up">Unsorted Plans presents</p>
+          <img src={LOGO.wordmark} alt="Unsorted" className="anim-fade-up h-auto w-56 sm:w-72" />
+          <p className="eyebrow anim-fade-up mt-3">presents</p>
           <h1 className="brand-title anim-fade-up mt-4 text-5xl font-black leading-[0.95] sm:text-7xl md:text-8xl" style={{ animationDelay: '0.1s' }}>
             Mafia
             <br />
@@ -53,7 +54,7 @@ export default function Landing() {
           <div className="divider-ornament mb-10 font-[family-name:var(--font-display)] text-xs tracking-[0.3em]">HOW IT WORKS</div>
           <ol className="grid gap-4 md:grid-cols-4">
             {[
-              ['I', 'Open a room', 'The host picks the player count (5–22) and the characters. A QR code and room code appear.'],
+              ['I', 'Open a room', 'The host picks the player count (5–26) and the characters. A QR code and room code appear.'],
               ['II', 'Everyone joins', 'Players scan the QR or type the code on their own phone, enter a name and tap Ready.'],
               ['III', 'Secret roles', 'Each phone privately shows one role. Press and hold to peek; release to hide.'],
               ['IV', 'Night & day', 'At night everyone taps a choice in secret. By day, argue, accuse and vote someone out.'],
@@ -123,8 +124,7 @@ export default function Landing() {
       </main>
 
       <footer className="relative z-10 border-t border-line/50 py-8 text-center text-xs text-mute">
-        <p className="font-[family-name:var(--font-display)] tracking-[0.3em]">UNSORTED PLANS</p>
-        <p className="mt-2">Plans worth showing up for.</p>
+        <img src={LOGO.full} alt="Unsorted — Plans worth showing up for." className="mx-auto h-auto w-60 opacity-90" />
       </footer>
     </div>
   );
