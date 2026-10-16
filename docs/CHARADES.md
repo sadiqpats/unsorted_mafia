@@ -32,6 +32,8 @@ Each round = one turn per team. After the last round the higher score wins; on a
 | Word blanks on the TV | on / off | on |
 | Who goes first | coin toss / Team 1 / Team 2 | coin toss |
 
+The captain's movie card **hides itself after 12 seconds untouched** (and when the phone returns from another app); tap to show it again, or tap 🙈 Hide. That way an awake phone on the table never shows the answer to the guessers.
+
 Team names are editable. Mid-game the host can add a round, end the game, **free a captain's seat** (a new captain joins with the room code) and, if the acting captain's phone died, **flip the card on the host's screen**.
 
 ## The deck

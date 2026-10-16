@@ -255,6 +255,7 @@ export function PrefsMenu() {
           <Toggle label="Vibration" hint="Buzz on phase changes (Android)" checked={prefs.vibration} onChange={(v) => set({ vibration: v })} />
           <Toggle label="Reduced motion" checked={prefs.reduceMotion} onChange={(v) => set({ reduceMotion: v })} />
           <Toggle label="Low-light mode (dim room)" checked={prefs.lowLight} onChange={(v) => set({ lowLight: v })} />
+          <Toggle label="Keep screen awake in games" hint="Stops the phone locking mid-game (the #1 cause of dropped connections)" checked={prefs.keepAwake} onChange={(v) => set({ keepAwake: v })} />
           <p className="pt-1 text-xs text-mute">Saved on this device only.</p>
         </div>
       )}

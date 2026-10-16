@@ -198,3 +198,16 @@ test('Dumb Charades: a captain whose phone dies can be replaced, and the host ca
   await expect(fresh.getByRole('heading', { name: 'Pick tonight’s game' })).toBeVisible();
   await expect(tv.getByTestId('scoreboard')).toContainText('Captain Neha');
 });
+
+test('Dumb Charades: the captain’s movie hides itself when the phone is left alone (no peeking)', async ({ browser }) => {
+  const { a } = await table(browser);
+  await a.evaluate(() => ((window as any).__CARD_HIDE_MS = 1500));
+  await a.getByTestId('card-back').click();
+  await expect(a.getByTestId('movie-card')).toBeVisible();
+  await expect(a.getByTestId('card-cover')).toBeVisible({ timeout: 5000 });
+  await expect(a.getByTestId('movie-card')).toHaveCount(0);
+  await a.getByTestId('card-cover').click();
+  await expect(a.getByTestId('movie-card')).toBeVisible();
+  await a.getByRole('button', { name: '🙈 Hide' }).click();
+  await expect(a.getByTestId('movie-card')).toHaveCount(0);
+});

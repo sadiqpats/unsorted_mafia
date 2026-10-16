@@ -23,6 +23,8 @@ export async function newPhone(browser: Browser, { intro = false }: { intro?: bo
   const ctx = await browser.newContext();
   // The welcome intro shows once per visit; tests skip it unless they are testing it.
   if (!intro) await ctx.addInitScript(() => sessionStorage.setItem('mafia-night:intro-seen', '1'));
+  // The Charades captain's card hides itself after 12 s untouched; keep it up during slow test runs.
+  await ctx.addInitScript(() => ((window as unknown as { __CARD_HIDE_MS: number }).__CARD_HIDE_MS = 600_000));
   return ctx.newPage();
 }
 

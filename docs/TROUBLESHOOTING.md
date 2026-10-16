@@ -22,3 +22,10 @@
 | Timeouts / “Something went wrong” on the Vercel site (fixed 2026-10-16) | Cause: the Vercel build had no `VITE_SERVER_URL` and Render had no `CLIENT_ORIGIN`, so the site sent API and socket requests to Vercel itself (405 errors, sockets timing out). The site now falls back to the Render server automatically on `*.vercel.app`, and the server always allows `https://unsortedmafia.vercel.app`. |
 | First connection after a quiet period is slow | The free Render server sleeps after 15 minutes and takes 20–60s to wake; the app now waits up to 45s for that first connection. To avoid sleeping entirely, add a free uptime monitor (e.g. UptimeRobot) that requests `https://mafia-night-1c5h.onrender.com/api/health` every 5 minutes. |
 | Duplicate / repeated / mismatched announcements (fixed 2026-10-16) | Phase changes were posted as public announcements, the silenced line showed twice, runoffs were announced twice, Dawn notes reappeared at Day, and without a Dawn round the vote result never showed. Each phase now shows exactly the announcements since the previous phase began. |
+
+
+## Phones dropping out during a game
+- Screens are kept awake during a game (Settings → "Keep screen awake in games", on by default; Android Chrome and iPhone Safari 16.4+). iPhone **Low Power Mode** can block this: turn it off for game night or set Auto-Lock to "Never".
+- When a phone comes back from another app or the lock screen, it checks its connection within ~4 seconds and reconnects automatically if needed; the seat and role are kept.
+- Use the venue Wi-Fi if it's good; otherwise mobile data. Keep the game tab open (don't close the browser).
+- The free server sleeps after ~15 minutes without visitors: the host should open the site a minute before people join so the first players don't wait.

@@ -618,7 +618,7 @@ function MyTurn({ view, send, left }: { view: CView; send: Send; left: number | 
             className="btn btn-ok min-h-14 w-full text-lg"
             disabled={busy}
             onClick={async () =>
-              (await confirm({ title: 'Did your team get it?', body: `They said “${cards[t.current]?.title ?? ''}” exactly?`, confirm: 'Yes — +1 point' })) && act({ type: 'got_it', seq })
+              (await confirm({ title: 'Did your team get it?', body: 'They said the exact title on your card?', confirm: 'Yes — +1 point' })) && act({ type: 'got_it', seq })
             }
           >
             ✅ They got it!
@@ -648,14 +648,49 @@ function MyTurn({ view, send, left }: { view: CView; send: Send; left: number | 
   );
 }
 
-/** The cards drawn this turn: arrows, dots and swipe to flip back and forth. The one showing is the one being acted. */
+/**
+ * The cards drawn this turn: arrows, dots and swipe to flip back and forth. The one
+ * showing is the one being acted. Because the phone stays awake, the card hides
+ * itself after 12 seconds untouched (and whenever the phone comes back from another
+ * app), so a teammate glancing at the table can't read the answer. Tap to show it.
+ */
 function CardBrowser({ cards, current, onShow }: { cards: CardView[]; current: number; onShow: (i: number) => void }) {
   const startX = useRef<number | null>(null);
-  const go = (i: number) => i >= 0 && i < cards.length && i !== current && onShow(i);
+  const [hidden, setHidden] = useState(false);
+  const [poke, setPoke] = useState(0);
+  const touch = () => setPoke((n) => n + 1);
+  useEffect(() => {
+    if (hidden) return;
+    // Tests may shorten/lengthen this via window.__CARD_HIDE_MS.
+    const ms = (window as unknown as { __CARD_HIDE_MS?: number }).__CARD_HIDE_MS ?? 12_000;
+    const t = setTimeout(() => setHidden(true), ms);
+    return () => clearTimeout(t);
+  }, [hidden, poke, current, cards.length]);
+  useEffect(() => {
+    const onVis = () => document.visibilityState === 'visible' && setHidden(true);
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+  const go = (i: number) => {
+    touch();
+    if (i >= 0 && i < cards.length && i !== current) onShow(i);
+  };
   const card = cards[current] ?? cards[cards.length - 1];
   if (!card) return null;
+  if (hidden) {
+    return (
+      <button type="button" className="card-cover focus-ring" data-testid="card-cover" onClick={() => (setHidden(false), touch())}>
+        <span className="text-4xl" aria-hidden="true">
+          🙈
+        </span>
+        <span className="mt-2 text-lg font-semibold">Movie hidden</span>
+        <span className="mt-1 text-sm text-white/70">Tap to show it (only to your actor!)</span>
+        {cards.length > 1 && <span className="mt-2 text-xs text-white/60">Card {current + 1} of {cards.length}</span>}
+      </button>
+    );
+  }
   return (
-    <div>
+    <div onPointerDown={touch}>
       <div
         onTouchStart={(e) => (startX.current = e.touches[0].clientX)}
         onTouchEnd={(e) => {
@@ -667,26 +702,29 @@ function CardBrowser({ cards, current, onShow }: { cards: CardView[]; current: n
       >
         <MovieCard card={card} />
       </div>
-      {cards.length > 1 && (
-        <div className="mt-3 flex items-center justify-between gap-2" data-testid="card-browser">
-          <button className="btn btn-ghost !min-h-10 !px-4" aria-label="Previous card" disabled={current === 0} onClick={() => go(current - 1)}>
-            ‹
-          </button>
-          <div className="flex flex-col items-center gap-1.5">
+      <div className="mt-3 flex items-center justify-between gap-2" data-testid="card-browser">
+        <button className="btn btn-ghost !min-h-10 !px-4" aria-label="Previous card" disabled={current === 0} onClick={() => go(current - 1)}>
+          ‹
+        </button>
+        <div className="flex flex-col items-center gap-1.5">
+          {cards.length > 1 && (
             <div className="flex flex-wrap justify-center gap-1.5">
               {cards.map((c, i) => (
                 <button key={c.title + i} aria-label={`Card ${i + 1}`} aria-current={i === current} className={`card-dot ${i === current ? 'is-on' : ''}`} onClick={() => go(i)} />
               ))}
             </div>
-            <span className="text-xs text-white/70">
-              Card {current + 1} of {cards.length}
-            </span>
-          </div>
-          <button className="btn btn-ghost !min-h-10 !px-4" aria-label="Next card" disabled={current === cards.length - 1} onClick={() => go(current + 1)}>
-            ›
-          </button>
+          )}
+          <span className="text-xs text-white/70">
+            Card {current + 1} of {cards.length} ·{' '}
+            <button className="underline underline-offset-2" onClick={() => setHidden(true)}>
+              🙈 Hide
+            </button>
+          </span>
         </div>
-      )}
+        <button className="btn btn-ghost !min-h-10 !px-4" aria-label="Next card" disabled={current === cards.length - 1} onClick={() => go(current + 1)}>
+          ›
+        </button>
+      </div>
     </div>
   );
 }

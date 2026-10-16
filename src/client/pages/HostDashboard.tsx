@@ -372,6 +372,12 @@ function HostGame({ view, send, serverNow }: GameProps) {
   const { act, busy } = useAct(send);
   const confirm = useConfirm();
   const [showRoles, setShowRoles] = useState(false);
+  // An awake laptop on the table must not keep every role on screen: hide again after 30 seconds.
+  useEffect(() => {
+    if (!showRoles) return;
+    const t = setTimeout(() => setShowRoles(false), 30_000);
+    return () => clearTimeout(t);
+  }, [showRoles]);
   const [rejoin, setRejoin] = useState<{ name: string; code: string } | null>(null);
   const [msg, setMsg] = useState('');
   const over = g.phase === 'game_over';

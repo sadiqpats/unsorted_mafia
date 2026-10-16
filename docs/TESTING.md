@@ -6,8 +6,8 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ no errors |
 | Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 155 / 155 |
-| Integration (real server + socket/HTTP clients) | `npm test` | ✅ 32 / 32 |
-| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 18 / 18 |
+| Integration (real server + socket/HTTP clients) | `npm test` | ✅ 33 / 33 |
+| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 21 / 21 |
 | Production build | `npm run build` | ✅ |
 
 ## Dumb Charades
@@ -58,3 +58,8 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 - Not yet tested on physical phones or iOS Safari.
 - Render free plan: a restart (deploy or sleep) wipes rooms. See DEPLOYMENT.md.
 - Host code is optional: until `HOST_CODE` is set in Render, anyone with the link can host.
+
+## Connection & privacy on awake phones
+- **`tests/e2e/connection.spec.ts` (2):** a phone that loses its network mid-game shows "Connection lost", reconnects on its own when the network returns, keeps its seat and role and can act; Screen Wake Lock is requested in a game room and released when leaving.
+- **Anti-peek:** the Mafia Town square never tags teammates (Godfather e2e test); the Charades captain's card hides itself when left alone (charades e2e test).
+- **Integration:** both games answer the liveness probe instantly.

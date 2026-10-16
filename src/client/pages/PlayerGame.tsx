@@ -113,14 +113,33 @@ function PhaseHeader({ view, serverNow }: { view: ClientView; serverNow: () => n
 function DeadBanner({ view }: { view: ClientView }) {
   const me = view.me!;
   return (
-    <div className="rounded-xl border border-line bg-black/60 p-4 text-center" role="status">
-      <div className="text-3xl" aria-hidden="true">
-        ☠
+    <>
+      <div className="rounded-xl border border-line bg-black/60 p-4 text-center" role="status">
+        <div className="text-3xl" aria-hidden="true">
+          ☠
+        </div>
+        <p className="mt-1 font-[family-name:var(--font-display)] text-lg">You have been eliminated</p>
+        <p className="mt-1 text-sm text-mute">Stay silent — no hints, no faces. You can keep watching the game here.</p>
       </div>
-      <p className="mt-1 font-[family-name:var(--font-display)] text-lg">You have been eliminated</p>
-      <p className="mt-1 text-sm text-mute">Stay silent — no hints, no faces. You can keep watching the game here.</p>
-      {me.allRoles && <p className="mt-2 text-xs text-gold">House rule: the dead can see every role (below).</p>}
-    </div>
+      {me.allRoles && view.game?.phase !== 'game_over' && <DeadRoles view={view} />}
+    </>
+  );
+}
+
+/** House rule "the dead can see every role": behind its own self-closing shield, never left open on the table. */
+function DeadRoles({ view }: { view: ClientView }) {
+  const roles = view.me!.allRoles!;
+  return (
+    <PrivacyShield label="Who is who (only the dead can open this)">
+      <ul className="space-y-1.5 pt-6 text-sm">
+        {view.players.map((p) => (
+          <li key={p.id} className="flex justify-between gap-2 rounded-lg bg-black/30 px-3 py-2">
+            <span>{p.name}</span>
+            <span className="text-gold">{ROLES[roles[p.id]]?.name ?? '—'}</span>
+          </li>
+        ))}
+      </ul>
+    </PrivacyShield>
   );
 }
 
@@ -219,8 +238,10 @@ function PlayersList({ view, lobby = false }: { view: ClientView; lobby?: boolea
               {p.id === view.me?.id && <span className="text-gold">You</span>}
               {lobby && <span>{p.ready ? '✓ Ready' : 'Not ready'}</span>}
               {p.revealedRoleId && <span>{ROLES[p.revealedRoleId]?.name}</span>}
-              {!p.revealedRoleId && view.me?.allRoles?.[p.id] && <span className="text-gold">{ROLES[view.me.allRoles[p.id]]?.name}</span>}
-              {view.me?.mafia?.team.some((t) => t.id === p.id) && p.id !== view.me.id && <span className="text-ember">🗡 Your family</span>}
+              {/* Nothing secret in this always-visible list: a neighbour could glance at an awake phone.
+                  Mafia teammates live behind the hold-to-reveal card and the night panel; the dead's
+                  role list sits behind its own shield (DeadRoles). */}
+              {!p.revealedRoleId && view.game?.phase === 'game_over' && view.me?.allRoles?.[p.id] && <span className="text-gold">{ROLES[view.me.allRoles[p.id]]?.name}</span>}
             </>
           }
         />

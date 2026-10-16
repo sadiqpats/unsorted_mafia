@@ -137,6 +137,9 @@ export function mountCharades(d: Deps) {
       reply(service.handle(data.code, data.identity, raw));
     });
 
+    // Liveness probe from phones returning from the background: answer instantly, nothing else.
+    socket.on('alive', (ack?: (ok: boolean) => void) => typeof ack === 'function' && ack(true));
+
     socket.on('sync', () => {
       const room = service.get(data.code);
       const viewer: CViewer = data.identity ? service.viewerOf(data.identity) : { kind: 'tv' };

@@ -9,10 +9,12 @@ export interface Prefs {
   vibration: boolean;
   reduceMotion: boolean;
   lowLight: boolean;
+  /** Keep the screen on during a game (Screen Wake Lock). */
+  keepAwake: boolean;
 }
 
 const KEY = 'mafia-night:prefs';
-const defaults: Prefs = { muted: false, volume: 0.8, vibration: true, reduceMotion: false, lowLight: false };
+const defaults: Prefs = { muted: false, volume: 0.8, vibration: true, reduceMotion: false, lowLight: false, keepAwake: true };
 
 function load(): Prefs {
   try {

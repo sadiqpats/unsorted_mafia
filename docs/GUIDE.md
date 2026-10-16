@@ -81,12 +81,13 @@ During Dawn, Night and Day, phones show **only the action**: no player list, fee
 |---|---|
 | Watching who taps their phone at night | **Everyone** must act every night. Players without a power pick a suspect on an identical screen. |
 | Peeking at a neighbour’s screen | Secret panels sit behind a shield you must tap open. They auto-close after 15s, or when the phone locks or switches apps. Roles use press-and-hold. |
+| A phone left awake on the table | Screens stay on during games (so phones don't drop out), but nothing secret is ever left open: the always-visible lists show no team tags, the Game Master's "Show roles" hides itself after 30 s, and the dead's role list sits behind its own shield. |
 | Colour or sound giving roles away | Closed panels look identical for everyone. Sounds play only on public phase changes, the same on every phone. |
 | Inspecting the page / network | The server sends each phone **only its own** role and results. Verified by automated tests at the network level. |
 | Re-rolling a role | Roles are dealt on the server with a cryptographic shuffle, once. There is no reroll. |
 | Voting twice / after the deadline / while dead | Rejected by the server (one vote per seat, phase-sequence checks, replay protection). |
 | Using someone else’s seat | Each seat is bound to a secret token on one phone. Moving it needs a host-issued one-time code. |
-| Dead players signalling | By default the dead **can’t** see other roles, so there’s nothing to leak. |
+| Dead players signalling | By default the dead **can’t** see other roles, so there’s nothing to leak. With the house rule on, the list is behind a self-closing shield. |
 | Host bias | If the host plays, the dashboard carries **no secrets**. Corrections are always public. |
 
 ## 8. Sound, motion and display

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { useWakeLock, watchConnection } from './liveness';
 import { SERVER_URL, serverUrl } from './server';
 import type { Ack, CommandInput } from '../../shared/protocol';
 import type { ClientView } from '../../shared/view-types';
@@ -62,23 +63,15 @@ export function useRoom(code: string, auth: { token?: string; display?: boolean 
       setEndedReason(e.reason);
       setStatus('ended');
     });
-    const wake = () => {
-      if (stopped) return;
-      if (!s.connected) s.connect();
-      else s.emit('sync');
-    };
+    const unwatch = watchConnection(s, () => stopped);
     // Free hosting (e.g. Render free) sleeps after ~15 min without HTTP requests, and WebSocket
     // traffic may not count. While a room is open, ping the server every 4 minutes to keep it awake.
     const keepAwake = setInterval(() => {
       if (!stopped) fetch(serverUrl('/api/health'), { cache: 'no-store' }).catch(() => undefined);
     }, 4 * 60_000);
-    const onVisible = () => document.visibilityState === 'visible' && wake();
-    window.addEventListener('online', wake);
-    document.addEventListener('visibilitychange', onVisible);
     return () => {
       clearInterval(keepAwake);
-      window.removeEventListener('online', wake);
-      document.removeEventListener('visibilitychange', onVisible);
+      unwatch();
       s.disconnect();
     };
   }, [code, auth?.token, auth?.display]);
@@ -97,6 +90,8 @@ export function useRoom(code: string, auth: { token?: string; display?: boolean 
     // Retry once with the SAME actionId — the server's idempotency keys make this safe.
     return attempt().then((a) => (a.error?.code === 'timeout' ? attempt() : a));
   }, []);
+
+  useWakeLock(!!auth && status !== 'denied' && status !== 'ended');
 
   const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
 

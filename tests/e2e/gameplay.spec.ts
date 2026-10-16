@@ -78,6 +78,11 @@ test('Godfather knows the Mafia and silences a player, who must stay quiet but c
   // The two Mafia know each other.
   await expect(mafia.page.locator('.flip-back')).toContainText(mafia2.name);
 
+
+  // Nothing in the always-visible Town square gives the Mafia away to a neighbour glancing at an awake phone.
+  const square = mafia.page.locator('section', { hasText: 'Town square' });
+  await expect(square).toContainText(mafia2.name);
+  await expect(square).not.toContainText('Your family');
   await advanceTo(t, 'Night');
   const silenced = t.byRole('Villager')[0];
   const target = t.byRole('Detective')[0];
