@@ -6,7 +6,9 @@ test('welcome intro: shows on first open, tap to enter opens the site, not shown
   await p.goto('/');
   const intro = p.getByRole('dialog', { name: 'Welcome to Mafia Night' });
   await expect(intro).toBeVisible();
-  await expect(intro.getByText('Mafia Night')).toBeVisible();
+  // Act one: the Unsorted Plans logo, then the Mafia Night gate.
+  await expect(intro.getByRole('img', { name: /Unsorted/ })).toBeVisible();
+  await expect(intro.getByText('Mafia Night')).toBeVisible({ timeout: 8000 });
   await intro.getByRole('button', { name: 'Tap to enter' }).click();
   await expect(intro).toHaveCount(0, { timeout: 6000 });
   await expect(p.getByRole('link', { name: 'Host a Game' })).toBeVisible();

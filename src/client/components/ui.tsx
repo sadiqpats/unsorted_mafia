@@ -15,6 +15,7 @@ import { Avatar } from './Avatar';
 export const LOGO = {
   wordmark: '/brand/unsorted-wordmark-light.png',
   full: '/brand/unsorted-logo-light.png',
+  mark: '/brand/unsorted-mark.png',
 };
 
 export function BrandMark({ compact = false }: { compact?: boolean }) {
