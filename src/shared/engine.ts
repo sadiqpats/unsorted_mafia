@@ -510,7 +510,7 @@ export interface NightOption {
   changeable: boolean;
 }
 
-const DECOY_PROMPT = 'Who do you suspect most tonight?';
+const DECOY_PROMPT = 'Whom do you suspect most?';
 
 function actsWhileDead(_room: Room, _p: Player): boolean {
   return false;
@@ -608,8 +608,8 @@ export function nightOptions(room: Room, playerId: string): NightOption[] {
     opts.push({
       abilityId: 'decoy',
       source: 'decoy',
-      name: 'Suspicion',
-      prompt: phase === 'prenight' ? 'Dawn: who do you suspect most?' : DECOY_PROMPT,
+      name: 'Dummy round',
+      prompt: DECOY_PROMPT,
       targets: room.players.filter((x) => x.alive && x.id !== p.id).sort(bySeat).map((x) => x.id),
       targetKind: 'player',
       charges: null,
@@ -1107,7 +1107,7 @@ function eliminateByVote(room: Room, targetId: string, verdict: Verdict, now: nu
     const announceNow = s.jesterEndsGame || s.revealRoleOnDeath;
     addLog(room, now, 'verdict', fillTemplate(s.announcements.jesterWin, { name: t.name }), announceNow ? 'public' : 'host');
     if (s.jesterEndsGame) {
-      return endGame(room, { faction: 'jester', winnerIds: [t.id], reason: `${t.name} the Jester tricked the town into voting them out.` }, now);
+      return endGame(room, { faction: 'jester', winnerIds: [t.id], reason: `${t.name} the Joker tricked the town into voting them out.` }, now);
     }
   }
   const win = checkWin(room);
@@ -1180,7 +1180,7 @@ function endGame(room: Room, win: WinResult, now: number) {
     for (const id of g.jesterWinners) addLog(room, now, 'verdict', fillTemplate(g.settings.announcements.jesterWin, { name: getPlayer(room, id).name }));
   }
   room.gamesPlayed++;
-  const label = { good: 'The Town wins!', mafia: 'The Mafia wins!', jester: 'The Jester wins!', draw: 'It’s a draw.', none: 'Game ended.' }[win.faction];
+  const label = { good: 'The Town wins!', mafia: 'The Mafia wins!', jester: 'The Joker wins!', draw: 'It’s a draw.', none: 'Game ended.' }[win.faction];
   addLog(room, now, 'gameover', `${label} ${win.reason}`);
 }
 

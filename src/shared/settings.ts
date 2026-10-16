@@ -85,7 +85,7 @@ export const SettingsSchema = z.object({
   // ---- Judge ----
   judgeWeight: z.number().int().min(1).max(5),
 
-  // ---- Jester ----
+  // ---- Joker (internal id: jester) ----
   jesterEndsGame: z.boolean(),
 
   // ---- Villager optional powers (off by default, max two) ----
@@ -114,7 +114,7 @@ export const DEFAULT_ANNOUNCEMENTS: Announcements = {
   silenced: '{name} has been silenced and cannot speak today (they can still vote).',
   voteOut: 'The town has eliminated {name}.',
   noElimination: 'The town could not agree. Nobody was eliminated.',
-  jesterWin: '{name} was the Jester — and wanted this all along.',
+  jesterWin: '{name} was the Joker — and wanted this all along.',
 };
 
 export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {

@@ -104,7 +104,7 @@ export default function Landing() {
                 <b className="text-ember">Mafia</b> wins when they equal or outnumber everyone else alive.
               </li>
               <li>
-                <b className="text-neutral">Neutrals</b> have their own goals — the Jester wants to be voted out; the Thief and Imposter want to survive.
+                <b className="text-neutral">Neutrals</b> have their own goals — the Joker wants to be voted out; the Thief and Imposter want to survive.
               </li>
               <li>Each night the Mafia pick a victim, while other roles protect, investigate, steal or revive — all in secret.</li>
               <li>Each day the town discusses, then votes. Most votes is eliminated. The Judge’s vote counts double.</li>

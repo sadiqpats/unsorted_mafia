@@ -32,7 +32,7 @@ Deaths and eliminations are announced by **name only**. Every role is revealed o
 | **Villager** | Town | No power; presses the dummy button at night. | up to 2 optional powers (off) |
 | **Thief** | Neutral | Every **Dawn** (from round 1) steals one **power**. He sees powers, never people, and never learns whose it was. It lasts **that round**; the owner gets it back next Dawn. He can't take the **same power two rounds in a row**. Wins by surviving. | side (neutral/town); may steal Judge vote |
 | **Imposter** | **Neutral** | From **round 2**, at **Dawn**, may revive one dead player, or skip. Everyone is told who came back, never who did it. Unlimited revivals. Wins by surviving. | side; revival limit |
-| **Jester** | Neutral | Wins alone if voted out by Day. | game continues instead |
+| **Joker** | Neutral | Wins alone if voted out by Day. | game continues instead |
 
 Removed for good: **Priest** and **Bodyguard**.
 
@@ -62,7 +62,7 @@ Dawn order: Imposter revive (90), then Thief steal (95).
 - Ties: nobody eliminated (default), a runoff, or the host decides.
 
 ## Victory
-1. **Jester**: voted out by Day → wins alone (ends the game by default).
+1. **Joker**: voted out by Day → wins alone (ends the game by default).
 2. Nobody alive → draw.
 3. **Town wins when every Mafia member is dead**, even if the Godfather is still alive.
 4. **Mafia side wins** when the Mafia plus the Godfather equal or outnumber everyone else alive.

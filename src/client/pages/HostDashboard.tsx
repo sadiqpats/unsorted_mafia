@@ -332,8 +332,8 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           <Select label="Imposter’s side" value={s.imposterAlignment} options={[['neutral', 'Neutral'], ['good', 'Town'], ['mafia', 'Mafia']]} onChange={(v) => patch({ imposterAlignment: v })} />
           <NumberSetting label="Revivals (0 = unlimited)" value={s.imposterCharges} min={0} max={10} suffix="" onChange={(v) => patch({ imposterCharges: v })} />
         </Group>
-        <Group title="Jester">
-          <Toggle label="Jester’s win ends the game" hint="Off: the Jester is credited and play continues." checked={s.jesterEndsGame} onChange={(v) => patch({ jesterEndsGame: v })} />
+        <Group title="Joker">
+          <Toggle label="Joker’s win ends the game" hint="Off: the Joker is credited and play continues." checked={s.jesterEndsGame} onChange={(v) => patch({ jesterEndsGame: v })} />
         </Group>
         <Group title={`Villager optional powers (${vpCount}/2)`}>
           <p className="px-2 pb-1 text-xs text-mute">Suggestions, off by default. Each is once per game. Max two.</p>

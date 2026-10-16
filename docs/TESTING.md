@@ -18,7 +18,7 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
   - **Doctor:** self-save allowed but not two rounds in a row (alternate rounds).
   - **Thief:** Dawn from round 1 with a power list, never people; steals for one round only; never learns whose; the victim is told and gets the dummy button; no same power two rounds in a row; stealing the **Mafia Hit** means a solo kill while the robbed Mafia gets the dummy button; with two Mafia, two kills; power list unaffected by deaths; can steal the Judge vote; Dawn continues after his death.
   - **Imposter:** Neutral by default, wins by surviving; no revival in round 1; revives or skips from round 2; revival announced without naming him.
-  - Judge ×2, Jester, Villager powers, and no role revealed before game over.
+  - Judge ×2, Joker, Villager powers, and no role revealed before game over.
 - **flow (31):**
   - Voting rules and ties.
   - Victory conditions.
@@ -38,7 +38,7 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 2. Doctor protection saves the target.
 3. **Godfather's card lists the Mafia** (the Mafia's card doesn't list him). He silences a player, who is blocked from voting.
 4. Judge's double vote decides the outcome.
-5. Jester wins by being voted out.
+5. Joker wins by being voted out.
 6. **Dawn:** the Thief steals *Investigate* for the round without learning whose; the robbed Detective is told; the Thief investigates that night.
 7. **Dawn:** the Imposter revives a dead player in round 2 and every phone is told.
 8. 10-player game to a Town victory.

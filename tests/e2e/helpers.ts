@@ -19,8 +19,10 @@ export interface Table {
 const nameRole = (roleName: string) => Object.values(ROLES).find((r) => r.name === roleName)!.id;
 
 /** Each player gets their own isolated browser context — like separate phones. */
-export async function newPhone(browser: Browser): Promise<Page> {
+export async function newPhone(browser: Browser, { intro = false }: { intro?: boolean } = {}): Promise<Page> {
   const ctx = await browser.newContext();
+  // The welcome intro shows once per visit; tests skip it unless they are testing it.
+  if (!intro) await ctx.addInitScript(() => sessionStorage.setItem('mafia-night:intro-seen', '1'));
   return ctx.newPage();
 }
 

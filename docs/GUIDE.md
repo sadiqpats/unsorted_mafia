@@ -28,7 +28,7 @@ The app proposes a balanced mix for your table size (see the table on `/guide`).
 | Players | Mafia | Specials added |
 |---|---|---|
 | 5–6 | 1 | Detective, Doctor |
-| 7 | 2 | + Jester |
+| 7 | 2 | + Joker |
 | 8–11 | 2 | + Godfather (8+), Judge (9+), Thief (10+) |
 | 12–16 | 3 | + Imposter (12+) |
 | 17–21 | 4 | all specials |
@@ -61,7 +61,7 @@ During Dawn, Night and Day, phones show **only the action**: no player list, fee
 
 **Roles stay secret until the game is over.** Deaths are announced by name only.
 
-**Win conditions:** the Town wins when every **Mafia** member is dead (the Godfather alive or dead doesn't matter). The Mafia side (Mafia + Godfather) wins when it equals or outnumbers everyone else. The Jester wins if voted out by Day. The Thief and Imposter win if they're alive at the end.
+**Win conditions:** the Town wins when every **Mafia** member is dead (the Godfather alive or dead doesn't matter). The Mafia side (Mafia + Godfather) wins when it equals or outnumbers everyone else. The Joker wins if voted out by Day. The Thief and Imposter win if they're alive at the end.
 
 **The Godfather** is not a Mafia member. He is privately shown who the Mafia are, they don't know him, and he silences one player each night and defends the Mafia by day.
 

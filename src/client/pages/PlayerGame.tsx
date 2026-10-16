@@ -437,6 +437,12 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
     act({ type: 'night_action', abilityId: option.abilityId, targetId: target, phaseSeq: view.game!.phaseSeq });
   return (
     <div data-option={option.abilityId}>
+      {option.source === 'decoy' && (
+        <div className="mb-3 rounded-xl border border-neutral/40 bg-neutral/10 p-3" data-testid="dummy-round">
+          <span className="chip border-neutral/60 text-neutral">🎭 DUMMY ROUND</span>
+          <p className="mt-2 text-xs text-mute">You have no power this round. Your pick doesn’t change anything — everyone taps so nobody can tell who has a role.</p>
+        </div>
+      )}
       <p className="text-base text-bone">{option.prompt}</p>
       {option.charges !== null && option.source !== 'decoy' && <p className="text-xs text-mute">{option.charges} use(s) left</p>}
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={option.prompt}>
@@ -659,7 +665,7 @@ export function GameOverPanel({ view, hostControls }: { view: ClientView; hostCo
   const g = view.game!;
   const w = g.winner!;
   const winners = new Set(w.winnerIds);
-  const headline = { good: 'The Town Prevails', mafia: 'The Mafia Rules', jester: 'The Jester Laughs Last', draw: 'Nobody Survives', none: 'Game Ended' }[w.faction];
+  const headline = { good: 'The Town Prevails', mafia: 'The Mafia Rules', jester: 'The Joker Laughs Last', draw: 'Nobody Survives', none: 'Game Ended' }[w.faction];
   const me = view.me;
   const iWon = me ? winners.has(me.id) : false;
   const stats = g.stats;

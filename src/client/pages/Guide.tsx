@@ -131,7 +131,7 @@ export default function Guide() {
               <b className="text-ember">🗡 Mafia wins</b> when the Mafia + Godfather equal or outnumber everyone else.
             </p>
             <p className="rounded-xl border border-neutral/40 p-3">
-              <b className="text-neutral">◆ Neutrals</b> win their own way: Jester by being voted out; Thief & Imposter by surviving.
+              <b className="text-neutral">◆ Neutrals</b> win their own way: Joker by being voted out; Thief & Imposter by surviving.
             </p>
           </div>
         </Section>

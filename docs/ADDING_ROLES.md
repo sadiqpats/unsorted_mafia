@@ -49,7 +49,7 @@ Example: a *Lookout* who learns who visited their target.
 ## C. New voting or win behaviour
 
 - Vote modifiers: extend `voteWeight()` in `engine.ts` (see `judge_vote` and `v_rally`).
-- Personal win conditions: `winsBySurviving: true` for survivors. For anything else, add a check in `checkWin()` (and, for day-elimination triggers, in `eliminateByVote()` the way the Jester works).
+- Personal win conditions: `winsBySurviving: true` for survivors. For anything else, add a check in `checkWin()` (and, for day-elimination triggers, in `eliminateByVote()` the way the Joker (id `jester`) works).
 - New house rules: add the field to `SettingsSchema` and `defaultSettings()` in `settings.ts`, read it from `room.game.settings` in the engine, and add a control in `HostDashboard.tsx → HouseRules`.
 
 ## Checklist

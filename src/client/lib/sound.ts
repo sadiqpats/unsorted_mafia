@@ -104,7 +104,47 @@ function noiseBurst(start: number, dur: number, gain: number, cutoff: number) {
   src.start(a.currentTime + start);
 }
 
+/** Howling wind: noise through a slowly sweeping band-pass filter. */
+function wind(start: number, dur: number, gain = 0.12) {
+  const a = ac();
+  if (!a || !master) return;
+  const len = Math.floor(a.sampleRate * dur);
+  const buf = a.createBuffer(1, len, a.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource();
+  src.buffer = buf;
+  const f = a.createBiquadFilter();
+  f.type = 'bandpass';
+  f.Q.value = 6;
+  const t0 = a.currentTime + start;
+  f.frequency.setValueAtTime(280, t0);
+  f.frequency.exponentialRampToValueAtTime(900, t0 + dur * 0.45);
+  f.frequency.exponentialRampToValueAtTime(360, t0 + dur);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + dur * 0.35);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.connect(f).connect(g).connect(master);
+  if (reverb) g.connect(reverb);
+  src.start(t0);
+}
+
 export const sounds = {
+  /**
+   * The welcome: haunted, then inviting. Wind, a creaking door, a distant bell,
+   * a dark choir chord that resolves into a warm major chord, and a sparkle.
+   */
+  welcome() {
+    wind(0, 3.2, 0.1);
+    tone(98, 0.05, 1.1, { type: 'sawtooth', gain: 0.035, attack: 0.15, slideTo: 64, filter: 650 });
+    bell(110, 0.25, 0.09, 3.5);
+    [220, 261.63, 329.63].forEach((f) => tone(f, 0.45, 2.1, { type: 'triangle', gain: 0.035, attack: 0.9 }));
+    tone(55, 0.45, 2.4, { type: 'sine', gain: 0.07, attack: 0.8 });
+    [220, 277.18, 329.63, 440].forEach((f) => tone(f, 1.95, 2.8, { type: 'triangle', gain: 0.04, attack: 0.45 }));
+    [1318.5, 1568, 2093, 2637].forEach((f, i) => bell(f, 2.15 + i * 0.09, 0.022, 1.6));
+  },
+
   /** Dawn: soft rising chimes. */
   dawn() {
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => bell(f, i * 0.16, 0.035, 2));

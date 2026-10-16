@@ -222,7 +222,7 @@ export const ROLES: Record<string, RoleDef> = {
     winCondition: 'Win with the Mafia. The Town wins once every Mafia member is dead, even if you are still alive.',
     abilities: [{ id: 'silence' }],
     investigatesAs: (s) => (s.godfatherAppearsInnocent ? 'good' : 'mafia'),
-    art: 'rose',
+    art: 'puppet',
   },
   detective: {
     id: 'detective',
@@ -282,7 +282,7 @@ export const ROLES: Record<string, RoleDef> = {
       { id: 'v_shield', enabled: (s) => s.villagerPowers.shield },
       { id: 'v_rally', enabled: (s) => s.villagerPowers.rally },
     ],
-    art: 'lantern',
+    art: 'cottage',
   },
   thief: {
     id: 'thief',
@@ -314,19 +314,20 @@ export const ROLES: Record<string, RoleDef> = {
     winsBySurviving: true,
     art: 'imposter',
   },
+  // Shown to players as "Joker" (internal id stays 'jester').
   jester: {
     id: 'jester',
-    name: 'Jester',
+    name: 'Joker',
     alignment: fixed('neutral'),
     mafiaTeam: () => false,
     unique: true,
-    tagline: 'The joke is on all of you.',
-    description: 'A chaos agent who craves the spotlight — especially the gallows.',
+    tagline: 'Why so serious?',
+    description: 'A wild card who craves the spotlight — especially the gallows.',
     abilityText: 'You win personally if the town votes you out during the day. Dying at night does not count.',
     howTo: 'Act suspicious enough to be voted out — but not so obviously that the town catches on.',
     winCondition: 'Neutral: win alone if eliminated by a day vote.',
     abilities: [],
-    art: 'jester',
+    art: 'joker',
   },
 };
 

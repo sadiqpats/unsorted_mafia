@@ -11,14 +11,6 @@ const ART: Record<string, ReactElement> = {
       <path d="M28 21c1.5 2 6.5 2 8 0" />
     </>
   ),
-  rose: (
-    <>
-      <path d="M32 26c-5 0-8-3-8-7s4-7 8-5c4-2 8 1 8 5s-3 7-8 7z" />
-      <path d="M28 18c2 3 6 3 8 0M30 14c1 3 3 4 5 2" />
-      <path d="M32 26v24" />
-      <path d="M32 38c-4-4-9-3-11 0 3 3 8 3 11 0zM32 44c4-4 9-3 11 0-3 3-8 3-11 0z" />
-    </>
-  ),
   lens: (
     <>
       <circle cx="28" cy="28" r="12" />
@@ -33,12 +25,6 @@ const ART: Record<string, ReactElement> = {
       <circle cx="32" cy="32" r="22" opacity="0.35" />
     </>
   ),
-  shield: (
-    <>
-      <path d="M32 10l18 6v12c0 12-8 21-18 26-10-5-18-14-18-26V16z" />
-      <path d="M32 22l2.8 5.8 6.2.9-4.5 4.4 1 6.3-5.5-3-5.5 3 1-6.3-4.5-4.4 6.2-.9z" />
-    </>
-  ),
   gavel: (
     <>
       <path d="M22 16l14 14M30 10l14 14" />
@@ -48,15 +34,6 @@ const ART: Record<string, ReactElement> = {
       <path d="M16 52v-4h18v4" />
     </>
   ),
-  lantern: (
-    <>
-      <path d="M26 12h12M32 8v4" />
-      <path d="M24 16h16l-2 4H26z" />
-      <path d="M26 20c-3 6-3 18 0 26h12c3-8 3-20 0-26" />
-      <path d="M32 26c-3 4-3 8 0 12 3-4 3-8 0-12z" className="anim-flicker" />
-      <path d="M24 50h16" />
-    </>
-  ),
   mask: (
     <>
       <path d="M8 28c6-6 16-6 24 0 8-6 18-6 24 0-1 9-7 14-13 13-5-1-7-5-11-5s-6 4-11 5C15 42 9 37 8 28z" />
@@ -64,23 +41,40 @@ const ART: Record<string, ReactElement> = {
       <path d="M22 46l-2 6M42 46l2 6" opacity="0.6" />
     </>
   ),
-  candle: (
+  // Godfather: the puppet master — a hand on the control bar, strings down to a little figure.
+  puppet: (
     <>
-      <path d="M32 10c-4 5-4 9 0 12 4-3 4-7 0-12z" className="anim-flicker" />
-      <path d="M26 24h12v26H26z" />
-      <path d="M26 30c3 2 9 2 12 0" opacity="0.6" />
-      <path d="M18 50h28" />
+      <path d="M25 17v-3.5c0-1.4 2.6-1.4 2.6 0V12c0-1.4 2.7-1.4 2.7 0v-.5c0-1.4 2.7-1.4 2.7 0v1c0-1.4 2.6-1.4 2.6 0V17z" />
+      <path d="M14 20h36" strokeWidth="3" />
+      <path d="M32 17v10" strokeWidth="3" />
+      <path d="M18 20l10 21M46 20l-10 21M32 27v11" strokeWidth="1.3" opacity="0.85" />
+      <circle cx="32" cy="42" r="4" />
+      <path d="M32 46v7M27 49l5-2 5 2M29 56l3-3 3 3" />
     </>
   ),
-  jester: (
+  // Villager: a cottage with a lit window.
+  cottage: (
     <>
-      <path d="M14 40c2-10 6-20 18-22 12 2 16 12 18 22" />
-      <path d="M32 18c-4-6-12-8-18-4 4 2 6 6 6 10M32 18c4-6 12-8 18-4-4 2-6 6-6 10M32 18v-6" />
-      <circle cx="14" cy="14" r="2.5" />
-      <circle cx="50" cy="14" r="2.5" />
-      <circle cx="32" cy="10" r="2.5" />
-      <path d="M12 40h40l-4 8H16z" />
-      <path d="M22 44h2M31 44h2M40 44h2" />
+      <path d="M12 31L32 15l20 16" />
+      <path d="M17 27v24h30V27" />
+      <path d="M28 51V41h8v10" />
+      <rect x="20" y="31" width="7" height="6" className="anim-flicker" />
+      <path d="M41 22v-6h4v9" />
+      <path d="M42 12c0-2 2-2 2-4" opacity="0.6" />
+    </>
+  ),
+  // Joker: a playing card with a sinister grin.
+  joker: (
+    <>
+      <rect x="18" y="11" width="28" height="42" rx="4" />
+      <path d="M21.5 15.5v3.5c0 1.6-2.4 1.6-2.4 0" strokeWidth="1.5" />
+      <path d="M23 30l2.5-10 4 5.5 2.5-8 2.5 8 4-5.5 2.5 10z" />
+      <circle cx="25.5" cy="19" r="1.4" />
+      <circle cx="32" cy="16.5" r="1.4" />
+      <circle cx="38.5" cy="19" r="1.4" />
+      <path d="M26 35l4 1.5M38 35l-4 1.5" />
+      <path d="M23.5 41c3 6 14 6 17 0" />
+      <path d="M26 43.5l1.4 1.6M30 45v1.8M34 45v1.8M38 43.5l-1.4 1.6" strokeWidth="1.3" />
     </>
   ),
   imposter: (

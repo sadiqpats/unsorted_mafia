@@ -15,6 +15,10 @@ test('5 players, no timers: full match — Mafia kill, Detective result, refresh
   await nightAct(mafia, 'mafia_kill', victim.name);
   await nightAct(det, 'investigate', mafia.name);
   await nightAct(doc, 'protect', other.name);
+  // Players without a power see a clearly labelled dummy round.
+  await other.page.getByRole('button', { name: /Open your night panel/ }).click();
+  await expect(other.page.getByTestId('dummy-round')).toContainText('DUMMY ROUND');
+  await expect(other.page.getByText('Whom do you suspect most?')).toBeVisible();
   await nightAct(other, 'decoy', mafia.name);
   await nightAct(victim, 'decoy', null);
   // No pop-up duplicating the on-screen ✓ confirmation.
@@ -101,12 +105,12 @@ test('Judge’s double vote changes the outcome', async ({ browser }) => {
   await expect(v1.page.getByText('The Town Prevails')).toBeVisible();
 });
 
-test('Jester wins by being voted out', async ({ browser }) => {
+test('Joker wins by being voted out', async ({ browser }) => {
   const t = await setupTable(browser, 5, { mafia: 1, jester: 1, villager: 3 });
   await advanceTo(t, 'Day');
-  const jester = t.byRole('Jester')[0];
+  const jester = t.byRole('Joker')[0];
   for (const s of t.seats) await vote(s, s === jester ? t.byRole('Mafia')[0].name : jester.name);
-  for (const s of t.seats) await expect(s.page.getByText('The Jester Laughs Last')).toBeVisible();
+  for (const s of t.seats) await expect(s.page.getByText('The Joker Laughs Last')).toBeVisible();
   await expect(jester.page.getByText('🏆 You won!')).toBeVisible();
 });
 
