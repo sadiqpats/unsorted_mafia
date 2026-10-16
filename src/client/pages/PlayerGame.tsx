@@ -13,7 +13,7 @@ import { PhotoPicker } from '../components/PhotoPicker';
 import { RoleArt } from '../components/RoleArt';
 import { uploadPhoto } from '../lib/photo';
 import { loadSession } from '../lib/session';
-import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, PlayerRow, Section, Timer, useCountdown, useToast } from '../components/ui';
+import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, PlayerRow, Section, Timer, useCountdown, useToast, winHeadline } from '../components/ui';
 
 type Send = (c: CommandInput) => Promise<Ack>;
 
@@ -823,9 +823,7 @@ export function GameOverPanel({ view, hostControls }: { view: ClientView; hostCo
   const g = view.game!;
   const w = g.winner!;
   const winners = new Set(w.winnerIds);
-  const headline = view.settings.bollywood
-    ? { good: 'Gaon Bach Gaya!', mafia: 'Gabbar Ka Raaj', jester: 'Baburao Hasta Hai!', draw: 'Koi Nahi Bacha', none: 'Game Khatam' }[w.faction]
-    : { good: 'The Town Prevails', mafia: 'The Mafia Rules', jester: 'The Joker Laughs Last', draw: 'Nobody Survives', none: 'Game Ended' }[w.faction];
+  const headline = winHeadline(w.faction, !!view.settings.bollywood);
   const me = view.me;
   const iWon = me ? winners.has(me.id) : false;
   const stats = g.stats;

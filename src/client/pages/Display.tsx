@@ -5,7 +5,7 @@ import { useParams } from 'react-router-dom';
 import { ROLES, roleAlignment, roleTitle } from '../../shared/roles';
 import { Avatar } from '../components/Avatar';
 import type { PublicPlayer } from '../../shared/view-types';
-import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, QR, Timer, useTitle } from '../components/ui';
+import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, QR, Timer, useTitle, winHeadline } from '../components/ui';
 import { useRoom } from '../lib/useRoom';
 
 /** TV / projector view. Connects as a read-only "display" and receives only public data. */
@@ -45,7 +45,7 @@ export default function Display() {
             <img src={LOGO.wordmark} alt="Unsorted" className="h-9 w-auto md:h-11" />
             <span className="eyebrow pb-1">presents</span>
           </div>
-          <h1 className="brand-title mt-1 text-4xl font-black md:text-5xl">Mafia Night</h1>
+          <h1 className="brand-title mt-1 text-4xl font-black md:text-5xl">{view.settings.bollywood ? 'Bollywood Mafia Night' : 'Mafia Night'}</h1>
         </div>
         <div className="flex items-center gap-3">
           <span className="font-[family-name:var(--font-display)] text-3xl tracking-[0.3em] text-gold">{upper}</span>
@@ -75,7 +75,7 @@ export default function Display() {
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="eyebrow">{g.round ? `Round ${g.round}` : ''}</p>
-                <h2 className="font-[family-name:var(--font-display)] text-5xl md:text-6xl">{PHASE_LABEL[g.phase]}</h2>
+                <h2 className="font-[family-name:var(--font-display)] text-5xl md:text-6xl">{g.phase === 'game_over' && g.winner ? winHeadline(g.winner.faction, !!view.settings.bollywood) : PHASE_LABEL[g.phase]}</h2>
               </div>
               <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />
             </div>

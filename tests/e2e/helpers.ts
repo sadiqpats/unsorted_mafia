@@ -28,7 +28,7 @@ export async function newPhone(browser: Browser, { intro = false }: { intro?: bo
   return ctx.newPage();
 }
 
-export async function createRoom(browser: Browser, count: number): Promise<{ host: Page; code: string }> {
+export async function createRoom(browser: Browser, count: number, { realClock = false }: { realClock?: boolean } = {}): Promise<{ host: Page; code: string }> {
   const host = await newPhone(browser);
   await host.goto('/host');
   await host.getByLabel('Host code').fill('e2e-host-code');
@@ -43,6 +43,16 @@ export async function createRoom(browser: Browser, count: number): Promise<{ hos
   await brk.fill('0');
   await brk.press('Enter');
   await expect(brk).toHaveValue('0');
+  // Long Night/Vote clocks so a slow, heavily loaded test machine never runs out the clock mid-test
+  // (the real 60 s clock has its own test).
+  if (!realClock) {
+    for (const label of [/^Night \(seconds\)/, /^Vote \(seconds\)/]) {
+      const box = host.getByLabel(label);
+      await box.fill('600');
+      await box.press('Enter');
+      await expect(box).toHaveValue('600');
+    }
+  }
   return { host, code };
 }
 
@@ -73,8 +83,8 @@ export async function setRoles(host: Page, counts: Record<string, number>) {
   }
 }
 
-export async function setupTable(browser: Browser, count: number, roles?: Record<string, number>, before?: (host: Page) => Promise<void>): Promise<Table> {
-  const { host, code } = await createRoom(browser, count);
+export async function setupTable(browser: Browser, count: number, roles?: Record<string, number>, before?: (host: Page) => Promise<void>, opts: { realClock?: boolean } = {}): Promise<Table> {
+  const { host, code } = await createRoom(browser, count, opts);
   if (roles) await setRoles(host, roles);
   if (before) await before(host);
   const seats: Seat[] = [];
@@ -154,14 +164,21 @@ export async function skipRest(t: Table, done: Set<string>) {
     // The phase can end the moment the last person acts (buttons vanish mid-click: fine), and the
     // secret panel closes itself after 15 s (reopen it). Loop until this player is locked in.
     const tap = (l: ReturnType<Page['locator']>) => l.click({ timeout: 8000 }).then(() => true, () => false);
+    // Stay in the phase we started in: a Dawn skip must never leak into the Night that follows it.
+    const phase = (await p.locator('h1', { hasText: /^(Dawn|Night)$/ }).first().innerText({ timeout: 2000 }).catch(() => '')).trim();
+    if (!phase) continue;
+    const samePhase = () => p.locator('h1', { hasText: new RegExp(`^${phase}$`, 'i') }).isVisible();
     for (let round = 0; round < 5; round++) {
       if (await p.getByText(/Locked in\. Put your phone face down/).isVisible()) break;
-      if (!(await p.locator('h1', { hasText: /^(Dawn|Night)$/ }).isVisible())) break; // phase moved on
+      if (!(await samePhase())) break; // phase moved on
       const open = p.getByRole('button', { name: /Open your (dawn|night) panel|Review your choice/ });
       if (await open.isVisible()) await tap(open);
       const skips = p.locator('[data-option]').getByRole('button', { name: 'Skip' });
       const n = await skips.count();
-      for (let i = 0; i < n; i++) await tap(skips.first());
+      for (let i = 0; i < n; i++) {
+        if (!(await samePhase())) break;
+        await tap(skips.first());
+      }
       await p.waitForTimeout(150);
     }
   }

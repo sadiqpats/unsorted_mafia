@@ -7,7 +7,7 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 | Typecheck | `npm run typecheck` | ✅ no errors |
 | Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 164 / 164 |
 | Integration (real server + socket/HTTP clients) | `npm test` | ✅ 33 / 33 |
-| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 27 / 27 |
+| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 28 / 28 |
 | Production build | `npm run build` | ✅ |
 
 ## Dumb Charades
