@@ -68,7 +68,8 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
       {me.alive || phase === 'game_over' ? null : <DeadBanner view={view} />}
       {me.silenced && me.alive && phase !== 'game_over' && (
         <div className="rounded-xl border border-gold/50 bg-gold/10 p-3 text-center text-sm" role="status">
-          🤐 <b>You have been silenced.</b> Do not speak during today’s discussion. You cannot vote today.
+          🤐 <b>You have been silenced.</b> Do not speak during today’s discussion.{' '}
+          {view.settings.silencedCanVote ? 'You can still vote.' : 'You cannot vote today.'}
         </div>
       )}
       {phase === 'reveal' && <RevealPanel view={view} send={send} />}

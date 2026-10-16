@@ -107,8 +107,17 @@ describe('voting rules', () => {
     expect(g.room.game!.winner!.faction).toBe('good');
   });
 
-  it('silenced players are reported with a reason', () => {
+  it('silenced players stay quiet but can still vote (default)', () => {
     const g = setup(['godfather', 'mafia', V, V, V, V, V]);
+    g.goToNight();
+    g.act(0, 'silence', 3);
+    g.goToVoting();
+    expect(() => g.vote(3, 1)).not.toThrow();
+    expect(g.room.game!.day.votes.p3.targetId).toBe('p1');
+  });
+
+  it('house rule: silenced players can be blocked from voting too, with a reason', () => {
+    const g = setup(['godfather', 'mafia', V, V, V, V, V], { silencedCanVote: false });
     g.goToNight();
     g.act(0, 'silence', 3);
     g.goToVoting();

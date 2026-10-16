@@ -108,7 +108,7 @@ export default function Landing() {
               </li>
               <li>Each night the Mafia pick a victim, while other roles protect, investigate, steal or revive — all in secret.</li>
               <li>Each day the town discusses, then votes. Most votes is eliminated. The Judge’s vote counts double.</li>
-              <li>Dead players stay silent. Silenced players can’t speak or vote that day.</li>
+              <li>Dead players stay silent. Silenced players can’t speak that day — but they can still vote.</li>
             </ul>
           </div>
           <div className="card p-6">

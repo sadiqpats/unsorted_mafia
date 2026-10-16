@@ -969,7 +969,7 @@ export function voteEligibility(room: Room, p: Player): { ok: boolean; reason?: 
   const g = room.game;
   if (!g) return { ok: false, reason: 'No game.' };
   if (!p.alive) return { ok: false, reason: 'Dead players cannot vote.' };
-  if (p.silencedRound === g.round) return { ok: false, reason: 'You are silenced today and cannot vote.' };
+  if (p.silencedRound === g.round && !g.settings.silencedCanVote) return { ok: false, reason: 'You are silenced today and cannot vote.' };
   if (p.noVoteRound === g.round) return { ok: false, reason: 'You were just revived and cannot vote this round.' };
   return { ok: true };
 }

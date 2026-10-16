@@ -29,7 +29,7 @@ describe('announcements', () => {
     g.act(1, 'silence', 3);
     g.advance();
     expect(g.room.game!.phase).toBe('voting');
-    expect(news(g)).toEqual(['P2 was killed during the night.', 'P3 has been silenced and cannot speak or vote today.']);
+    expect(news(g)).toEqual(['P2 was killed during the night.', 'P3 has been silenced and cannot speak today (they can still vote).']);
   });
 
   it('the vote result is shown at the next Night when there is no Dawn round (was missing)', () => {

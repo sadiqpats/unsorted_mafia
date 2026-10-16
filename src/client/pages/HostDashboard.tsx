@@ -293,6 +293,7 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           <Toggle label="Players may change their vote" checked={s.allowVoteChange} onChange={(v) => patch({ allowVoteChange: v })} />
           <Toggle label="Allow voting for yourself" checked={s.allowSelfVote} onChange={(v) => patch({ allowSelfVote: v })} />
           <Toggle label="Allow abstaining" checked={s.allowAbstain} onChange={(v) => patch({ allowAbstain: v })} />
+          <Toggle label="Silenced players can still vote" hint="They must stay quiet in discussion either way." checked={s.silencedCanVote} onChange={(v) => patch({ silencedCanVote: v })} />
           <Select label="On a tie" value={s.tieRule} options={[['none', 'Nobody is eliminated'], ['runoff', 'Runoff vote'], ['host', 'Host decides']]} onChange={(v) => patch({ tieRule: v })} />
           <Select label="Reveal after voting" value={s.voteReveal} options={[['outcome', 'Outcome only'], ['tally', 'Vote totals'], ['full', 'Who voted for whom']]} onChange={(v) => patch({ voteReveal: v })} />
           <NumberSetting label="Judge vote weight" value={s.judgeWeight} min={1} max={5} suffix="×" onChange={(v) => patch({ judgeWeight: v })} />

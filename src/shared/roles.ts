@@ -218,7 +218,7 @@ export const ROLES: Record<string, RoleDef> = {
     tagline: 'A whisper is louder than a gunshot.',
     description: 'The Mafia’s silent patron. You know exactly who the Mafia are — they have no idea who you are.',
     abilityText: 'You privately know who the Mafia are. Each night, silence one player for the next day. Defend the Mafia in discussion.',
-    howTo: 'Your role card lists the Mafia. At night, choose someone to silence — they cannot speak or vote the next day and never learn who did it. By day, protect the Mafia without giving yourself away.',
+    howTo: 'Your role card lists the Mafia. At night, choose someone to silence — they cannot speak during the next day’s discussion (they can still vote) and never learn who did it. By day, protect the Mafia without giving yourself away.',
     winCondition: 'Win with the Mafia. The Town wins once every Mafia member is dead, even if you are still alive.',
     abilities: [{ id: 'silence' }],
     investigatesAs: (s) => (s.godfatherAppearsInnocent ? 'good' : 'mafia'),

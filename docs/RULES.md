@@ -55,7 +55,7 @@ Removed for good: **Priest** and **Bodyguard**.
 Dawn order: Imposter revive (90), then Thief steal (95).
 
 ## Voting (Day)
-- Eligible: alive, not silenced today, not just revived (if that house rule is on). The Day ends when **all eligible players** have voted.
+- Eligible: alive, and not just revived (if that house rule is on). **Silenced players may still vote** (they just can't speak in discussion); the house rule `silencedCanVote: false` blocks their vote too. The Day ends when **all eligible players** have voted.
 - One secret ballot per player; abstaining allowed; no self-vote by default.
 - Weights are counted on the server when the Day closes (Judge ×2, Rally ×2).
 - If “no one” (abstain) gets at least as many votes as the leader, nobody is eliminated.

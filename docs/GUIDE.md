@@ -55,7 +55,7 @@ Everyone else is a Villager. Red messages (e.g. “roles add up to 9, need 10”
 | 🂠 Role reveal | Press and hold the card to see your role privately. Tap “I’ve seen my role”. | Everyone |
 | 🕯 Dawn | *(Only if a Thief or Imposter is in the game.)* The Thief picks a **power**, never a person, and uses it for this round. The owner is told privately and gets it back next Dawn. The same power can't be taken two rounds in a row. From round 2 the Imposter may revive a dead player or skip. Every phone is told **that** something happened, never who did it. | Everyone (others press the dummy button) |
 | 🌙 Night | Open the secret panel and lock in a choice. Mafia kill; Doctor protects (self too, never two rounds in a row); Detective investigates; Godfather silences. | Everyone (others press the dummy button) |
-| ☀ Day | The night's news appears, then talk and vote in secret. The Day ends when everyone has voted. | Living, not-silenced players |
+| ☀ Day | The night's news appears, then talk and vote in secret. The Day ends when everyone has voted. Silenced players stay quiet but still vote. | Living players |
 
 During Dawn, Night and Day, phones show **only the action**: no player list, feed or extra text.
 
@@ -84,7 +84,7 @@ During Dawn, Night and Day, phones show **only the action**: no player list, fee
 | Colour or sound giving roles away | Closed panels look identical for everyone. Sounds play only on public phase changes, the same on every phone. |
 | Inspecting the page / network | The server sends each phone **only its own** role and results. Verified by automated tests at the network level. |
 | Re-rolling a role | Roles are dealt on the server with a cryptographic shuffle, once. There is no reroll. |
-| Voting twice / after the deadline / while dead or silenced | Rejected by the server (one vote per seat, phase-sequence checks, replay protection). |
+| Voting twice / after the deadline / while dead | Rejected by the server (one vote per seat, phase-sequence checks, replay protection). |
 | Using someone else’s seat | Each seat is bound to a secret token on one phone. Moving it needs a host-issued one-time code. |
 | Dead players signalling | By default the dead **can’t** see other roles, so there’s nothing to leak. |
 | Host bias | If the host plays, the dashboard carries **no secrets**. Corrections are always public. |

@@ -46,6 +46,8 @@ export const SettingsSchema = z.object({
   allowVoteChange: z.boolean(),
   allowSelfVote: z.boolean(),
   allowAbstain: z.boolean(),
+  /** On (default): a silenced player must stay quiet in discussion but can still vote. Off: they can't vote either. */
+  silencedCanVote: z.boolean(),
   tieRule: z.enum(['none', 'runoff', 'host']),
   /** outcome: only who was eliminated. tally: weighted totals per player. full: who voted for whom. */
   voteReveal: z.enum(['outcome', 'tally', 'full']),
@@ -109,7 +111,7 @@ export const DEFAULT_ANNOUNCEMENTS: Announcements = {
   revived: '{name} has been revived and is back in the game!',
   theft: 'At dawn, the Thief struck — someone’s power was stolen for this round.',
   quietPreNight: 'Dawn passed quietly.',
-  silenced: '{name} has been silenced and cannot speak or vote today.',
+  silenced: '{name} has been silenced and cannot speak today (they can still vote).',
   voteOut: 'The town has eliminated {name}.',
   noElimination: 'The town could not agree. Nobody was eliminated.',
   jesterWin: '{name} was the Jester — and wanted this all along.',
@@ -128,6 +130,7 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     allowVoteChange: false,
     allowSelfVote: false,
     allowAbstain: true,
+    silencedCanVote: true,
     tieRule: 'none',
     voteReveal: 'tally',
     revealRoleOnDeath: false,

@@ -81,7 +81,7 @@ describe('Godfather', () => {
     g.advance();
     expect(news(g, 'morning').join()).toContain('P3 has been silenced');
     expect(news(g, 'morning').join()).not.toContain('P0');
-    expect(() => g.vote(3, 1)).toThrow(/silenced/);
+    expect(() => g.vote(3, 1)).not.toThrow(); // silenced = can't speak, but can still vote
   });
 
   it('the Town wins once every Mafia member is dead, even with the Godfather alive', () => {

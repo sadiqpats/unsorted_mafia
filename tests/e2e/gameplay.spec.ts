@@ -59,7 +59,7 @@ test('Doctor protection saves the Mafia target', async ({ browser }) => {
   await expect(target.page.getByTestId('phase-news')).toContainText('Nobody died tonight.');
 });
 
-test('Godfather knows the Mafia, silences a player, who is then blocked from voting', async ({ browser }) => {
+test('Godfather knows the Mafia and silences a player, who must stay quiet but can still vote', async ({ browser }) => {
   const t = await setupTable(browser, 7, { godfather: 1, mafia: 1, detective: 1, villager: 4 });
   const gf = t.byRole('Godfather')[0];
   const mafia = t.byRole('Mafia')[0];
@@ -78,10 +78,11 @@ test('Godfather knows the Mafia, silences a player, who is then blocked from vot
   await skipRest(t, new Set([gf.name]));
   await expect(t.host.getByTestId('host-phase')).toHaveText('Day');
   await expect(silenced.page.getByTestId('phase-news')).toContainText(`${silenced.name} has been silenced`);
-  await expect(silenced.page.getByText('You are silenced today and cannot vote.')).toBeVisible();
+  await expect(silenced.page.getByText('You have been silenced.')).toBeVisible();
+  await expect(silenced.page.getByText('You can still vote.')).toBeVisible();
   // Announced once — not repeated in a second line.
   expect(await silenced.page.getByText(/has been silenced/).count()).toBe(1);
-  await expect(silenced.page.getByRole('button', { name: /Open your ballot/ })).toHaveCount(0);
+  await vote(silenced, gf.name); // the ballot works for a silenced player
 });
 
 test('Judge’s double vote changes the outcome', async ({ browser }) => {
