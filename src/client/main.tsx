@@ -6,6 +6,10 @@ import { WakeBanner } from './components/WakeBanner';
 import { PrefsProvider } from './lib/prefs';
 import Landing from './pages/Landing';
 import './index.css';
+import { sounds } from './lib/sound';
+
+// Phones only allow sound after a tap: unlock audio on the first interaction.
+window.addEventListener('pointerdown', () => sounds.unlock(), { once: true });
 
 const HostCreate = lazy(() => import('./pages/HostCreate'));
 const Join = lazy(() => import('./pages/Join'));

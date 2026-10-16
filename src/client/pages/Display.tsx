@@ -1,4 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { PhaseCurtain, usePhaseFx } from '../components/PhaseCurtain';
+import { sounds } from '../lib/sound';
 import { useParams } from 'react-router-dom';
 import { ROLES, roleAlignment } from '../../shared/roles';
 import { Avatar } from '../components/Avatar';
@@ -13,14 +15,29 @@ export default function Display() {
   const auth = useMemo(() => ({ display: true }), []);
   const { view, status, serverNow, endedReason } = useRoom(upper, auth);
   const joinUrl = `${window.location.origin}/join/${upper}`;
+  const scene = usePhaseFx(view);
+  const [soundOn, setSoundOn] = useState(false);
 
   if (status === 'denied' || status === 'ended') return <div className="grid min-h-dvh place-items-center text-2xl text-mute">{endedReason ?? 'Room unavailable'}</div>;
   if (!view) return <div className="grid min-h-dvh place-items-center text-mute">Connecting to {upper}…</div>;
 
   const g = view.game;
-  const night = g?.phase === 'night' || g?.phase === 'prenight';
   return (
-    <div className={`grain min-h-dvh p-6 md:p-10 ${night ? 'bg-[#05060a]' : ''}`}>
+    <div className="grain relative min-h-dvh p-6 md:p-10">
+      <div className="ambient" aria-hidden="true" />
+      <PhaseCurtain scene={scene} />
+      {!soundOn && (
+        <button
+          className="btn btn-ghost fixed bottom-5 right-5 z-50 !min-h-10 text-sm"
+          onClick={() => {
+            sounds.unlock();
+            sounds.seal();
+            setSoundOn(true);
+          }}
+        >
+          🔊 Tap to enable sound
+        </button>
+      )}
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         <div>
           <div className="flex items-end gap-3">
@@ -91,7 +108,7 @@ export default function Display() {
           </div>
           <div className="card max-h-[75vh] overflow-hidden p-5">
             <h3 className="eyebrow mb-3">Announcements</h3>
-            <Feed entries={view.feed} limit={14} />
+            <Feed entries={view.feed} limit={14} inGame />
           </div>
         </div>
       )}

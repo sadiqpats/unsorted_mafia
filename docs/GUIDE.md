@@ -89,7 +89,12 @@ During Dawn, Night and Day, phones show **only the action**: no player list, fee
 | Dead players signalling | By default the dead **can’t** see other roles, so there’s nothing to leak. |
 | Host bias | If the host plays, the dashboard carries **no secrets**. Corrections are always public. |
 
-## 8. Quick fixes
+## 8. Sound, motion and display
+- Each phase opens with a short cinematic moment and its own sound: chimes at **Dawn**, a low bell at **Night**, a warm swell by **Day**, a gavel for ties and runoffs, and a fanfare at game over. Locking in and voting play a soft “sealed” sound. Everyone does these, so they never give anything away.
+- Every phone and the TV play the same cue at the same moment. On the TV, tap **🔊 Tap to enable sound** once (browsers block sound until someone taps).
+- Per phone (🔊 Settings): sound on/off, **volume**, **vibration**, reduced motion, low-light mode.
+
+## 9. Quick fixes
 
 - **Phone locked / tab closed:** reopen the same link. The seat is remembered on that phone.
 - **New phone / cleared browser:** host taps **Rejoin** next to the name. The player enters the code under “Rejoin” on the join page.

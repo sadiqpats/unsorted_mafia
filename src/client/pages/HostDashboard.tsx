@@ -83,6 +83,7 @@ function HostLobby({ view, send }: GameProps) {
               {view.players.map((p) => (
                 <PlayerRow
                   key={p.id}
+                  className="anim-slide-in"
                   p={p}
                   sub={<span>{p.ready ? '✓ Ready' : 'Not ready'}</span>}
                   right={

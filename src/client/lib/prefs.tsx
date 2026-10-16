@@ -1,14 +1,18 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { sounds } from './sound';
 
 /** Per-device preferences (not game state): sound, motion, low-light. */
 export interface Prefs {
   muted: boolean;
+  /** 0–1 */
+  volume: number;
+  vibration: boolean;
   reduceMotion: boolean;
   lowLight: boolean;
 }
 
 const KEY = 'mafia-night:prefs';
-const defaults: Prefs = { muted: false, reduceMotion: false, lowLight: false };
+const defaults: Prefs = { muted: false, volume: 0.8, vibration: true, reduceMotion: false, lowLight: false };
 
 function load(): Prefs {
   try {
@@ -31,8 +35,24 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement;
     root.classList.toggle('reduce-motion', prefs.reduceMotion);
     root.classList.toggle('low-light', prefs.lowLight);
+    sounds.setVolume(prefs.volume);
   }, [prefs]);
   return <Ctx.Provider value={{ prefs, set: (p) => setPrefs((x) => ({ ...x, ...p })) }}>{children}</Ctx.Provider>;
 }
 
 export const usePrefs = () => useContext(Ctx);
+
+type Cue = Exclude<keyof typeof sounds, 'setVolume' | 'unlock'>;
+
+/** Play a sound cue / vibrate, honouring the player's mute, volume and vibration settings. */
+export function useFx() {
+  const { prefs } = usePrefs();
+  const play = useCallback((cue: Cue) => !prefs.muted && prefs.volume > 0 && sounds[cue](), [prefs.muted, prefs.volume]);
+  const buzz = useCallback(
+    (pattern: number | number[]) => {
+      if (prefs.vibration && typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(pattern);
+    },
+    [prefs.vibration],
+  );
+  return { play, buzz };
+}

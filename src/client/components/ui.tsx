@@ -5,7 +5,8 @@ import { ALIGNMENT_LABEL } from '../../shared/roles';
 import type { Alignment, LogEntry } from '../../shared/types';
 import type { PublicPlayer } from '../../shared/view-types';
 import type { ConnStatus } from '../lib/useRoom';
-import { usePrefs } from '../lib/prefs';
+import { useFx, usePrefs } from '../lib/prefs';
+import { sounds } from '../lib/sound';
 import { Avatar } from './Avatar';
 
 // ------------------------------------------------------------------ brand
@@ -20,7 +21,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
     <Link to="/" className="flex items-center gap-3 focus-ring rounded-lg" aria-label="Unsorted — Mafia Night home">
       <img src={LOGO.wordmark} alt="Unsorted" className={compact ? 'h-5 w-auto' : 'h-7 w-auto'} />
-      <span className={`whitespace-nowrap border-l border-line pl-3 font-[family-name:var(--font-display)] tracking-[0.16em] text-gold ${compact ? 'hidden text-[0.7rem] sm:inline' : 'text-xs sm:text-sm'}`}>MAFIA NIGHT</span>
+      <span className={`whitespace-nowrap border-l border-line pl-3 font-[family-name:var(--font-display)] tracking-[0.16em] text-gold hidden sm:inline ${compact ? 'text-[0.7rem]' : 'text-sm'}`}>MAFIA NIGHT</span>
     </Link>
   );
 }
@@ -28,6 +29,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
 export function Shell({ children, right, wide = false }: { children: ReactNode; right?: ReactNode; wide?: boolean }) {
   return (
     <div className="grain vignette min-h-dvh">
+      <div className="ambient" aria-hidden="true" />
       <header className="sticky top-0 z-40 border-b border-line/60 bg-ink/80 backdrop-blur-md">
         <div className={`mx-auto flex h-14 items-center justify-between gap-3 px-4 ${wide ? 'max-w-7xl' : 'max-w-3xl'}`}>
           <BrandMark compact />
@@ -86,13 +88,19 @@ export function fmt(ms: number) {
 
 export function Timer({ endsAt, serverNow, pausedMs, large = false }: { endsAt: number | null; serverNow: () => number; pausedMs: number | null; large?: boolean }) {
   const left = useCountdown(endsAt, serverNow, pausedMs);
+  const { play } = useFx();
+  const secs = left === null ? null : Math.ceil(left / 1000);
+  useEffect(() => {
+    // Soft tick for the last 5 seconds — the clock is public, so every phone ticks together.
+    if (secs !== null && secs > 0 && secs <= 5 && pausedMs === null) play('tick');
+  }, [secs]);
   if (left === null) return pausedMs !== null ? <span className="chip text-gold">⏸ Paused</span> : null;
   const urgent = left < 10_000 && pausedMs === null;
   return (
     <span
       role="timer"
       aria-label={`${Math.ceil(left / 1000)} seconds left`}
-      className={`font-[family-name:var(--font-display)] tabular-nums ${large ? 'text-6xl md:text-8xl' : 'text-lg'} ${urgent ? 'text-ember' : 'text-bone'}`}
+      className={`inline-block font-[family-name:var(--font-display)] tabular-nums ${large ? 'text-6xl md:text-8xl' : 'text-lg'} ${urgent ? 'timer-urgent text-ember' : 'text-bone'}`}
     >
       {pausedMs !== null && '⏸ '}
       {fmt(left)}
@@ -151,6 +159,23 @@ export function PrefsMenu() {
       {open && (
         <div className="card absolute right-0 z-50 mt-2 w-64 space-y-1 p-3 text-sm" role="dialog" aria-label="Device settings">
           <Toggle label="Sound effects" checked={!prefs.muted} onChange={(v) => set({ muted: !v })} />
+          {!prefs.muted && (
+            <label className="flex min-h-11 items-center justify-between gap-3 px-2">
+              <span>Volume</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={prefs.volume}
+                onChange={(e) => set({ volume: Number(e.target.value) })}
+                onPointerUp={() => sounds.seal()}
+                aria-label="Sound volume"
+                className="w-28 accent-[#c9a45c]"
+              />
+            </label>
+          )}
+          <Toggle label="Vibration" hint="Buzz on phase changes (Android)" checked={prefs.vibration} onChange={(v) => set({ vibration: v })} />
           <Toggle label="Reduced motion" checked={prefs.reduceMotion} onChange={(v) => set({ reduceMotion: v })} />
           <Toggle label="Low-light mode (dim room)" checked={prefs.lowLight} onChange={(v) => set({ lowLight: v })} />
           <p className="pt-1 text-xs text-mute">Saved on this device only.</p>
@@ -276,9 +301,9 @@ export function QR({ text, size = 200 }: { text: string; size?: number }) {
 
 // ------------------------------------------------------------------ players & feed
 
-export function PlayerRow({ p, right, sub }: { p: PublicPlayer; right?: ReactNode; sub?: ReactNode }) {
+export function PlayerRow({ p, right, sub, className = '' }: { p: PublicPlayer; right?: ReactNode; sub?: ReactNode; className?: string }) {
   return (
-    <li data-player={p.name} className={`flex min-h-12 items-center justify-between gap-3 rounded-xl border border-line/60 px-3 py-2 ${p.alive ? 'bg-white/[0.02]' : 'bg-black/40 opacity-60'}`}>
+    <li data-player={p.name} className={`flex min-h-12 items-center justify-between gap-3 rounded-xl border border-line/60 px-3 py-2 ${p.alive ? 'bg-white/[0.02]' : 'bg-black/40 opacity-60'} ${className}`}>
       <div className="flex min-w-0 items-center gap-3">
         <span className="relative">
           <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={38} />
@@ -302,8 +327,14 @@ export function PlayerRow({ p, right, sub }: { p: PublicPlayer; right?: ReactNod
   );
 }
 
-export function Feed({ entries, limit = 30 }: { entries: LogEntry[]; limit?: number }) {
-  const list = [...entries].reverse().slice(0, limit);
+const LOBBY_KINDS = new Set(['join', 'room', 'kick']);
+
+/** During a game, lobby chatter (joins, room opened) is left out of the announcements. */
+export function Feed({ entries, limit = 30, inGame = false }: { entries: LogEntry[]; limit?: number; inGame?: boolean }) {
+  const list = [...entries]
+    .filter((e) => !inGame || !LOBBY_KINDS.has(e.kind))
+    .reverse()
+    .slice(0, limit);
   if (!list.length) return <p className="text-sm text-mute">Nothing has happened yet.</p>;
   return (
     <ol className="space-y-2" aria-label="Game announcements">

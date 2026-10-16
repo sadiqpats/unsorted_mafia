@@ -6,6 +6,7 @@ import { ABILITIES, ROLES, roleAlignment } from '../../shared/roles';
 import type { ClientView, PublicPlayer } from '../../shared/view-types';
 import { Avatar } from '../components/Avatar';
 import { HoldToReveal, PrivacyShield, RoleDetails } from '../components/RoleCard';
+import { useFx, usePrefs } from '../lib/prefs';
 import { PhotoPicker } from '../components/PhotoPicker';
 import { RoleArt } from '../components/RoleArt';
 import { uploadPhoto } from '../lib/photo';
@@ -22,13 +23,21 @@ export interface GameProps {
 
 export function useAct(send: Send) {
   const toast = useToast();
+  const { play, buzz } = useFx();
   const [busy, setBusy] = useState(false);
   const act = async (cmd: CommandInput, okMsg?: string) => {
     setBusy(true);
     const a = await send(cmd);
     setBusy(false);
     if (!a.ok) toast(a.error?.message ?? 'That didn’t work.', 'error');
-    else if (okMsg) toast(okMsg);
+    else {
+      // Every player locks in / votes, so this identical cue reveals nothing.
+      if (cmd.type === 'night_action' || cmd.type === 'vote') {
+        play('seal');
+        buzz(25);
+      }
+      if (okMsg) toast(okMsg);
+    }
     return a;
   };
   return { act, busy };
@@ -37,6 +46,14 @@ export function useAct(send: Send) {
 const nameOf = (view: ClientView, id: string | null | undefined) => (id ? (view.players.find((p) => p.id === id)?.name ?? '—') : 'Nobody');
 
 const ACTION_PHASES = ['prenight', 'night', 'voting'];
+
+function CheckMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" className="check-draw text-ok" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </svg>
+  );
+}
 
 // ======================================================================= root
 
@@ -70,7 +87,7 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
             </Section>
           )}
           <Section title="Announcements">
-            <Feed entries={view.feed} limit={12} />
+            <Feed entries={view.feed} limit={12} inGame />
           </Section>
         </>
       )}
@@ -194,6 +211,7 @@ function PlayersList({ view, lobby = false }: { view: ClientView; lobby?: boolea
       {view.players.map((p) => (
         <PlayerRow
           key={p.id}
+          className="anim-slide-in"
           p={p}
           sub={
             <>
@@ -343,8 +361,8 @@ function NightPanel({ view, send }: { view: ClientView; send: Send }) {
         </div>
       </PrivacyShield>
       {allDone && (
-        <div className="rounded-xl border border-ok/40 bg-ok/10 p-3 text-center text-sm" role="status">
-          ✓ Locked in. Put your phone face down.
+        <div className="anim-pop flex items-center justify-center gap-2 rounded-xl border border-ok/40 bg-ok/10 p-3 text-center text-sm" role="status">
+          <CheckMark /> Locked in. Put your phone face down.
         </div>
       )}
     </div>
@@ -380,7 +398,7 @@ function PhaseNews({ view }: { view: ClientView }) {
         <div key={grp.lines[0].seq}>
           <p className="eyebrow">{NEWS_TITLE[grp.kind] ?? 'News'}</p>
           {grp.lines.map((l) => (
-            <p key={l.seq} className="mt-1.5 font-[family-name:var(--font-serif)] text-xl leading-snug">
+            <p key={l.seq} className="news-line mt-1.5 font-[family-name:var(--font-serif)] text-xl leading-snug">
               {l.text.replace(/^📣\s*/, '')}
             </p>
           ))}
@@ -430,7 +448,7 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
               aria-checked={selected}
               disabled={locked || busy}
               onClick={() => setPick(t)}
-              className={`min-h-12 rounded-xl border px-3 py-2 text-sm font-medium transition ${selected ? 'border-gold bg-gold/15 text-bone' : 'border-line bg-black/30 text-bone/90 hover:border-gold/50'}`}
+              className={`choice-tile min-h-12 rounded-xl border px-3 py-2 text-sm font-medium ${selected ? 'border-gold bg-gold/15 text-bone' : 'border-line bg-black/30 text-bone/90 hover:border-gold/50'}`}
             >
               {option.targetKind === 'power' ? (ABILITIES[t]?.name ?? t) : nameOf(view, t)}
               {option.targetKind === 'player' && t === view.me!.id && ' (you)'}
@@ -525,7 +543,7 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
                 aria-checked={pick === t}
                 disabled={busy || (voted && !canChange)}
                 onClick={() => setPick(t)}
-                className={`min-h-12 rounded-xl border px-3 py-2 text-sm font-medium ${pick === t ? 'border-crimson bg-crimson/20' : 'border-line bg-black/30 hover:border-crimson/60'}`}
+                className={`choice-tile min-h-12 rounded-xl border px-3 py-2 text-sm font-medium ${pick === t ? 'border-crimson bg-crimson/20' : 'border-line bg-black/30 hover:border-crimson/60'}`}
               >
                 {nameOf(view, t)}
               </button>
@@ -536,7 +554,7 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
                 aria-checked={pick === null}
                 disabled={busy || (voted && !canChange)}
                 onClick={() => setPick(null)}
-                className={`min-h-12 rounded-xl border px-3 py-2 text-sm ${pick === null ? 'border-gold bg-gold/15' : 'border-dashed border-line text-mute'}`}
+                className={`choice-tile min-h-12 rounded-xl border px-3 py-2 text-sm ${pick === null ? 'border-gold bg-gold/15' : 'border-dashed border-line text-mute'}`}
               >
                 No one (abstain)
               </button>
@@ -558,8 +576,8 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
         </div>
       </PrivacyShield>
       {voted && (
-        <div className="rounded-xl border border-ok/40 bg-ok/10 p-3 text-center text-sm" role="status">
-          ✓ Your vote is in.
+        <div className="anim-pop flex items-center justify-center gap-2 rounded-xl border border-ok/40 bg-ok/10 p-3 text-center text-sm" role="status">
+          <CheckMark /> Your vote is in.
         </div>
       )}
     </div>
@@ -620,6 +638,22 @@ function VerdictPanel({ view }: { view: ClientView }) {
 
 // ======================================================================= game over
 
+function GoldDust() {
+  const { prefs } = usePrefs();
+  const bits = useMemo(
+    () => Array.from({ length: 28 }, (_, i) => ({ left: (i * 37) % 100, delay: (i * 0.53) % 6, dur: 5 + ((i * 1.7) % 5), size: 4 + (i % 4) })),
+    [],
+  );
+  if (prefs.reduceMotion || prefs.lowLight) return null;
+  return (
+    <div className="gold-dust" aria-hidden="true">
+      {bits.map((b, i) => (
+        <span key={i} style={{ left: `${b.left}%`, animationDelay: `${b.delay}s`, animationDuration: `${b.dur}s`, width: b.size, height: b.size }} />
+      ))}
+    </div>
+  );
+}
+
 export function GameOverPanel({ view, hostControls }: { view: ClientView; hostControls?: ReactNode }) {
   const g = view.game!;
   const w = g.winner!;
@@ -631,7 +665,8 @@ export function GameOverPanel({ view, hostControls }: { view: ClientView; hostCo
   const topSuspect = stats ? Object.entries(stats.suspicion).sort((a, b) => b[1] - a[1])[0] : undefined;
   return (
     <div className="space-y-4 anim-fade-up">
-      <div className="card p-6 text-center">
+      <GoldDust />
+      <div className="card relative z-10 p-6 text-center">
         <p className="eyebrow">Game over</p>
         <h2 className="brand-title mt-2 text-4xl font-black">{headline}</h2>
         <p className="mt-2 text-mute">{w.reason}</p>
