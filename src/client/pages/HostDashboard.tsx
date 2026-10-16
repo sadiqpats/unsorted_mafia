@@ -120,7 +120,7 @@ function HostLobby({ view, send }: GameProps) {
           ))}
           {d.warnings.map((w) => (
             <p key={w} className="text-sm text-gold">
-              ⚑ {w}
+              ⚠️ {w}
             </p>
           ))}
           {!full && <p className="text-sm text-mute">Waiting for {s.playerCount - view.players.length} more player(s)…</p>}
@@ -161,7 +161,7 @@ function RoleEditor({ view, onChange }: { view: ClientView; onChange: (r: Record
   return (
     <div className="mt-4">
       <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
-        <span className="chip text-good">⛨ Town {d.byAlignment.good}</span>
+        <span className="chip text-good">🛡️ Town {d.byAlignment.good}</span>
         <span className="chip text-ember">🗡 Mafia {d.byAlignment.mafia}</span>
         <span className="chip text-neutral">◆ Neutral {d.byAlignment.neutral}</span>
         <span className={`chip ${d.total === s.playerCount ? 'text-ok' : 'text-ember'}`}>
@@ -290,7 +290,7 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           <Toggle label="Allow late joining" hint="Late joiners always become Villagers." checked={s.allowLateJoin} onChange={(v) => patch({ allowLateJoin: v })} />
         </Group>
         <Group title="Voting">
-          <Toggle label="Players may change their vote" checked={s.allowVoteChange} onChange={(v) => patch({ allowVoteChange: v })} />
+          <Toggle label="Players may change their vote" hint="Without timers, you close the vote with Next phase once everyone is happy." checked={s.allowVoteChange} onChange={(v) => patch({ allowVoteChange: v })} />
           <Toggle label="Allow voting for yourself" checked={s.allowSelfVote} onChange={(v) => patch({ allowSelfVote: v })} />
           <Toggle label="Allow abstaining" checked={s.allowAbstain} onChange={(v) => patch({ allowAbstain: v })} />
           <Toggle label="Silenced players can still vote" hint="They must stay quiet in discussion either way." checked={s.silencedCanVote} onChange={(v) => patch({ silencedCanVote: v })} />
@@ -426,6 +426,12 @@ function HostGame({ view, send, serverNow }: GameProps) {
         <p className="rounded-xl border border-gold/40 bg-gold/5 p-3 text-sm">
           You are playing, so this dashboard shows <b>no secret information</b>. The app resolves the night and counts the votes for you.
         </p>
+      )}
+
+      {g.phase === 'voting' && view.settings.allowVoteChange && g.votingProgress && g.votingProgress.total > 0 && g.votingProgress.done === g.votingProgress.total && (
+        <div className="anim-pop rounded-xl border border-ok/50 bg-ok/10 p-3 text-center text-sm" role="status">
+          ✅ All votes are in. Press <b>Next phase</b> to reveal the result (players can still change their vote until you do).
+        </div>
       )}
 
       {g.pendingTie && (
@@ -567,7 +573,7 @@ function HostGame({ view, send, serverNow }: GameProps) {
           {h.secrets && h.alignmentAlive && (
             <Section title="Balance of power (secret)">
               <div className="flex flex-wrap gap-2 text-sm">
-                <span className="chip text-good">⛨ Town alive {h.alignmentAlive.good}</span>
+                <span className="chip text-good">🛡️ Town alive {h.alignmentAlive.good}</span>
                 <span className="chip text-ember">🗡 Mafia alive {h.alignmentAlive.mafia}</span>
                 <span className="chip text-neutral">◆ Neutral alive {h.alignmentAlive.neutral}</span>
               </div>

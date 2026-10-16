@@ -103,7 +103,7 @@ export default function Display() {
             {g.nightProgress && <p className="mt-3 text-xl text-mute">{g.nightProgress.done} / {g.nightProgress.total} locked in</p>}
             {g.votingProgress && <p className="mt-3 text-xl text-mute">{g.votingProgress.done} / {g.votingProgress.total} votes in</p>}
             <div className="mt-8">
-              <PhotoWall players={view.players} settings={view.settings} />
+              <PhotoWall players={view.players} settings={view.settings} winners={g.phase === 'game_over' ? (g.winner?.winnerIds ?? []) : null} />
             </div>
           </div>
           <div className="card max-h-[75vh] overflow-hidden p-5">
@@ -117,7 +117,7 @@ export default function Display() {
 }
 
 /** The big-screen wall of faces. Eliminated players' photos are cut in two. */
-function PhotoWall({ players, lobby = false, settings }: { players: PublicPlayer[]; lobby?: boolean; settings: Parameters<typeof roleAlignment>[1] }) {
+function PhotoWall({ players, lobby = false, settings, winners = null }: { players: PublicPlayer[]; lobby?: boolean; settings: Parameters<typeof roleAlignment>[1]; winners?: string[] | null }) {
   const n = players.length;
   const size = n <= 8 ? 150 : n <= 12 ? 128 : n <= 16 ? 112 : n <= 22 ? 96 : 84;
   if (!n) return <p className="mt-6 text-xl text-mute">Waiting for the first guest…</p>;
@@ -128,10 +128,16 @@ function PhotoWall({ players, lobby = false, settings }: { players: PublicPlayer
         const a = p.revealedRoleId ? roleAlignment(p.revealedRoleId, settings) : null;
         return (
           <li key={p.id} className="flex flex-col items-center text-center" style={{ width: size + 8 }} data-player={p.name} data-dead={!p.alive}>
-            <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={size} className={lobby && !p.ready ? 'opacity-50' : ''} />
+            <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={size} className={`${lobby && !p.ready ? 'opacity-50' : ''} ${winners?.includes(p.id) ? 'rounded-[18%] ring-4 ring-gold shadow-[0_0_40px_rgba(226,194,125,0.55)]' : ''}`} />
             <div className={`mt-2 w-full truncate text-lg font-semibold ${p.alive ? 'text-bone' : 'text-mute line-through decoration-ember/80'}`}>{p.name}</div>
             <div className="min-h-5 text-xs text-mute">
-              {lobby ? (p.ready ? '✓ Ready' : 'Joining…') : !p.alive ? (
+              {lobby ? (p.ready ? '✓ Ready' : 'Joining…') : winners ? (
+                <span className={a === 'mafia' ? 'text-ember' : a === 'neutral' ? 'text-neutral' : 'text-good'}>
+                  {winners.includes(p.id) && '🏆 '}
+                  {r?.name}
+                  {!p.alive && ' · ☠'}
+                </span>
+              ) : !p.alive ? (
                 <span className={a === 'mafia' ? 'text-ember' : a === 'neutral' ? 'text-neutral' : 'text-good'}>☠ {r ? r.name : 'Eliminated'}</span>
               ) : p.silenced ? (
                 '🤐 Silenced'

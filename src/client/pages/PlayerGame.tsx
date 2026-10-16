@@ -164,7 +164,7 @@ function PlayerLobby({ view, send }: { view: ClientView; send: Send }) {
       </Section>
       <Section title="Characters in this game">
         <div className="mb-3 flex flex-wrap gap-2 text-xs">
-          <span className="chip text-good">⛨ Town {d.byAlignment.good}</span>
+          <span className="chip text-good">🛡️ Town {d.byAlignment.good}</span>
           <span className="chip text-ember">🗡 Mafia {d.byAlignment.mafia}</span>
           <span className="chip text-neutral">◆ Neutral {d.byAlignment.neutral}</span>
         </div>
@@ -275,7 +275,7 @@ function GodfatherKnows({ view }: { view: ClientView }) {
   const list = view.me!.knownMafia!;
   return (
     <div className="mt-4 rounded-xl border border-crimson/50 bg-crimson/10 p-3 text-left text-sm">
-      <div className="eyebrow mb-2 !text-ember">🌹 The Mafia (only you know this)</div>
+      <div className="eyebrow mb-2 !text-ember">🎩 The Mafia (only you know this)</div>
       <ul className="space-y-1">
         {list.map((m) => (
           <li key={m.id}>
@@ -296,7 +296,7 @@ function MyRoleButton({ view }: { view: ClientView }) {
   return (
     <>
       <button className="btn btn-ghost w-full" onClick={() => setOpen(true)}>
-        🂠 My role & private notebook
+        🃏 My role & private notebook
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title="Your secret card">
         <HoldToReveal minHeight={460}>

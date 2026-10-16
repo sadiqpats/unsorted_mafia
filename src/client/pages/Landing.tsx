@@ -115,7 +115,7 @@ export default function Landing() {
             <h2 className="eyebrow mb-4">Built for the same room</h2>
             <ul className="space-y-3 text-sm text-bone/90">
               <li>🕯️ Everyone taps a choice every night — even players without a power — so no one can tell who has a role by watching hands.</li>
-              <li>🂠 Your role hides behind a press-and-hold card, and every secret panel closes itself when you look away.</li>
+              <li>🃏 Your role hides behind a press-and-hold card, and every secret panel closes itself when you look away.</li>
               <li>🔒 Roles are dealt by the server with a secure random generator. Phones only ever receive their own secrets.</li>
               <li>🗳️ Votes stay hidden until the timer ends. Each seat is locked to one phone.</li>
             </ul>

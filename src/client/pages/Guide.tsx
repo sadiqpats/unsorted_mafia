@@ -125,7 +125,7 @@ export default function Guide() {
           </ol>
           <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
             <p className="rounded-xl border border-good/40 p-3">
-              <b className="text-good">⛨ Town wins</b> when every Mafia member is gone (the Godfather doesn’t count).
+              <b className="text-good">🛡️ Town wins</b> when every Mafia member is gone (the Godfather doesn’t count).
             </p>
             <p className="rounded-xl border border-crimson/50 p-3">
               <b className="text-ember">🗡 Mafia wins</b> when the Mafia + Godfather equal or outnumber everyone else.
@@ -143,7 +143,7 @@ export default function Guide() {
               <ul className="space-y-2 text-bone/90">
                 <li>🕯️ <b>Everyone acts every night.</b> Villagers pick a suspect, so you can’t spot a power by watching who taps.</li>
                 <li>🛡️ <b>Identical screens.</b> Every closed panel looks the same; colours and sounds never depend on your role.</li>
-                <li>🂠 <b>Hold-to-reveal.</b> Your card hides the moment you let go, lock the phone, or switch apps.</li>
+                <li>🃏 <b>Hold-to-reveal.</b> Your card hides the moment you let go, lock the phone, or switch apps.</li>
                 <li>⏳ <b>Auto-hiding panels.</b> Secret panels close themselves after 15 seconds.</li>
                 <li>🔒 <b>Server-side secrets.</b> Your phone only ever receives your own role — not even the page code contains anyone else’s.</li>
                 <li>🎲 <b>Fair dealing.</b> Roles are shuffled on the server with a cryptographic random generator. No rerolls.</li>

@@ -43,7 +43,7 @@ export function Shell({ children, right, wide = false }: { children: ReactNode; 
 
 // ------------------------------------------------------------------ alignment
 
-const ALIGN_ICON: Record<Alignment, string> = { good: '⛨', mafia: '🗡', neutral: '◆' };
+const ALIGN_ICON: Record<Alignment, string> = { good: '🛡️', mafia: '🗡', neutral: '◆' };
 const ALIGN_CLASS: Record<Alignment, string> = {
   good: 'text-good border-good/40 bg-good/5',
   mafia: 'text-ember border-crimson/50 bg-crimson/10',
