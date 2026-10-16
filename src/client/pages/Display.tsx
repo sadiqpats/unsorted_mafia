@@ -39,7 +39,7 @@ export default function Display() {
           🔊 Tap to enable sound
         </button>
       )}
-      <div className="mx-auto flex max-w-7xl items-center justify-between">
+      <div className={`mx-auto flex items-center justify-between ${g && view.status !== 'lobby' ? 'max-w-[1800px]' : 'max-w-7xl'}`}>
         <div>
           <div className="flex items-end gap-3">
             <img src={LOGO.wordmark} alt="Unsorted" className="h-9 w-auto md:h-11" />
@@ -70,14 +70,16 @@ export default function Display() {
           </div>
         </div>
       ) : (
-        <div className="mx-auto mt-10 grid max-w-7xl gap-8 lg:grid-cols-[1.4fr_1fr]">
+        <div className="mx-auto mt-6 grid max-w-[1800px] gap-8 lg:grid-cols-[1fr_22rem]">
           <div>
-            <p className="eyebrow">{g.round ? `Round ${g.round}` : ''}</p>
-            <h2 className="font-[family-name:var(--font-display)] text-6xl md:text-7xl">{PHASE_LABEL[g.phase]}</h2>
-            <div className="mt-4">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="eyebrow">{g.round ? `Round ${g.round}` : ''}</p>
+                <h2 className="font-[family-name:var(--font-display)] text-5xl md:text-6xl">{PHASE_LABEL[g.phase]}</h2>
+              </div>
               <Timer endsAt={g.phaseEndsAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />
             </div>
-            <p className="mt-4 font-[family-name:var(--font-serif)] text-3xl italic text-mute">
+            <p className="mt-2 font-[family-name:var(--font-serif)] text-2xl italic text-mute md:text-3xl">
               {
                 {
                   reveal: 'Check your phone — privately.',
@@ -93,7 +95,7 @@ export default function Display() {
               }
             </p>
             {g.news.length > 0 && (
-              <div className="mt-5 space-y-1 rounded-2xl border border-gold/30 bg-black/30 p-4" data-testid="tv-news">
+              <div className="mt-4 space-y-1 rounded-2xl border border-gold/30 bg-black/30 p-4" data-testid="tv-news">
                 {g.news.map((n) => (
                   <p key={n.seq} className="font-[family-name:var(--font-serif)] text-2xl leading-snug text-bone">
                     {n.text.replace(/^📣\s*/, '')}
@@ -103,11 +105,11 @@ export default function Display() {
             )}
             {g.nightProgress && <p className="mt-3 text-xl text-mute">{g.nightProgress.done} / {g.nightProgress.total} locked in</p>}
             {g.votingProgress && <p className="mt-3 text-xl text-mute">{g.votingProgress.done} / {g.votingProgress.total} votes in</p>}
-            <div className="mt-8">
+            <div className="mt-4">
               <PhotoWall players={view.players} settings={view.settings} winners={g.phase === 'game_over' ? (g.winner?.winnerIds ?? []) : null} />
             </div>
           </div>
-          <div className="card max-h-[75vh] overflow-hidden p-5">
+          <div className="card max-h-[78vh] self-start overflow-hidden p-5">
             <h3 className="eyebrow mb-3">Announcements</h3>
             <Feed entries={view.feed} limit={14} inGame />
           </div>
@@ -120,15 +122,16 @@ export default function Display() {
 /** The big-screen wall of faces. Eliminated players' photos are cut in two. */
 function PhotoWall({ players, lobby = false, settings, winners = null }: { players: PublicPlayer[]; lobby?: boolean; settings: Parameters<typeof roleAlignment>[1]; winners?: string[] | null }) {
   const n = players.length;
-  const size = n <= 8 ? 150 : n <= 12 ? 128 : n <= 16 ? 112 : n <= 22 ? 96 : 84;
+  // Sized so a full table fits one TV screen (16:9) without scrolling.
+  const size = n <= 8 ? 140 : n <= 12 ? 118 : n <= 16 ? 104 : n <= 20 ? 92 : 80;
   if (!n) return <p className="mt-6 text-xl text-mute">Waiting for the first guest…</p>;
   return (
-    <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-6" aria-label="Players">
+    <ul className="mt-4 grid gap-x-4 gap-y-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${size + 12}px, 1fr))` }} aria-label="Players">
       {players.map((p) => {
         const r = p.revealedRoleId ? ROLES[p.revealedRoleId] : null;
         const a = p.revealedRoleId ? roleAlignment(p.revealedRoleId, settings) : null;
         return (
-          <li key={p.id} className="flex flex-col items-center text-center" style={{ width: size + 8 }} data-player={p.name} data-dead={!p.alive}>
+          <li key={p.id} className="flex min-w-0 flex-col items-center text-center" data-player={p.name} data-dead={!p.alive}>
             <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={size} className={`${lobby && !p.ready ? 'opacity-50' : ''} ${winners?.includes(p.id) ? 'rounded-[18%] ring-4 ring-gold shadow-[0_0_40px_rgba(226,194,125,0.55)]' : ''}`} />
             <div className={`mt-2 w-full truncate text-lg font-semibold ${p.alive ? 'text-bone' : 'text-mute line-through decoration-ember/80'}`}>{p.name}</div>
             <div className="min-h-5 text-xs text-mute">

@@ -295,7 +295,7 @@ export const ROLES: Record<string, RoleDef> = {
     tagline: 'What’s yours is mine.',
     description: 'A light-fingered opportunist who borrows other people’s talents, one night at a time.',
     abilityText: 'Every Dawn, steal one POWER (you see powers, never people). You use it that round; its owner loses it until the next Dawn. You can’t take the same power two rounds in a row.',
-    howTo: 'At Dawn, pick a power from the list. You never learn whose it was. Steal the Mafia Hit and you make your own kill that night. Next Dawn the power goes back and you steal again — just not the same one.',
+    howTo: 'At Dawn, pick a power from the list. You never learn whose it was. Steal the Mafia Hit and you vote with the Mafia that night as an anonymous “Mafia” member — nobody learns who you are. Steal Resurrect (from round 2) and you can revive someone that night. Next Dawn the power goes back and you steal again — just not the same one.',
     winCondition: 'Neutral: win by surviving to the end of the game (alongside whoever wins).',
     abilities: [{ id: 'steal' }],
     winsBySurviving: true,

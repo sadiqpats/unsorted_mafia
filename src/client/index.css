@@ -591,3 +591,5 @@ p { text-wrap: pretty; }
 .main-menu-link { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.5rem; padding: 0.4rem 1rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600; color: var(--color-bone); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(201, 164, 92, 0.45); transition: background 0.2s ease, transform 0.2s ease; }
 .main-menu-link:hover { background: rgba(201, 164, 92, 0.15); transform: translateX(-2px); }
 .bolly .main-menu-link { border-color: rgba(255, 179, 0, 0.5); color: #fff4d6; }
+/* Cormorant's old-style figures make "P1" look like "Pı": use full-height numbers everywhere. */
+[class*='font-serif'] { font-variant-numeric: lining-nums; }
