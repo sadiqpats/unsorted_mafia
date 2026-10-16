@@ -15,6 +15,8 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     ...devices['Pixel 7'],
     trace: 'retain-on-failure',
+    // A click that can't happen should fail with a clear error, not hang until the 10-minute test timeout.
+    actionTimeout: 30_000,
   },
   webServer: {
     command: `npm run build && node --no-warnings dist/server/index.js`,

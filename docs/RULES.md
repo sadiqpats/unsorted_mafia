@@ -24,13 +24,13 @@ Deaths and eliminations are announced by **name only**. Every role is revealed o
 
 | Role | Side | Default | Configurable |
 |---|---|---|---|
-| **Mafia** | Mafia | Each night the Mafia pick one victim (most picks wins; ties go to the first-seated member). They know each other. | decision mode |
-| **Godfather** | Mafia side, **not** a Mafia member | Privately shown **who the Mafia are** (they don't know him). Silences one player each night for the next Day. Doesn't kill. Defends the Mafia in discussion. | Detective sees him as innocent |
+| **Mafia** | Mafia | Each night the Mafia pick one victim (most picks wins; ties go to the first-seated member). They know each other by name and photo (on the role card and again at night), never the Godfather. At night the live plan is anonymous: “Mafia 1 wants to kill X”, numbers shuffled every night. | decision mode |
+| **Godfather** | Mafia side, **not** a Mafia member | Privately shown **who the Mafia are**, with photos, on the role card and again at night (they don't know him). Silences one player each night for the next Day. Doesn't kill. Defends the Mafia in discussion. | Detective sees him as innocent |
 | **Detective** | Town | Investigates one player each night; private result: suspicious / not suspicious. | exact alignment instead |
 | **Doctor** | Town | Protects one player each night. **May save themselves, but never two rounds in a row.** | never / always self-save |
 | **Judge** | Town | Day vote counts ×2 (applied by the server). | weight 1–5 |
 | **Villager** | Town | No power; presses the dummy button at night. | up to 2 optional powers (off) |
-| **Thief** | Neutral | Every **Dawn** (from round 1) steals one **power**. He sees powers, never people, and never learns whose it was. It lasts **that round**; the owner gets it back next Dawn. He can't take the **same power two rounds in a row**. Wins by surviving. | side (neutral/town); may steal Judge vote |
+| **Thief** | Neutral | Every **Dawn** (from round 1) steals one **power** — any power in the setup (Resurrect from round 2). He sees powers, never people, and never learns whose it was. It lasts **that round**; the owner gets it back next Dawn. He can't take the **same power two rounds in a row**. Wins by surviving. | side (neutral/town); may steal Judge vote |
 | **Imposter** | **Neutral** | From **round 2**, at **Dawn**, may revive one dead player, or skip. Everyone is told who came back, never who did it. Unlimited revivals. Wins by surviving. | side; revival limit |
 | **Joker** | Neutral | Wins alone if voted out by Day. | game continues instead |
 
@@ -40,7 +40,8 @@ Removed for good: **Priest** and **Bodyguard**.
 - The power list shows every stealable power of every role **in the setup** (even if its holder is dead), so it reveals nothing.
 - If several living players hold that power, one is chosen at random. If nobody alive holds it, the attempt fails quietly and the Thief is told “Nobody could give up that power this round”.
 - The robbed player is told privately: *“Your power has been stolen for this round… just press the button on your screen.”* Their night screen shows the dummy button.
-- **Stealing the Mafia Hit:** that night the Thief chooses his own victim from **everyone else alive** (the list doesn't hide the Mafia, so he learns nothing). The robbed Mafia member presses the dummy button. Any other Mafia member still makes the Mafia kill, so two deaths are possible. Protection stops either kill.
+- **Stealing the Mafia Hit:** that night the Thief **joins the Mafia's vote** as an anonymous “Mafia N”. His list is everyone else alive (it doesn't hide the Mafia, so he learns nothing). Everyone voting — Mafia and Thief — appears only as “Mafia 1/2/3” in an order shuffled every night (and keyed with a server secret), so the Mafia can't tell which slot is the Thief and he can't tell who they are. The robbed Mafia member presses the dummy button but still sees the anonymous plan. There is **one** kill: most picks wins, ties go to the first-seated voter. Protection stops it.
+- **Stealing Resurrect** (from round 2): the steal resolves before the Imposter's revival at Dawn, so the Imposter's revive that Dawn is cancelled and the Thief can revive someone that **night** instead.
 - Stealing the Judge's vote gives the Thief the ×2 vote that Day.
 
 ## Night order (lower first)
@@ -48,11 +49,11 @@ Removed for good: **Priest** and **Bodyguard**.
 |---|---|
 | 10 | Doctor protect, Villager *Barricade* |
 | 20 | Godfather silence |
-| 50 | Mafia hit (team decision) and the Thief's stolen hit (solo) |
+| 50 | Mafia hit (one team decision; a Thief holding the stolen hit votes in it anonymously) |
 | 55 | Attacks resolve: protected targets survive, others die |
 | 80 | Detective investigate, Villager *Hunch* |
 
-Dawn order: Imposter revive (90), then Thief steal (95).
+Dawn order: Thief steal (85), then Imposter revive (90). A power stolen earlier in the same phase no longer works for its owner.
 
 ## Voting (Day)
 - Eligible: alive, and not just revived (if that house rule is on). **Silenced players may still vote** (they just can't speak in discussion); the house rule `silencedCanVote: false` blocks their vote too. The Day ends when **all eligible players** have voted.

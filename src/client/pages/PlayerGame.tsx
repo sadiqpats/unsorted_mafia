@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { NightOption } from '../../shared/engine';
 import type { Ack, CommandInput } from '../../shared/protocol';
 import { ABILITIES, ROLES, roleAlignment } from '../../shared/roles';
+import type { Alignment } from '../../shared/types';
 import type { ClientView, PublicPlayer } from '../../shared/view-types';
 import { Avatar } from '../components/Avatar';
 import { HoldToReveal, PrivacyShield, RoleDetails } from '../components/RoleCard';
@@ -260,9 +261,13 @@ function RevealPanel({ view, send }: { view: ClientView; send: Send }) {
     <div className="space-y-4 anim-fade-up">
       <p className="text-center text-sm text-mute">Make sure nobody can see your screen.</p>
       <HoldToReveal>
-        <RoleDetails roleId={me.roleId!} alignment={me.alignment!} abilities={me.abilities} settings={view.settings} />
+        {/* Team info first: a held card can't be scrolled, so it must be visible straight away. */}
+        {(me.mafia || me.knownMafia) && <RoleBadge roleId={me.roleId!} alignment={me.alignment!} />}
         {me.mafia && <MafiaTeam view={view} />}
         {me.knownMafia && <GodfatherKnows view={view} />}
+        <div className={me.mafia || me.knownMafia ? 'mt-5 border-t border-line/50 pt-4' : ''}>
+          <RoleDetails roleId={me.roleId!} alignment={me.alignment!} abilities={me.abilities} settings={view.settings} compact={!!(me.mafia || me.knownMafia)} />
+        </div>
       </HoldToReveal>
       <button className="btn btn-gold w-full text-lg" disabled={busy || me.revealAck} onClick={() => act({ type: 'ack_role' })}>
         {me.revealAck ? `Waiting for others… ${prog ? `${prog.done}/${prog.total}` : ''}` : 'I’ve seen my role'}
@@ -271,40 +276,65 @@ function RevealPanel({ view, send }: { view: ClientView; send: Send }) {
   );
 }
 
-function MafiaTeam({ view }: { view: ClientView }) {
-  const team = view.me!.mafia!.team;
+/** Small "You are the Mafia" header shown above the team list on the role card. */
+function RoleBadge({ roleId, alignment }: { roleId: string; alignment: Alignment }) {
   return (
-    <div className="mt-4 rounded-xl border border-crimson/50 bg-crimson/10 p-3 text-left text-sm">
-      <div className="eyebrow mb-2 !text-ember">🗡 Your family</div>
-      <ul className="space-y-1">
-        {team.map((t) => (
-          <li key={t.id} className="flex justify-between">
-            <span>
-              {t.name}
-              {t.id === view.me!.id && ' (you)'}
-              {!view.players.find((p) => p.id === t.id)?.alive && <span className="ml-2 text-xs text-mute">(eliminated)</span>}
-            </span>
-            <span className="text-mute">{ROLES[t.roleId]?.name}</span>
-          </li>
-        ))}
-      </ul>
+    <div className="flex items-center gap-3">
+      <RoleArt art={ROLES[roleId].art} alignment={alignment} size={56} />
+      <div className="text-left">
+        <div className="eyebrow !text-[0.62rem]">You are the</div>
+        <div className="brand-title text-2xl font-bold">{ROLES[roleId].name}</div>
+      </div>
     </div>
   );
 }
 
-/** Godfather only: who the Mafia are. They do not know him. */
+/** A Mafia member's family (names + photos): on the role card and again at night. */
+function MafiaTeam({ view }: { view: ClientView }) {
+  const team = view.me!.mafia!.team;
+  const others = team.filter((t) => t.id !== view.me!.id);
+  return (
+    <div className="mt-4 rounded-xl border border-crimson/50 bg-crimson/10 p-3 text-left text-sm" data-testid="mafia-family">
+      <div className="eyebrow mb-2 !text-ember">🗡 Your family {others.length ? `— ${others.length === 1 ? 'the other Mafia' : `the other ${others.length} Mafia`}` : ''}</div>
+      {others.length === 0 && <p className="text-mute">You’re the only Mafia. Make it count.</p>}
+      <ul className="space-y-2">
+        {others.map((t) => {
+          const pl = view.players.find((p) => p.id === t.id);
+          return (
+            <li key={t.id} className="flex items-center gap-3">
+              <Avatar name={t.name} photo={pl?.photo ?? null} dead={!pl?.alive} size={40} />
+              <span>
+                <b className="text-bone">{t.name}</b>
+                {!pl?.alive && <span className="ml-2 text-xs text-mute">(eliminated)</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-2 text-xs text-mute">You never learn who the Godfather is.</p>
+    </div>
+  );
+}
+
+/** Godfather only: who the Mafia are (names + photos). They do not know him. */
 function GodfatherKnows({ view }: { view: ClientView }) {
   const list = view.me!.knownMafia!;
   return (
-    <div className="mt-4 rounded-xl border border-crimson/50 bg-crimson/10 p-3 text-left text-sm">
+    <div className="mt-4 rounded-xl border border-crimson/50 bg-crimson/10 p-3 text-left text-sm" data-testid="godfather-knows">
       <div className="eyebrow mb-2 !text-ember">🎩 The Mafia (only you know this)</div>
-      <ul className="space-y-1">
-        {list.map((m) => (
-          <li key={m.id}>
-            {m.name}
-            {!view.players.find((p) => p.id === m.id)?.alive && <span className="ml-2 text-xs text-mute">(eliminated)</span>}
-          </li>
-        ))}
+      <ul className="space-y-2">
+        {list.map((m) => {
+          const pl = view.players.find((p) => p.id === m.id);
+          return (
+            <li key={m.id} className="flex items-center gap-3">
+              <Avatar name={m.name} photo={pl?.photo ?? null} dead={!pl?.alive} size={40} />
+              <span>
+                <b className="text-bone">{m.name}</b>
+                {!pl?.alive && <span className="ml-2 text-xs text-mute">(eliminated)</span>}
+              </span>
+            </li>
+          );
+        })}
       </ul>
       <p className="mt-2 text-xs text-mute">They don’t know you are the Godfather. Protect them by day.</p>
     </div>
@@ -322,9 +352,9 @@ function MyRoleButton({ view }: { view: ClientView }) {
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title="Your secret card">
         <HoldToReveal minHeight={460}>
-          <RoleDetails roleId={me.roleId} alignment={me.alignment!} abilities={me.abilities} stolen={me.stolen} settings={view.settings} compact />
           {me.mafia && <MafiaTeam view={view} />}
           {me.knownMafia && <GodfatherKnows view={view} />}
+          <RoleDetails roleId={me.roleId} alignment={me.alignment!} abilities={me.abilities} stolen={me.stolen} settings={view.settings} compact />
           <Notebook view={view} />
         </HoldToReveal>
         <button className="btn btn-ghost mt-3 w-full" onClick={() => setOpen(false)}>
@@ -377,7 +407,8 @@ function NightPanel({ view, send }: { view: ClientView; send: Send }) {
       <PrivacyShield label={allDone ? 'Review your choice' : pre ? 'Open your dawn panel' : 'Open your night panel'}>
         <div className="space-y-6 pt-11">
           <PrivateNotes view={view} />
-          {me.mafia && !pre && <MafiaVotes view={view} />}
+          {me.mafia && !pre && <MafiaTeam view={view} />}
+          {me.hitPlan && !pre && <MafiaVotes view={view} />}
           {me.knownMafia && !pre && <GodfatherKnows view={view} />}
           {night.options.map((o) => (
             <NightOptionCard key={o.abilityId} view={view} option={o} submitted={night.submitted} send={send} />
@@ -456,14 +487,11 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
   const done = option.abilityId in submitted;
   const [pick, setPick] = useState<string | null>(done ? submitted[option.abilityId] : null);
   const locked = done && !option.changeable;
-  // Mafia hit: which teammates have picked each target (the family coordinates without talking).
+  // Mafia hit: which (anonymous) members picked each target, so the family lines up without talking.
   const familyOn: Record<string, string[]> = {};
-  const fam = view.me!.mafia;
-  if (fam && option.abilityId === 'mafia_kill' && option.source !== 'stolen') {
-    for (const t of fam.team) {
-      const v = fam.votes[t.id];
-      if (t.id !== view.me!.id && v) (familyOn[v] ??= []).push(t.name);
-    }
+  const plan = view.me!.hitPlan;
+  if (plan && option.abilityId === 'mafia_kill') {
+    for (const slot of plan.slots) if (!slot.you && slot.pick) (familyOn[slot.pick] ??= []).push(slot.label);
   }
   const submit = (target: string | null) =>
     act({ type: 'night_action', abilityId: option.abilityId, targetId: target, phaseSeq: view.game!.phaseSeq });
@@ -510,58 +538,54 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
   );
 }
 
+/**
+ * Tonight's hit, anonymised: every voter shows as "Mafia 1/2/3…" (shuffled each night). A
+ * Thief holding the stolen hit votes too, and nobody can tell which slot is him — nor can he
+ * tell who the Mafia are.
+ */
 function MafiaVotes({ view }: { view: ClientView }) {
-  const me = view.me!;
-  const m = me.mafia!;
-  const living = m.team.filter((t) => t.canAct);
-  const others = living.filter((t) => t.id !== me.id);
-  if (!others.length) {
-    if (m.team.length < 2) return null;
-    return (
-      <div className="rounded-xl border border-crimson/50 bg-crimson/10 p-3 text-sm" data-testid="family-plan">
-        <div className="eyebrow mb-1 !text-ember">🗡 Your family</div>
-        <p className="text-mute">You make the call alone tonight.</p>
-      </div>
-    );
-  }
-  const picks = living.map((t) => (t.id in m.votes ? m.votes[t.id] : undefined));
-  const chosen = picks.filter((v): v is string => typeof v === 'string');
-  const allIn = picks.every((v) => v !== undefined);
-  const agreed = allIn && chosen.length === living.length && new Set(chosen).size === 1;
-  const leader = living[0];
+  const plan = view.me!.hitPlan;
+  if (!plan) return null;
+  const others = plan.slots.filter((x) => !x.you);
+  const mine = plan.slots.find((x) => x.you);
+  const picks = plan.slots.map((x) => x.pick);
+  const allIn = picks.every((p) => p !== undefined);
+  const chosen = picks.filter((p): p is string => typeof p === 'string');
+  const agreed = allIn && chosen.length === plan.slots.length && new Set(chosen).size === 1;
   return (
     <div className="anim-fade-up rounded-xl border border-crimson/50 bg-crimson/10 p-3 text-sm" data-testid="family-plan">
-      <div className="eyebrow mb-2 !text-ember">🗡 Your family tonight</div>
-      <ul className="space-y-1.5">
-        {others.map((t) => (
-          <li key={t.id}>
-            <b className="text-bone">{t.name}</b>{' '}
-            {!(t.id in m.votes) ? (
-              <span className="text-mute">is still choosing…</span>
-            ) : m.votes[t.id] === null ? (
-              <span className="text-mute">wants to skip the kill</span>
-            ) : (
-              <>
-                <span className="text-mute">wants to kill</span> <b className="text-ember">{nameOf(view, m.votes[t.id])}</b>
-              </>
-            )}
-          </li>
-        ))}
-        {m.team
-          .filter((t) => !t.canAct && t.id !== me.id && view.players.find((p) => p.id === t.id)?.alive)
-          .map((t) => (
-            <li key={t.id} className="text-mute">
-              <b className="text-bone">{t.name}</b> can’t pick tonight.
+      <div className="eyebrow mb-2 !text-ember">🗡 Tonight’s hit {mine ? `· you are ${mine.label}` : ''}</div>
+      {!plan.youVote && <p className="mb-2 text-mute">Your power is gone for this round — you can only watch the plan.</p>}
+      {others.length === 0 ? (
+        <p className="text-mute">You make the call alone tonight.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {others.map((x) => (
+            <li key={x.label}>
+              <b className="text-bone">{x.label}</b>{' '}
+              {x.pick === undefined ? (
+                <span className="text-mute">is still choosing…</span>
+              ) : x.pick === null ? (
+                <span className="text-mute">wants to skip the kill</span>
+              ) : (
+                <>
+                  <span className="text-mute">wants to kill</span> <b className="text-ember">{nameOf(view, x.pick)}</b>
+                </>
+              )}
             </li>
           ))}
-      </ul>
-      <p className={`mt-2 rounded-lg px-2 py-1.5 text-xs ${agreed ? 'bg-ok/15 text-bone' : 'bg-black/30 text-mute'}`}>
-        {agreed
-          ? `✅ You all agree: ${nameOf(view, chosen[0])}.`
-          : view.settings.mafiaDecision === 'leader'
-            ? `${leader.id === me.id ? 'You make' : `${leader.name} makes`} the final call. You can change your pick until the night ends.`
-            : `Pick the same person. If picks differ, most picks wins; a tie goes to ${leader.id === me.id ? 'you' : leader.name}.`}
-      </p>
+        </ul>
+      )}
+      {others.length > 0 && (
+        <p className={`mt-2 rounded-lg px-2 py-1.5 text-xs ${agreed ? 'bg-ok/15 text-bone' : 'bg-black/30 text-mute'}`}>
+          {agreed
+            ? `✅ You all agree: ${nameOf(view, chosen[0])}.`
+            : view.settings.mafiaDecision === 'leader'
+              ? `${plan.leaderLabel === mine?.label ? 'You make' : `${plan.leaderLabel} makes`} the final call. You can change your pick until the night ends.`
+              : `Pick the same person. If picks differ, most picks wins; a tie goes to ${plan.leaderLabel === mine?.label ? 'you' : plan.leaderLabel}.`}
+        </p>
+      )}
+      <p className="mt-2 text-[0.7rem] text-mute">Names are hidden here on purpose: numbers change every night.</p>
     </div>
   );
 }

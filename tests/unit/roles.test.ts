@@ -29,7 +29,13 @@ describe('Mafia', () => {
       expect(view(i).knownMafia).toBeNull();
     }
     g.act(0, 'mafia_kill', 4);
-    expect(view(1).mafia!.votes).toEqual({ p0: 'p4' });
+    // The live plan shows the teammate's pick under an anonymous label, never a name or id.
+    const plan = view(1).hitPlan!;
+    expect(plan.slots).toHaveLength(2);
+    expect(plan.slots.find((x) => !x.you)).toMatchObject({ pick: 'p4' });
+    expect(plan.slots.map((x) => x.label).sort()).toEqual(['Mafia 1', 'Mafia 2']);
+    expect(JSON.stringify(plan)).not.toContain('p0');
+    expect(view(2).hitPlan).toBeNull();
     expect(view(2).mafia).toBeNull();
     expect(view(2).knownMafia!.map((m) => m.id)).toEqual(['p0', 'p1']);
     expect(view(3).mafia).toBeNull();
@@ -228,18 +234,24 @@ describe('Thief (steals at Dawn, one round at a time)', () => {
     expect(nightOptions(g.room, 'p1')[0].targets).not.toContain('protect');
   });
 
-  it('stealing the Mafia Hit: the Thief kills on his own; the robbed Mafia can only press the dummy button', () => {
+  it('stealing the Mafia Hit: the Thief joins the Mafia vote anonymously; one kill; the robbed Mafia presses the dummy button', () => {
     const g = setup(['mafia', 'thief', V, V, V, V, V]);
     toPhase(g, 'prenight');
     submitNightAction(g.room, 'p1', { abilityId: 'steal', targetId: 'mafia_kill', phaseSeq: g.seq() }, 1);
     g.advance();
     expect(g.results(0).join()).toMatch(/Your Mafia Hit power has been stolen for this round/);
+    expect(g.results(1).join()).toMatch(/vote with the Mafia/);
     expect(opts(g, 0)).toEqual(['decoy']);
     const kill = nightOptions(g.room, 'p1')[0];
-    expect(kill).toMatchObject({ abilityId: 'mafia_kill', team: false });
+    expect(kill).toMatchObject({ abilityId: 'mafia_kill', team: true, changeable: true });
     // His target list includes everyone else alive — he does not learn who the Mafia are.
     expect(kill.targets).toContain('p0');
+    // The robbed Mafia still sees the (anonymous) plan; the Thief sees it too — never a name.
+    const view = (i: number) => buildView(g.room, { kind: 'player', playerId: g.id(i) }, new Set(), 1).me!;
     g.act(1, 'mafia_kill', 4);
+    expect(view(0).hitPlan).toMatchObject({ youVote: false, slots: [{ label: 'Mafia 1', you: false, pick: 'p4' }] });
+    expect(view(1).hitPlan).toMatchObject({ youVote: true, slots: [{ label: 'Mafia 1', you: true }] });
+    expect(view(1).mafia).toBeNull();
     g.advance();
     expect(g.P(4).alive).toBe(false);
     // The Mafia gets the power back next round.
@@ -247,24 +259,65 @@ describe('Thief (steals at Dawn, one round at a time)', () => {
     expect(opts(g, 0)).toEqual(['mafia_kill']);
   });
 
-  it('with two Mafia, the other one still makes the Mafia kill — two deaths possible', () => {
-    const g = setup(['mafia', 'mafia', 'thief', V, V, V, V, V, V]);
+  it('with two Mafia + the Thief: three anonymous votes, ONE kill (most picks wins), nobody identified', () => {
+    const g = setup(['mafia', 'mafia', 'mafia', 'thief', V, V, V, V, V, V]);
     toPhase(g, 'prenight');
-    submitNightAction(g.room, 'p2', { abilityId: 'steal', targetId: 'mafia_kill', phaseSeq: g.seq() }, 1);
+    submitNightAction(g.room, 'p3', { abilityId: 'steal', targetId: 'mafia_kill', phaseSeq: g.seq() }, 1);
     g.advance();
     const robbed = g.room.players.find((p) => p.lostAbilities.includes('mafia_kill'))!;
-    const other = robbed.id === 'p0' ? 1 : 0;
-    g.act(other, 'mafia_kill', 3);
-    g.act(2, 'mafia_kill', 4);
-    // The family sees each other's picks, but never the Thief's (that would expose him).
-    for (const id of ['p0', 'p1']) {
-      const fam = buildView(g.room, { kind: 'player', playerId: id }, new Set(), 1).me!.mafia!;
-      expect(Object.keys(fam.votes)).toEqual([g.id(other)]);
-      expect(fam.team.map((t) => t.id).sort()).toEqual(['p0', 'p1']);
+    const [m1, m2] = ['p0', 'p1', 'p2'].filter((id) => id !== robbed.id);
+    submitNightAction(g.room, m1, { abilityId: 'mafia_kill', targetId: 'p5', phaseSeq: g.seq() }, 1);
+    submitNightAction(g.room, m2, { abilityId: 'mafia_kill', targetId: 'p6', phaseSeq: g.seq() }, 2);
+    g.act(3, 'mafia_kill', 6); // the Thief sides with p6
+    for (const id of ['p0', 'p1', 'p2', 'p3']) {
+      const me = buildView(g.room, { kind: 'player', playerId: id }, new Set(), 1).me!;
+      expect(me.hitPlan!.slots).toHaveLength(3); // m1, m2 and the Thief
+      const raw = JSON.stringify(me.hitPlan);
+      for (const other of ['p0', 'p1', 'p2', 'p3']) expect(raw).not.toContain(`"${other}"`);
     }
+    // Teammates still know each other by name (on the card), but never the Thief.
+    const fam = buildView(g.room, { kind: 'player', playerId: m1 }, new Set(), 1).me!.mafia!;
+    expect(fam.team.map((t) => t.id).sort()).toEqual(['p0', 'p1', 'p2']);
     g.advance();
-    expect(g.P(3).alive).toBe(false);
-    expect(g.P(4).alive).toBe(false);
+    expect(g.P(6).alive).toBe(false);
+    expect(g.P(5).alive).toBe(true); // one kill only
+  });
+
+  it('the anonymous order is shuffled each night', () => {
+    const g = setup(['mafia', 'mafia', 'mafia', V, V, V, V, V, V, V]);
+    const seen = new Set<string>();
+    for (let night = 0; night < 6 && seen.size < 2; night++) {
+      g.goToNight();
+      const me = buildView(g.room, { kind: 'player', playerId: 'p0' }, new Set(), 1).me!;
+      seen.add(me.hitPlan!.slots.findIndex((x) => x.you).toString());
+      for (const i of [0, 1, 2]) g.act(i, 'mafia_kill', null);
+      g.advance();
+      // revive everyone so the game keeps going
+      for (const p of g.room.players) p.alive = true;
+      g.room.status = 'active';
+      g.room.game!.winner = null as never;
+    }
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  it('the Thief can steal Resurrect (from round 2): the Imposter’s Dawn revive is cancelled and the Thief revives that night', () => {
+    const g = setup(['mafia', 'thief', 'imposter', V, V, V, V]);
+    g.P(4).alive = false;
+    toPhase(g, 'prenight'); // round 1: nothing to revive yet
+    expect(nightOptions(g.room, 'p1')[0].targets).not.toContain('imposter_revive');
+    for (let i = 0; i < 12 && !(g.room.game!.phase === 'prenight' && g.room.game!.round === 2); i++) g.advance();
+    expect(nightOptions(g.room, 'p1')[0].targets).toContain('imposter_revive');
+    submitNightAction(g.room, 'p1', { abilityId: 'steal', targetId: 'imposter_revive', phaseSeq: g.seq() }, 1);
+    submitNightAction(g.room, 'p2', { abilityId: 'imposter_revive', targetId: 'p4', phaseSeq: g.seq() }, 1);
+    g.advance();
+    expect(g.P(4).alive).toBe(false); // the Imposter's revive was stolen first
+    expect(g.results(2).join()).toMatch(/Resurrect power has been stolen/);
+    expect(g.room.game!.phase).toBe('night');
+    const opt = nightOptions(g.room, 'p1').find((o) => o.abilityId === 'imposter_revive')!;
+    expect(opt.targets).toContain('p4');
+    g.act(1, 'imposter_revive', 4);
+    g.advance();
+    expect(g.P(4).alive).toBe(true);
   });
 
   it('the power list never reveals who is alive (holder dead → attempt fails quietly)', () => {

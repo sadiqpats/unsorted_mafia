@@ -16,6 +16,8 @@ import {
   hasRally,
   hasUsable,
   heldAbilities,
+  hitVoters,
+  mafiaLeader,
   nightOptions,
   voteEligibility,
   voteTargets,
@@ -154,13 +156,27 @@ function buildMe(room: Room, playerId: string): MeView | null {
     const team = room.players
       .filter((x) => isMafiaTeam(x.roleId, s))
       .map((x) => ({ id: x.id, name: x.name, roleId: x.roleId!, canAct: x.alive && !!hasUsable(room, x, 'mafia_kill') }));
-    const votes: Record<string, string | null> = {};
-    if (g!.phase === 'night' && p.alive) {
-      // Only the family's own picks: a Thief holding the stolen hit must stay invisible to them.
-      const family = new Set(team.map((t) => t.id));
-      for (const a of Object.values(g!.night.actions)) if (a.abilityId === 'mafia_kill' && family.has(a.actorId)) votes[a.actorId] = a.targetId;
+    mafia = { team };
+  }
+  let hitPlan: MeView['hitPlan'] = null;
+  if (g && g.phase === 'night' && p.alive) {
+    const voters = hitVoters(room);
+    const youVote = voters.some((v) => v.id === p.id);
+    if (youVote || isMafiaTeam(p.roleId, s)) {
+      // Shuffled per night (stable within it) so a slot number never maps to a seat. The server-only
+      // secret in the key stops anyone recomputing the order from the (public) player ids.
+      const key = (id: string) => slotHash(`${room.hostTokenHash}:${g.phaseSeq}:${id}`);
+      const order = [...voters].sort((a, b) => key(a.id) - key(b.id));
+      const leader = mafiaLeader(room);
+      hitPlan = {
+        slots: order.map((v, i) => {
+          const act = g.night.actions[`${v.id}:mafia_kill`];
+          return { label: `Mafia ${i + 1}`, you: v.id === p.id, ...(act ? { pick: act.targetId } : {}) };
+        }),
+        youVote,
+        leaderLabel: leader ? `Mafia ${order.findIndex((v) => v.id === leader.id) + 1}` : null,
+      };
     }
-    mafia = { team, votes };
   }
   const knownMafia =
     inGame && ROLES[p.roleId!]?.knowsMafia ? room.players.filter((x) => isMafiaTeam(x.roleId, s)).map((x) => ({ id: x.id, name: x.name })) : null;
@@ -180,6 +196,7 @@ function buildMe(room: Room, playerId: string): MeView | null {
     vote,
     night,
     mafia,
+    hitPlan,
     knownMafia,
     privateResults: room.privateResults.filter((r) => r.playerId === p.id).map((r) => ({ id: r.id, round: r.round, kind: r.kind, text: r.text, at: r.at })),
     allRoles,
@@ -222,4 +239,14 @@ export function buildView(room: Room, viewer: Viewer, connected: Set<string>, no
   if (viewer.kind === 'player') return { ...base, kind: 'player', me: buildMe(room, viewer.playerId), host: null };
   const me = room.hostPlayerId ? buildMe(room, room.hostPlayerId) : null;
   return { ...base, kind: 'host', me, host: buildHost(room) };
+}
+
+/** FNV-1a: a cheap, stable hash for shuffling the anonymous Mafia slots each night. */
+function slotHash(str: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
 }

@@ -46,7 +46,7 @@ export const ABILITIES: Record<string, AbilityDef> = {
     kind: 'night',
     priority: 50,
     team: true,
-    /** A Thief who steals it makes his own kill that night (without learning who the Mafia are). */
+    /** A Thief who steals it joins the Mafia's vote that night as an anonymous "Mafia N" (he never learns who they are). */
     transferable: true,
     target: 'alive-non-mafia',
     charges: () => null,
@@ -94,7 +94,8 @@ export const ABILITIES: Record<string, AbilityDef> = {
     id: 'steal',
     name: 'Steal',
     kind: 'night',
-    priority: 95,
+    // Resolves just before the Imposter's revival (90): stealing Resurrect cancels it for the round.
+    priority: 85,
     transferable: false,
     target: 'alive-other',
     charges: () => null,
@@ -109,7 +110,8 @@ export const ABILITIES: Record<string, AbilityDef> = {
     kind: 'night',
     priority: 90,
     preNight: true,
-    transferable: false,
+    /** Stealable: the Thief takes it at Dawn (before the Imposter acts) and can use it that night. */
+    transferable: true,
     target: 'dead',
     charges: (s) => (s.imposterCharges === 0 ? null : s.imposterCharges),
     prompt: 'Bring someone back from the dead — or skip.',
@@ -202,7 +204,7 @@ export const ROLES: Record<string, RoleDef> = {
     tagline: 'Family first. Witnesses last.',
     description: 'A made member of the family. You know your fellow Mafia and hunt together after dark.',
     abilityText: 'Each night, vote with the Mafia on one player to eliminate.',
-    howTo: 'At night, open your secret panel and pick a target. Your teammates see your pick. The family decision follows the room rule (default: most votes; ties go to the Godfather).',
+    howTo: 'At night, open your secret panel and pick a target. Your teammates see your pick. Picks show as “Mafia 1/2/3” (names hidden — a Thief may be voting too). Most picks wins; a tie goes to the first-seated member.',
     winCondition: 'Win when the Mafia side equals or outnumbers everyone else still alive.',
     abilities: [{ id: 'mafia_kill' }],
     art: 'fedora',

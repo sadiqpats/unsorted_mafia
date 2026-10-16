@@ -5,9 +5,9 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 | Suite | Command | Result |
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ no errors |
-| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 156 / 156 |
+| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 159 / 159 |
 | Integration (real server + socket/HTTP clients) | `npm test` | ✅ 33 / 33 |
-| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 22 / 22 |
+| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 23 / 23 |
 | Production build | `npm run build` | ✅ |
 
 ## Dumb Charades
@@ -58,6 +58,10 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 - Not yet tested on physical phones or iOS Safari.
 - Render free plan: a restart (deploy or sleep) wipes rooms. See DEPLOYMENT.md.
 - Host code is optional: until `HOST_CODE` is set in Render, anyone with the link can host.
+
+## Thief & anonymous Mafia plan
+- **Unit (`roles.test.ts`):** a Thief with the stolen Mafia Hit joins the vote (team, changeable); the plan never contains a voter's id or name; 2 Mafia + Thief = 3 anonymous votes and **one** kill; the anonymous order changes between nights; Resurrect can be stolen from round 2, cancelling the Imposter's Dawn revive, and the Thief revives at night.
+- **End-to-end (`gameplay.spec.ts`):** the Thief steals the Mafia Hit, sees “you are Mafia N” and no Mafia names; each Mafia sees “Mafia N wants to kill X” and never the Thief's name; the shared target dies. The Godfather test checks the anonymous plan and the named family reminder.
 
 ## Connection & privacy on awake phones
 - **`tests/e2e/connection.spec.ts` (2):** a phone that loses its network mid-game shows "Connection lost", reconnects on its own when the network returns, keeps its seat and role and can act; Screen Wake Lock is requested in a game room and released when leaving.

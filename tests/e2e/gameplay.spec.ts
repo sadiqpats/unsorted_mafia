@@ -94,8 +94,11 @@ test('Godfather knows the Mafia and silences a player, who must stay quiet but c
   // …and each Mafia sees what the other wants, live, without a word.
   await nightAct(mafia, 'mafia_kill', target.name);
   await mafia2.page.getByRole('button', { name: /Open your night panel/ }).click();
-  await expect(mafia2.page.getByTestId('family-plan')).toContainText(`${mafia.name} wants to kill ${target.name}`);
-  await expect(mafia2.page.locator('[data-option="mafia_kill"]').getByRole('radio', { name: new RegExp(`^${target.name}`) })).toContainText(`🗡 ${mafia.name}`);
+  // The plan is anonymous ("Mafia 1/2"), and the reminder lists the family by name + photo.
+  await expect(mafia2.page.getByTestId('family-plan')).toContainText(new RegExp(`Mafia \\d wants to kill ${target.name}`));
+  await expect(mafia2.page.getByTestId('family-plan')).not.toContainText(mafia.name);
+  await expect(mafia2.page.getByTestId('mafia-family')).toContainText(mafia.name);
+  await expect(mafia2.page.locator('[data-option="mafia_kill"]').getByRole('radio', { name: new RegExp(`^${target.name}`) })).toContainText(/🗡 Mafia \d/);
   await expect(gf.page.getByTestId('family-plan')).toHaveCount(0);
   await nightAct(mafia2, 'mafia_kill', target.name);
   await expect(mafia.page.getByTestId('family-plan')).toContainText(`You all agree: ${target.name}`);
@@ -155,6 +158,31 @@ test('Dawn: the Thief steals a power for the round without learning whose; the r
   await expect(t.host.getByTestId('host-phase')).toHaveText('Day');
   await thief.page.getByRole('button', { name: 'Open your ballot' }).click();
   await expect(thief.page.getByTestId('private-note').filter({ hasText: 'SUSPICIOUS' })).toContainText(`${mafia.name} is SUSPICIOUS`);
+});
+
+test('Dawn: the Thief steals the Mafia Hit and votes with the Mafia as an anonymous member — nobody learns anybody', async ({ browser }) => {
+  const t = await setupTable(browser, 7, { mafia: 2, thief: 1, detective: 1, villager: 3 });
+  await advanceTo(t, 'Dawn');
+  const thief = t.byRole('Thief')[0];
+  const [m1, m2] = t.byRole('Mafia');
+  const target = t.byRole('Villager')[0];
+  await nightAct(thief, 'steal', 'Mafia Hit');
+  await skipRest(t, new Set([thief.name]));
+  await expect(t.host.getByTestId('host-phase')).toHaveText('Night');
+  // The Thief votes in tonight's hit as "Mafia N" — and sees no Mafia names.
+  await nightAct(thief, 'mafia_kill', target.name);
+  await expect(thief.page.getByTestId('family-plan')).toContainText(/you are Mafia \d/);
+  for (const m of [m1, m2]) await expect(thief.page.getByTestId('family-plan')).not.toContainText(m.name);
+  await expect(thief.page.getByTestId('mafia-family')).toHaveCount(0);
+  // Whichever Mafia still holds the hit sees an anonymous member wanting the same target, never the Thief's name.
+  for (const m of [m1, m2]) {
+    await m.page.getByRole('button', { name: /Open your night panel/ }).click();
+    await expect(m.page.getByTestId('family-plan')).toContainText(new RegExp(`Mafia \\d wants to kill ${target.name}`));
+    await expect(m.page.getByTestId('family-plan')).not.toContainText(thief.name);
+  }
+  await skipRest(t, new Set([thief.name]));
+  await expect(t.host.getByTestId('host-phase')).toHaveText('Day');
+  for (const s of t.seats) await expect(s.page.getByTestId('phase-news')).toContainText(`${target.name} was killed during the night.`);
 });
 
 test('Dawn: the Imposter revives a dead player in round 2 and every phone is told', async ({ browser }) => {

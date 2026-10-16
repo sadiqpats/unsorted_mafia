@@ -82,8 +82,18 @@ export interface MeView {
     options: NightOption[];
     submitted: Record<string, string | null>;
   } | null;
-  /** Mafia members only: teammates (canAct = still holds the Mafia Hit this round) and their live picks. */
-  mafia: { team: { id: string; name: string; roleId: string; canAct: boolean }[]; votes: Record<string, string | null> } | null;
+  /** Mafia members only: who the teammates are (canAct = still holds the Mafia Hit this round). Never the picks. */
+  mafia: { team: { id: string; name: string; roleId: string; canAct: boolean }[] } | null;
+  /**
+   * Tonight's hit, anonymised: everyone voting (Mafia members and a Thief holding the stolen
+   * hit) appears as "Mafia 1/2/3…" in an order shuffled every night, so the Thief stays hidden
+   * and never learns who the Mafia are. Sent to voters and to living Mafia members.
+   */
+  hitPlan: {
+    slots: { label: string; you: boolean; /** undefined = still choosing; null = skip */ pick?: string | null }[];
+    youVote: boolean;
+    leaderLabel: string | null;
+  } | null;
   /** Godfather only: who the Mafia are (the Mafia never learn who the Godfather is). */
   knownMafia: { id: string; name: string }[] | null;
   privateResults: { id: string; round: number; kind: string; text: string; at: number }[];
