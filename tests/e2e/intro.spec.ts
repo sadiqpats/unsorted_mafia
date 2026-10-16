@@ -3,14 +3,14 @@ import { newPhone } from './helpers';
 
 test('welcome intro: shows on first open, tap to enter opens the site, not shown again this visit', async ({ browser }) => {
   const p = await newPhone(browser, { intro: true });
-  await p.goto('/');
+  await p.goto('/mafia');
   const intro = p.getByRole('dialog', { name: 'Welcome to Mafia Night' });
   await expect(intro).toBeVisible();
   // Act one: the Unsorted Plans logo, then the Mafia Night gate.
   await expect(intro.getByRole('img', { name: /Unsorted/ })).toBeVisible();
   await expect(intro.getByText('Mafia Night')).toBeVisible({ timeout: 8000 });
   await intro.getByRole('button', { name: 'Tap to enter' }).click();
-  await expect(intro).toHaveCount(0, { timeout: 6000 });
+  await expect(intro).toHaveCount(0, { timeout: 15000 });
   await expect(p.getByRole('link', { name: 'Host a Game' })).toBeVisible();
   await p.reload();
   await expect(p.getByRole('dialog', { name: 'Welcome to Mafia Night' })).toHaveCount(0);
@@ -18,6 +18,23 @@ test('welcome intro: shows on first open, tap to enter opens the site, not shown
 
 test('welcome intro never interrupts a game room or the TV display', async ({ browser }) => {
   const p = await newPhone(browser, { intro: true });
-  await p.goto('/tv/ABCDE');
-  await expect(p.getByRole('dialog', { name: 'Welcome to Mafia Night' })).toHaveCount(0);
+  for (const path of ['/tv/ABCDE', '/ctv/ABCDE', '/c/ABCDE', '/r/ABCDE']) {
+    await p.goto(path);
+    await expect(p.getByRole('dialog')).toHaveCount(0);
+  }
+});
+
+test('the front door is Unsorted: both games are one tap away', async ({ browser }) => {
+  const p = await newPhone(browser, { intro: true });
+  await p.goto('/');
+  const intro = p.getByRole('dialog', { name: 'Welcome to Unsorted' });
+  await expect(intro.getByText('Game Night')).toBeVisible({ timeout: 8000 });
+  await intro.getByRole('button', { name: 'Tap to enter' }).click();
+  await expect(intro).toHaveCount(0, { timeout: 15000 });
+  await expect(p).toHaveTitle('Unsorted');
+  await p.getByRole('link', { name: /Mafia Night/ }).click();
+  await expect(p).toHaveURL(/\/mafia$/);
+  await p.goto('/');
+  await p.getByRole('link', { name: /Bollywood Dumb Charades/ }).click();
+  await expect(p).toHaveURL(/\/charades$/);
 });

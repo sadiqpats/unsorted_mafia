@@ -8,6 +8,7 @@ import { GameError } from '../shared/engine';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../shared/settings';
 import { RoomService, type Identity } from './rooms';
 import { RateLimiter, hashToken, safeEqualHex, secureRng } from './security';
+import { mountCharades } from './charades/http';
 import { Store } from './store';
 import { buildView } from './views';
 
@@ -227,6 +228,19 @@ export function createApp(opts: AppOptions) {
     res.send(Buffer.from(photo.data));
   });
 
+  // Bollywood Dumb Charades lives alongside Mafia Night on the same server.
+  const socketLimiter = new RateLimiter(25, 4);
+  const charades = mountCharades({
+    app,
+    io,
+    store,
+    rng: secureRng,
+    limit,
+    checkHostCode,
+    roomTtlMs: (opts.roomTtlHours ?? 12) * 3600_000,
+    allowSocket: (id) => socketLimiter.take(`c:${id}`),
+  });
+
   app.use('/api', (_req, res) => res.status(404).json({ error: { code: 'not_found', message: 'Not found' } }));
 
   if (opts.staticDir && existsSync(opts.staticDir)) {
@@ -235,7 +249,6 @@ export function createApp(opts: AppOptions) {
   }
 
   // -------------------------------------------------------------- sockets
-  const socketLimiter = new RateLimiter(25, 4);
 
   io.use((socket, next) => {
     const auth = socket.handshake.auth as { code?: unknown; token?: unknown; display?: unknown };
@@ -282,14 +295,21 @@ export function createApp(opts: AppOptions) {
     });
   });
 
-  const tickTimer = setInterval(() => service.tickAll(), opts.tickMs ?? 250);
-  const sweepTimer = setInterval(() => service.sweep(), 10 * 60_000);
+  const tickTimer = setInterval(() => {
+    service.tickAll();
+    charades.tickAll();
+  }, opts.tickMs ?? 250);
+  const sweepTimer = setInterval(() => {
+    service.sweep();
+    charades.sweep();
+  }, 10 * 60_000);
 
   return {
     app,
     http,
     io,
     service,
+    charades,
     store,
     listen(port: number, host = '0.0.0.0') {
       return new Promise<number>((resolve) => {

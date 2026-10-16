@@ -557,3 +557,31 @@ p { text-wrap: pretty; }
 .reduce-motion .intro-brand-logo, .reduce-motion .intro-brand-presents { clip-path: none; opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .intro-brand-logo, .intro-brand-presents { clip-path: none; opacity: 1; } .intro-brand-ring { display: none; } }
 .reduce-motion .intro-brand-ring { display: none; }
+
+/* ================================================================
+   UNSORTED HUB (front door) + shared Charades title font
+   ================================================================ */
+.charades-title {
+  font-family: 'Yatra One', var(--font-display);
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  background: linear-gradient(180deg, #fff3c4 0%, #ffc23d 45%, #ff5fa2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(90, 10, 60, 0.6)) drop-shadow(0 0 18px rgba(255, 179, 0, 0.25));
+}
+.hub-card { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.35s ease, box-shadow 0.35s ease; }
+.hub-card:hover { transform: translateY(-4px); }
+.hub-mafia:hover { border-color: rgba(201, 164, 92, 0.6); box-shadow: 0 30px 70px -30px rgba(176, 32, 42, 0.7); }
+.hub-charades { background: radial-gradient(600px 300px at 50% 0%, rgba(229, 25, 111, 0.28), transparent 70%), linear-gradient(180deg, #2a0b30, #160519); border-color: rgba(255, 179, 0, 0.35); }
+.hub-charades:hover { border-color: rgba(255, 179, 0, 0.7); box-shadow: 0 30px 70px -30px rgba(229, 25, 111, 0.8); }
+.hub-glow { position: absolute; inset: -40% -20% auto; height: 70%; pointer-events: none; background: radial-gradient(closest-side, rgba(201, 164, 92, 0.18), transparent); animation: drift 4s ease-in-out infinite alternate; }
+.hub-charades .hub-glow { background: radial-gradient(closest-side, rgba(255, 179, 0, 0.22), transparent); }
+.hub-bulbs { position: absolute; inset: 8px; border-radius: 0.9rem; pointer-events: none; background:
+  radial-gradient(circle, #ffd76a 0 2px, transparent 3px) 0 0 / 22px 22px repeat-x,
+  radial-gradient(circle, #ffd76a 0 2px, transparent 3px) 0 100% / 22px 22px repeat-x;
+  opacity: 0.55; animation: bulbs 1.2s steps(2) infinite; }
+@keyframes bulbs { 50% { opacity: 0.95; filter: drop-shadow(0 0 4px #ffb300); } }
+.clap-arm { animation: clap 2.8s ease-in-out infinite; }
+@keyframes clap { 0%, 70%, 100% { transform: rotate(0deg); } 78% { transform: rotate(-14deg); } 86% { transform: rotate(0deg); } }

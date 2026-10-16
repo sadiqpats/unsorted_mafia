@@ -1,5 +1,12 @@
-# Unsorted Plans Presents: Mafia Night
+# Unsorted
 *Plans worth showing up for.*
+
+Party games for people in the same room, played on their own phones. The front page (`/`) lets you pick a game:
+
+- **Mafia Night** (`/mafia`): secret roles, Dawn → Night → Day, a TV photo wall. Details below.
+- **Bollywood Dumb Charades** (`/charades`): two teams, two captains' phones, 972 famous Hindi films, a TV scoreboard. See [docs/CHARADES.md](docs/CHARADES.md).
+
+## Mafia Night
 
 A real-time, multiplayer Mafia party game played on everyone's own phone. The server deals secret roles, runs the night and day phases, resolves every ability, counts the (weighted) votes and decides who wins. Nobody has to sit out as narrator.
 

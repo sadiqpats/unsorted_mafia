@@ -18,11 +18,13 @@ export const LOGO = {
   mark: '/brand/unsorted-mark.png',
 };
 
-export function BrandMark({ compact = false }: { compact?: boolean }) {
+export function BrandMark({ compact = false, label = 'MAFIA NIGHT', to = '/mafia' }: { compact?: boolean; label?: string | null; to?: string }) {
   return (
-    <Link to="/" className="flex items-center gap-3 focus-ring rounded-lg" aria-label="Unsorted — Mafia Night home">
+    <Link to={to} className="flex items-center gap-3 focus-ring rounded-lg" aria-label={label ? `Unsorted — ${label.toLowerCase()} home` : 'Unsorted home'}>
       <img src={LOGO.wordmark} alt="Unsorted" className={compact ? 'h-5 w-auto' : 'h-7 w-auto'} />
-      <span className={`whitespace-nowrap border-l border-line pl-3 font-[family-name:var(--font-display)] tracking-[0.16em] text-gold hidden sm:inline ${compact ? 'text-[0.7rem]' : 'text-sm'}`}>MAFIA NIGHT</span>
+      {label && (
+        <span className={`whitespace-nowrap border-l border-line pl-3 font-[family-name:var(--font-display)] tracking-[0.16em] text-gold hidden sm:inline ${compact ? 'text-[0.7rem]' : 'text-sm'}`}>{label}</span>
+      )}
     </Link>
   );
 }

@@ -8,7 +8,7 @@ const SEEN_KEY = 'mafia-night:intro-seen';
 /** Show the welcome once per visit, on the public pages (never inside a running game or on the TV). */
 function shouldShow() {
   if (typeof window === 'undefined') return false;
-  if (/^\/(r|tv)\//.test(window.location.pathname)) return false;
+  if (/^\/(r|tv|c|ctv)\//.test(window.location.pathname)) return false;
   try {
     return sessionStorage.getItem(SEEN_KEY) !== '1';
   } catch {
@@ -22,9 +22,17 @@ function shouldShow() {
  * Browsers only allow sound after a tap, so the gate asks the guest to "enter" —
  * that tap starts the sound and swings the doors open.
  */
+/** Act two names the game the guest is walking into. */
+function gateFor(path: string) {
+  if (path.startsWith('/charades')) return { title: 'Dumb Charades', whisper: 'Lights. Camera. Action!', label: 'Welcome to Bollywood Dumb Charades' };
+  if (path === '/') return { title: 'Game Night', whisper: 'Two games. One unforgettable night…', label: 'Welcome to Unsorted' };
+  return { title: 'Mafia Night', whisper: 'The night is waiting for you…', label: 'Welcome to Mafia Night' };
+}
+
 export function IntroSplash() {
   const [stage, setStage] = useState<'brand' | 'gate' | 'open' | 'gone'>(() => (shouldShow() ? 'brand' : 'gone'));
   const [brandOut, setBrandOut] = useState(false);
+  const [gate] = useState(() => gateFor(typeof window === 'undefined' ? '/' : window.location.pathname));
   const { prefs } = usePrefs();
   const { play } = useFx();
 
@@ -80,7 +88,7 @@ export function IntroSplash() {
 
   if (stage === 'gone') return null;
   return (
-    <div className={`intro ${stage === 'open' ? 'intro-open' : ''}`} role="dialog" aria-modal="true" aria-label="Welcome to Mafia Night">
+    <div className={`intro ${stage === 'open' ? 'intro-open' : ''}`} role="dialog" aria-modal="true" aria-label={gate.label}>
       <div className="intro-door intro-door-left" aria-hidden="true" />
       <div className="intro-door intro-door-right" aria-hidden="true" />
       <div className="intro-fog" aria-hidden="true" />
@@ -96,8 +104,8 @@ export function IntroSplash() {
             <div className="intro-wax" />
           </div>
           <p className="intro-presents">Unsorted Plans presents</p>
-          <h1 className="intro-title">Mafia Night</h1>
-          <p className="intro-whisper">The night is waiting for you…</p>
+          <h1 className="intro-title">{gate.title}</h1>
+          <p className="intro-whisper">{gate.whisper}</p>
           <button className="intro-enter" onClick={enter} autoFocus>
             <span className="intro-ring" aria-hidden="true" />
             Tap to enter

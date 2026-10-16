@@ -35,6 +35,11 @@ export class Store {
         detail TEXT
       );
       CREATE INDEX IF NOT EXISTS audit_room ON audit_log(room_code, at);
+      CREATE TABLE IF NOT EXISTS charades_rooms (
+        code TEXT PRIMARY KEY,
+        state TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS photos (
         room_code TEXT NOT NULL,
         player_id TEXT NOT NULL,
@@ -84,6 +89,22 @@ export class Store {
 
   auditFor(code: string): { at: number; actor: string; action: string; ok: number; detail: string | null }[] {
     return this.db.prepare('SELECT at, actor, action, ok, detail FROM audit_log WHERE room_code = ? ORDER BY id').all(code) as never;
+  }
+
+  // ---------------------------------------------------------- Dumb Charades rooms
+  loadCharades<T>(): T[] {
+    const rows = this.db.prepare('SELECT state FROM charades_rooms').all() as { state: string }[];
+    return rows.map((r) => JSON.parse(r.state) as T);
+  }
+
+  saveCharades(code: string, state: unknown, updatedAt: number) {
+    this.db
+      .prepare('INSERT INTO charades_rooms (code, state, updated_at) VALUES (?, ?, ?) ON CONFLICT(code) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at')
+      .run(code, JSON.stringify(state), updatedAt);
+  }
+
+  deleteCharades(code: string) {
+    this.db.prepare('DELETE FROM charades_rooms WHERE code = ?').run(code);
   }
 
   close() {

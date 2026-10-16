@@ -1,14 +1,20 @@
 # Testing: what was run, and the results
 
-Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright 1.64), after the **Dawn → Night → Day / no-timer** update. Nothing below is reported as passing without having been run.
+Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright 1.64), after adding **Bollywood Dumb Charades** and the **Unsorted** front page. Nothing below is reported as passing without having been run.
 
 | Suite | Command | Result |
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ no errors |
-| Unit (engine, rules, announcements, deploy config) | `npm test` | ✅ 133 / 133 |
-| Integration (real server + socket clients) | `npm test` | ✅ 31 / 31 |
-| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 12 / 12 (3.9 min) |
+| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 152 / 152 |
+| Integration (real server + socket/HTTP clients) | `npm test` | ✅ 32 / 32 |
+| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 17 / 17 |
 | Production build | `npm run build` | ✅ |
+
+## Dumb Charades
+- **Unit — `tests/unit/charades.test.ts` (17):** the deck (≥ 950 films, all 2000+, ≤ 4 words, no duplicates, every card has genre and leads; difficulty counts in sync); word counting; turn order, rounds, scoring, timeout, tie → one more round; only the acting captain can flip/swap/pass; limited swaps with the clock still running; no movie dealt twice; pause/resume; host fixes a wrong call; stale taps refused; **who sees the movie** (deck mode: host + acting captain only; rival mode: the picker too; TV only after the turn); rival picks (deck title accepted, > 4 words refused, found online, too old / not Hindi refused, not found → host approves, acting team can't pick its own).
+- **Integration — `tests/integration/charades.test.ts`:** host code required, one captain per team (409 `seat_taken`), room info, title suggestions.
+- **End-to-end — `tests/e2e/charades.spec.ts` (2):** a full game with host, two captains and the TV in **deck** mode (flip, swap, judge, pass, fix a call, end, tie-breaker) and in **rival** mode (word-limit check, suggestion, rival's pick revealed only on flip, random card).
+- **Deck check — `npx tsx scripts/verify-movies.ts`:** looks up every card on Wikidata. Last run: 976 checked; the 4 real mistakes were removed. Remaining flags are Wikidata gaps (films missing a Hindi-language tag) or festival premiere dates a year before the cinema release.
 
 ## Unit — `tests/unit/`
 - **distribution:** a valid default game for every player count **5–26**; Mafia stay ~¼ of the table (6 at 25–26); exact role dealing for every count; invalid/unbalanced configs; new mix (2 Mafia from 7, Godfather from 8, no Priest/Bodyguard).
