@@ -123,7 +123,7 @@ export async function nightAct(seat: Seat, abilityId: string, target: string | n
       if (target === null) {
         await card.getByRole('button', { name: 'Skip' }).click({ timeout: 8000 });
       } else {
-        await card.getByRole('radio', { name: new RegExp(`^${target}( \\(you\\))?$`) }).click({ timeout: 8000 });
+        await card.getByRole('radio', { name: new RegExp(`^${target}( \\(you\\))?(\\s*🗡.*)?$`) }).click({ timeout: 8000 });
         await card.getByRole('button', { name: /Lock in|Change pick/ }).click({ timeout: 8000 });
       }
       await expect(done).toBeVisible({ timeout: 8000 });

@@ -64,9 +64,9 @@ test('Doctor protection saves the Mafia target', async ({ browser }) => {
 });
 
 test('Godfather knows the Mafia and silences a player, who must stay quiet but can still vote', async ({ browser }) => {
-  const t = await setupTable(browser, 7, { godfather: 1, mafia: 1, detective: 1, villager: 4 });
+  const t = await setupTable(browser, 9, { godfather: 1, mafia: 2, detective: 1, villager: 5 });
   const gf = t.byRole('Godfather')[0];
-  const mafia = t.byRole('Mafia')[0];
+  const [mafia, mafia2] = t.byRole('Mafia');
   // The Godfather's card lists the Mafia; the Mafia's card does not list the Godfather.
   await gf.page.getByLabel(/Tap instead of hold/).check();
   await gf.page.getByRole('button', { name: /reveal/i }).first().click();
@@ -75,11 +75,26 @@ test('Godfather knows the Mafia and silences a player, who must stay quiet but c
   await mafia.page.getByLabel(/Tap instead of hold/).check();
   await mafia.page.getByRole('button', { name: /reveal/i }).first().click();
   await expect(mafia.page.locator('.flip-back')).not.toContainText(gf.name);
+  // The two Mafia know each other.
+  await expect(mafia.page.locator('.flip-back')).toContainText(mafia2.name);
 
   await advanceTo(t, 'Night');
   const silenced = t.byRole('Villager')[0];
+  const target = t.byRole('Detective')[0];
+  // At night the Godfather is reminded who the Mafia are…
+  await gf.page.getByRole('button', { name: /Open your night panel/ }).click();
+  await expect(gf.page.getByText('The Mafia (only you know this)')).toBeVisible();
+  await expect(gf.page.locator('[data-option="silence"]').locator('..')).toContainText(mafia2.name);
   await nightAct(gf, 'silence', silenced.name);
-  await skipRest(t, new Set([gf.name]));
+  // …and each Mafia sees what the other wants, live, without a word.
+  await nightAct(mafia, 'mafia_kill', target.name);
+  await mafia2.page.getByRole('button', { name: /Open your night panel/ }).click();
+  await expect(mafia2.page.getByTestId('family-plan')).toContainText(`${mafia.name} wants to kill ${target.name}`);
+  await expect(mafia2.page.locator('[data-option="mafia_kill"]').getByRole('radio', { name: new RegExp(`^${target.name}`) })).toContainText(`🗡 ${mafia.name}`);
+  await expect(gf.page.getByTestId('family-plan')).toHaveCount(0);
+  await nightAct(mafia2, 'mafia_kill', target.name);
+  await expect(mafia.page.getByTestId('family-plan')).toContainText(`You all agree: ${target.name}`);
+  await skipRest(t, new Set([gf.name, mafia.name, mafia2.name]));
   await expect(t.host.getByTestId('host-phase')).toHaveText('Day');
   await expect(silenced.page.getByTestId('phase-news')).toContainText(`${silenced.name} has been silenced`);
   await expect(silenced.page.getByText('You have been silenced.')).toBeVisible();

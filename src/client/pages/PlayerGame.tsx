@@ -261,6 +261,7 @@ function MafiaTeam({ view }: { view: ClientView }) {
             <span>
               {t.name}
               {t.id === view.me!.id && ' (you)'}
+              {!view.players.find((p) => p.id === t.id)?.alive && <span className="ml-2 text-xs text-mute">(eliminated)</span>}
             </span>
             <span className="text-mute">{ROLES[t.roleId]?.name}</span>
           </li>
@@ -284,7 +285,7 @@ function GodfatherKnows({ view }: { view: ClientView }) {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-xs text-mute">They don’t know you are the Godfather. Defend them by day.</p>
+      <p className="mt-2 text-xs text-mute">They don’t know you are the Godfather. Protect them by day.</p>
     </div>
   );
 }
@@ -353,12 +354,13 @@ function NightPanel({ view, send }: { view: ClientView; send: Send }) {
     <div className="space-y-3">
       <PhaseNews view={view} />
       <PrivacyShield label={allDone ? 'Review your choice' : pre ? 'Open your dawn panel' : 'Open your night panel'}>
-        <div className="space-y-6 pt-6">
+        <div className="space-y-6 pt-11">
           <PrivateNotes view={view} />
+          {me.mafia && !pre && <MafiaVotes view={view} />}
+          {me.knownMafia && !pre && <GodfatherKnows view={view} />}
           {night.options.map((o) => (
             <NightOptionCard key={o.abilityId} view={view} option={o} submitted={night.submitted} send={send} />
           ))}
-          {me.mafia && !pre && <MafiaVotes view={view} />}
         </div>
       </PrivacyShield>
       {allDone && (
@@ -433,6 +435,15 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
   const done = option.abilityId in submitted;
   const [pick, setPick] = useState<string | null>(done ? submitted[option.abilityId] : null);
   const locked = done && !option.changeable;
+  // Mafia hit: which teammates have picked each target (the family coordinates without talking).
+  const familyOn: Record<string, string[]> = {};
+  const fam = view.me!.mafia;
+  if (fam && option.abilityId === 'mafia_kill' && option.source !== 'stolen') {
+    for (const t of fam.team) {
+      const v = fam.votes[t.id];
+      if (t.id !== view.me!.id && v) (familyOn[v] ??= []).push(t.name);
+    }
+  }
   const submit = (target: string | null) =>
     act({ type: 'night_action', abilityId: option.abilityId, targetId: target, phaseSeq: view.game!.phaseSeq });
   return (
@@ -459,6 +470,7 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
             >
               {option.targetKind === 'power' ? (ABILITIES[t]?.name ?? t) : nameOf(view, t)}
               {option.targetKind === 'player' && t === view.me!.id && ' (you)'}
+              {familyOn[t]?.length ? <span className="mt-0.5 block text-[0.7rem] font-semibold text-ember">🗡 {familyOn[t].join(', ')}</span> : null}
             </button>
           );
         })}
@@ -478,21 +490,56 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
 }
 
 function MafiaVotes({ view }: { view: ClientView }) {
-  const m = view.me!.mafia!;
+  const me = view.me!;
+  const m = me.mafia!;
   const living = m.team.filter((t) => t.canAct);
+  const others = living.filter((t) => t.id !== me.id);
+  if (!others.length) {
+    if (m.team.length < 2) return null;
+    return (
+      <div className="rounded-xl border border-crimson/50 bg-crimson/10 p-3 text-sm" data-testid="family-plan">
+        <div className="eyebrow mb-1 !text-ember">🗡 Your family</div>
+        <p className="text-mute">You make the call alone tonight.</p>
+      </div>
+    );
+  }
+  const picks = living.map((t) => (t.id in m.votes ? m.votes[t.id] : undefined));
+  const chosen = picks.filter((v): v is string => typeof v === 'string');
+  const allIn = picks.every((v) => v !== undefined);
+  const agreed = allIn && chosen.length === living.length && new Set(chosen).size === 1;
+  const leader = living[0];
   return (
-    <div className="rounded-xl border border-crimson/50 bg-crimson/10 p-3 text-sm">
-      <div className="eyebrow mb-2 !text-ember">🗡 Family picks tonight</div>
-      <ul className="space-y-1">
-        {living.map((t) => (
-          <li key={t.id} className="flex justify-between gap-2">
-            <span>{t.name}</span>
-            <span className="text-mute">{t.id in m.votes ? nameOf(view, m.votes[t.id]) : '…thinking'}</span>
+    <div className="anim-fade-up rounded-xl border border-crimson/50 bg-crimson/10 p-3 text-sm" data-testid="family-plan">
+      <div className="eyebrow mb-2 !text-ember">🗡 Your family tonight</div>
+      <ul className="space-y-1.5">
+        {others.map((t) => (
+          <li key={t.id}>
+            <b className="text-bone">{t.name}</b>{' '}
+            {!(t.id in m.votes) ? (
+              <span className="text-mute">is still choosing…</span>
+            ) : m.votes[t.id] === null ? (
+              <span className="text-mute">wants to skip the kill</span>
+            ) : (
+              <>
+                <span className="text-mute">wants to kill</span> <b className="text-ember">{nameOf(view, m.votes[t.id])}</b>
+              </>
+            )}
           </li>
         ))}
+        {m.team
+          .filter((t) => !t.canAct && t.id !== me.id && view.players.find((p) => p.id === t.id)?.alive)
+          .map((t) => (
+            <li key={t.id} className="text-mute">
+              <b className="text-bone">{t.name}</b> can’t pick tonight.
+            </li>
+          ))}
       </ul>
-      <p className="mt-2 text-xs text-mute">
-        {view.settings.mafiaDecision === 'leader' ? 'The first-seated Mafia member makes the final call.' : 'Most picks wins; ties go to the first-seated member.'} You can change your pick until the night ends.
+      <p className={`mt-2 rounded-lg px-2 py-1.5 text-xs ${agreed ? 'bg-ok/15 text-bone' : 'bg-black/30 text-mute'}`}>
+        {agreed
+          ? `✅ You all agree: ${nameOf(view, chosen[0])}.`
+          : view.settings.mafiaDecision === 'leader'
+            ? `${leader.id === me.id ? 'You make' : `${leader.name} makes`} the final call. You can change your pick until the night ends.`
+            : `Pick the same person. If picks differ, most picks wins; a tie goes to ${leader.id === me.id ? 'you' : leader.name}.`}
       </p>
     </div>
   );

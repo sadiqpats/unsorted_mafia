@@ -156,7 +156,9 @@ function buildMe(room: Room, playerId: string): MeView | null {
       .map((x) => ({ id: x.id, name: x.name, roleId: x.roleId!, canAct: x.alive && !!hasUsable(room, x, 'mafia_kill') }));
     const votes: Record<string, string | null> = {};
     if (g!.phase === 'night' && p.alive) {
-      for (const a of Object.values(g!.night.actions)) if (a.abilityId === 'mafia_kill') votes[a.actorId] = a.targetId;
+      // Only the family's own picks: a Thief holding the stolen hit must stay invisible to them.
+      const family = new Set(team.map((t) => t.id));
+      for (const a of Object.values(g!.night.actions)) if (a.abilityId === 'mafia_kill' && family.has(a.actorId)) votes[a.actorId] = a.targetId;
     }
     mafia = { team, votes };
   }

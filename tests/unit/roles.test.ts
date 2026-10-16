@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { checkWin, hostEliminate, nightOptions, submitNightAction, voteWeight } from '../../src/shared/engine';
 import { ROLES } from '../../src/shared/roles';
+import { buildView } from '../../src/server/views';
 import { setup } from './helpers';
 
 const V = 'villager';
@@ -19,6 +20,22 @@ describe('characters available', () => {
 });
 
 describe('Mafia', () => {
+  it('two Mafia know each other and see each other’s picks live; the Godfather knows them, they never know him', () => {
+    const g = setup(['mafia', 'mafia', 'godfather', V, V, V, V, V]);
+    g.goToNight();
+    const view = (i: number) => buildView(g.room, { kind: 'player', playerId: g.id(i) }, new Set(), 1).me!;
+    for (const i of [0, 1]) {
+      expect(view(i).mafia!.team.map((t) => t.id)).toEqual(['p0', 'p1']);
+      expect(view(i).knownMafia).toBeNull();
+    }
+    g.act(0, 'mafia_kill', 4);
+    expect(view(1).mafia!.votes).toEqual({ p0: 'p4' });
+    expect(view(2).mafia).toBeNull();
+    expect(view(2).knownMafia!.map((m) => m.id)).toEqual(['p0', 'p1']);
+    expect(view(3).mafia).toBeNull();
+    expect(view(3).knownMafia).toBeNull();
+  });
+
   it('kills at night; the death is announced by name only (no role)', () => {
     const g = setup(['mafia', V, V, V, 'doctor']);
     g.goToNight();
@@ -239,6 +256,12 @@ describe('Thief (steals at Dawn, one round at a time)', () => {
     const other = robbed.id === 'p0' ? 1 : 0;
     g.act(other, 'mafia_kill', 3);
     g.act(2, 'mafia_kill', 4);
+    // The family sees each other's picks, but never the Thief's (that would expose him).
+    for (const id of ['p0', 'p1']) {
+      const fam = buildView(g.room, { kind: 'player', playerId: id }, new Set(), 1).me!.mafia!;
+      expect(Object.keys(fam.votes)).toEqual([g.id(other)]);
+      expect(fam.team.map((t) => t.id).sort()).toEqual(['p0', 'p1']);
+    }
     g.advance();
     expect(g.P(3).alive).toBe(false);
     expect(g.P(4).alive).toBe(false);
