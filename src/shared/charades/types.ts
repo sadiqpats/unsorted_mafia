@@ -124,6 +124,8 @@ export const CHostCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('rename_team'), team: z.union([z.literal(0), z.literal(1)]), name: z.string().trim().min(1).max(24) }),
   z.object({ type: z.literal('start') }),
   z.object({ type: z.literal('kick_captain'), team: z.union([z.literal(0), z.literal(1)]) }),
+  /** The host takes a team's captain seat on their own phone (hosts and plays). */
+  z.object({ type: z.literal('claim_captain'), team: z.union([z.literal(0), z.literal(1)]) }),
   z.object({ type: z.literal('random_card'), seq }),
   /** Captain's phone died: the host flips the card on their own screen. */
   z.object({ type: z.literal('reveal_here'), seq }),
@@ -195,5 +197,8 @@ export interface CView {
   history: TurnRecord[];
   winner: TeamIdx | 'tie' | null;
   /** Who is looking. */
-  me: { kind: 'host' } | { kind: 'captain'; team: TeamIdx; name: string; rivalNote: string | null } | { kind: 'tv' };
+  me:
+    | { kind: 'host'; /** The team whose captain seat the host took (hosts and plays), if any. */ captainTeam: TeamIdx | null; rivalNote: string | null }
+    | { kind: 'captain'; team: TeamIdx; name: string; rivalNote: string | null }
+    | { kind: 'tv' };
 }

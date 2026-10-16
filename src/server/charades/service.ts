@@ -146,7 +146,12 @@ export class CharadesService {
     const ctx = this.ctx();
     if (id.kind === 'host') {
       const p = CHostCommandSchema.safeParse(raw);
-      if (!p.success) throw new CharadesError('bad_command', 'That command isn’t valid.');
+      if (!p.success) {
+        // A host who took a captain seat also sends captain commands for that team.
+        const team = E.hostTeamOf(room);
+        if (team !== null && CCaptainCommandSchema.safeParse(raw).success) return this.apply(room, { kind: 'captain', team, id: E.HOST_CAPTAIN, sessionVersion: 1 }, raw);
+        throw new CharadesError('bad_command', 'That command isn’t valid.');
+      }
       const c = p.data;
       // Judging and pausing are guarded by the turn's stage instead: a captain's swap a
       // split second earlier must not bounce the host's ✅.
@@ -158,6 +163,8 @@ export class CharadesService {
           return E.renameTeam(room, c.team, c.name, ctx.now);
         case 'start':
           return E.start(room, ctx);
+        case 'claim_captain':
+          return E.claimCaptain(room, c.team, ctx.now);
         case 'kick_captain':
           E.kickCaptain(room, c.team, ctx.now);
           this.opts.onSessionEnded(room.code, c.team, 'The host freed your captain seat.');

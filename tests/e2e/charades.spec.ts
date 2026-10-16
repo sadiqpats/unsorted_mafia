@@ -211,3 +211,44 @@ test('Dumb Charades: the captain’s movie hides itself when the phone is left a
   await a.getByRole('button', { name: '🙈 Hide' }).click();
   await expect(a.getByTestId('movie-card')).toHaveCount(0);
 });
+
+test('Dumb Charades: the host can play too — captain of a team on the same phone', async ({ browser }) => {
+  const host = await newPhone(browser);
+  await host.goto('/charades/host');
+  await host.getByLabel('Host code').fill('e2e-host-code');
+  await host.getByLabel('Your name').fill('Sadiq');
+  await host.getByRole('button', { name: 'Open the room' }).click();
+  await host.waitForURL(/\/c\/[A-Z0-9]{5}$/);
+  const code = host.url().split('/').pop()!;
+  await host.getByRole('button', { name: /I’ll captain Team 1/ }).click();
+  await expect(host.getByTestId('captain-0')).toContainText('Sadiq (you, on this phone)');
+  await expect(host.getByRole('button', { name: /I’ll captain Team 2/ })).toHaveCount(0);
+  await shot(host, 'hostcap-lobby');
+  const b = await newPhone(browser);
+  await b.goto(`/charades/join/${code}?team=2`);
+  await b.getByLabel('Your name').fill('Ravi');
+  await b.getByRole('button', { name: 'Join as captain' }).click();
+  await host.getByLabel('Who goes first?').selectOption('0');
+  await host.getByRole('button', { name: /Start the show/ }).click();
+
+  // Host's team acts: the host gets the captain's face-down card, not the movie.
+  await expect(host.getByText(/Host \+ captain/)).toBeVisible();
+  await expect(host.getByTestId('movie-card')).toHaveCount(0);
+  await host.getByTestId('card-back').click();
+  await expect(host.getByTestId('movie-card')).toBeVisible();
+  await host.getByRole('button', { name: /New card/ }).click();
+  await expect(host.getByText('Card 2 of 2')).toBeVisible();
+  await shot(host, 'hostcap-acting');
+  await host.getByRole('button', { name: '✅ They got it!' }).click();
+  await host.getByRole('button', { name: 'Yes — +1 point' }).click();
+  await expect(host.getByTestId('result')).toContainText('Sahi Jawab!');
+  await expect(b.getByTestId('score-0')).toHaveText('1');
+
+  // Other team's turn: the host judges (the movie stays hidden — they're playing).
+  await host.getByRole('button', { name: /Next: Team 2/ }).click();
+  await b.getByTestId('card-back').click();
+  await expect(b.getByTestId('movie-card')).toBeVisible();
+  await expect(host.getByTestId('movie-hidden')).toBeVisible();
+  await host.getByRole('button', { name: '✅ Guessed it!' }).click();
+  await expect(host.getByTestId('score-1')).toHaveText('1');
+});

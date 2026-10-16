@@ -9,6 +9,8 @@ Two teams act out famous Hindi films. Only the two **team captains** and the **h
 | Team captain ×2 | `/charades/join/CODE?team=1` → `/c/CODE` | Their team's cards (flip to reveal, draw new cards, flip back through them with ‹ ›/swipe, ✅ They got it!, pass), or the movie picker when the rival team acts |
 | TV | `/ctv/CODE` | Scores, round, the clock, word blanks, the answer after each turn, movies played, the winner |
 
+**The host can play too:** in the lobby, under a team with a free seat, tap **🙋 I'll captain …** to be that team's captain on the host's own phone. On their team's turn the host gets the captain controls (face-down card, new cards, ✅ They got it!) and never sees their movie early; on the other team's turn they judge (the movie stays hidden unless "I'm playing too" is off), or pick the movie in rival mode.
+
 Hosting needs the same **host code** as Mafia Night (`HOST_CODE` on Render). Captains never need it.
 
 ## A turn

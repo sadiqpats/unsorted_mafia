@@ -288,6 +288,43 @@ describe('the rival picks a movie (server)', () => {
     expect(x.room.teams[0].score).toBe(1);
   });
 
+  it('the host can also play as a captain: commands work and they never see their own movie early', () => {
+    const changes: string[] = [];
+    const s = new CharadesService({
+      store: new Store(':memory:'),
+      rng: { int: (m) => Math.floor(m / 3), id: () => Math.random().toString(36).slice(2) },
+      onChange: (c) => changes.push(c),
+      onSessionEnded: () => undefined,
+    });
+    const { code, token } = s.create('Sadiq');
+    const host = s.authenticate(code, token)!;
+    const room = s.get(code)!;
+    expect(s.handle(code, host, { type: 'claim_captain', team: 0 }).ok).toBe(true);
+    expect(s.handle(code, host, { type: 'claim_captain', team: 1 }).error?.code).toBe('already_captain');
+    s.join(code, 1, 'Ravi');
+    s.handle(code, host, { type: 'update_settings', patch: { firstTeam: '0', hostSeesMovie: true } });
+    expect(s.handle(code, host, { type: 'start' }).ok).toBe(true);
+    const hv = () => buildCView(room, { kind: 'host' }, new Set(), clock);
+    expect(hv().me).toMatchObject({ kind: 'host', captainTeam: 0 });
+    expect(hv().turn!.card).toBeNull();
+    // Captain commands from the host's phone act for their team.
+    expect(s.handle(code, host, { type: 'reveal', seq: room.seq }).ok).toBe(true);
+    expect(hv().turn!.card).not.toBeNull();
+    expect(hv().turn!.cards).toHaveLength(1);
+    expect(s.handle(code, host, { type: 'got_it', seq: room.seq }).ok).toBe(true);
+    expect(room.teams[0].score).toBe(1);
+    s.handle(code, host, { type: 'next_turn', seq: room.seq });
+    // The other team's turn: as a judge who said they'd see movies, the host may see it once flipped.
+    const ravi = { kind: 'captain' as const, team: 1 as TeamIdx, id: room.teams[1].captain!.id, sessionVersion: 1 };
+    s.handle(code, ravi, { type: 'reveal', seq: room.seq });
+    expect(hv().turn!.card).not.toBeNull();
+    expect(hv().turn!.cards).toBeNull();
+    // Freeing the host's own seat works like any other.
+    s.handle(code, host, { type: 'end_game' });
+    expect(s.handle(code, host, { type: 'kick_captain', team: 0 }).ok).toBe(true);
+    expect(hv().me).toMatchObject({ captainTeam: null });
+  });
+
   it('the acting team cannot pick its own movie', () => {
     const x = svc(async () => null);
     const me = { kind: 'captain' as const, team: 0 as TeamIdx, id: x.room.teams[0].captain!.id, sessionVersion: 1 };

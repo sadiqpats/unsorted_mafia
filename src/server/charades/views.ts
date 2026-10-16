@@ -1,4 +1,4 @@
-import { winnerOf } from '../../shared/charades/engine';
+import { hostTeamOf, winnerOf } from '../../shared/charades/engine';
 import { wordCount } from '../../shared/charades/movie';
 import type { Card, CardView, CRoom, CView, TeamIdx } from '../../shared/charades/types';
 
@@ -17,6 +17,9 @@ function canSeeCard(room: CRoom, v: CViewer): boolean {
   const t = room.turn;
   if (!t?.card) return false;
   if (t.stage === 'done') return true;
+  // A host who captains a team sees exactly what that team's captain may see — never more.
+  const ht = v.kind === 'host' ? hostTeamOf(room) : null;
+  if (ht !== null) return canSeeCard(room, { kind: 'captain', team: ht }) || (ht !== t.team && (room.settings.hostSeesMovie || t.flippedByHost === true));
   // The host sees it only if they said they aren't playing (and always after "Flip it here", which they chose).
   if (v.kind === 'host') return room.settings.hostSeesMovie || t.flippedByHost === true;
   if (v.kind !== 'captain') return false;
@@ -48,12 +51,19 @@ export function buildCView(room: CRoom, v: CViewer, online: Set<string>, now: nu
           tookMs: t.tookMs,
           words: showWords ? wordCount(t.card!.title) : null,
           card: canSeeCard(room, v) ? cardView(t.card!) : null,
-          cards: v.kind === 'captain' && v.team === t.team && t.stage === 'acting' ? (t.cards ?? []).map(cardView) : null,
+          cards: (v.kind === 'captain' ? v.team : v.kind === 'host' ? hostTeamOf(room) : null) === t.team && t.stage === 'acting' ? (t.cards ?? []).map(cardView) : null,
           current: t.current ?? 0,
           cardCount: (t.cards ?? []).length,
           checking: !!t.checking,
           // When the host plays, an unverified rival title is approved blind (it's the other team's secret).
-          pending: v.kind === 'host' && t.pending ? (room.settings.hostSeesMovie ? t.pending : { title: '', reason: t.pending.reason }) : t.pending ? { title: '', reason: '' } : null,
+          pending:
+            v.kind === 'host' && t.pending
+              ? room.settings.hostSeesMovie && hostTeamOf(room) !== t.team
+                ? t.pending
+                : { title: '', reason: t.pending.reason }
+              : t.pending
+                ? { title: '', reason: '' }
+                : null,
         }
       : null,
     history: room.history,
@@ -62,7 +72,7 @@ export function buildCView(room: CRoom, v: CViewer, online: Set<string>, now: nu
       v.kind === 'captain'
         ? { kind: 'captain', team: v.team, name: room.teams[v.team].captain?.name ?? '', rivalNote: t && t.team !== v.team ? t.rivalNote : null }
         : v.kind === 'host'
-          ? { kind: 'host' }
+          ? { kind: 'host', captainTeam: hostTeamOf(room), rivalNote: t && hostTeamOf(room) !== null && t.team !== hostTeamOf(room) ? t.rivalNote : null }
           : { kind: 'tv' },
   };
 }

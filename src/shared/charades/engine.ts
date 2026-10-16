@@ -142,6 +142,20 @@ export function joinCaptain(room: CRoom, team: TeamIdx, captain: { id: string; n
   touch(room, now);
 }
 
+/** Captain id used when the host takes a seat on their own phone. */
+export const HOST_CAPTAIN = 'host';
+
+export const hostTeamOf = (room: CRoom): TeamIdx | null => {
+  const i = room.teams.findIndex((t) => t.captain?.id === HOST_CAPTAIN);
+  return i < 0 ? null : (i as TeamIdx);
+};
+
+/** The host plays as a team's captain on the same phone (one seat at most). */
+export function claimCaptain(room: CRoom, team: TeamIdx, now: number) {
+  if (hostTeamOf(room) !== null) fail('already_captain', 'You’re already a captain. Free that seat first.');
+  joinCaptain(room, team, { id: HOST_CAPTAIN, name: room.hostName, tokenHash: room.hostTokenHash }, now);
+}
+
 export function kickCaptain(room: CRoom, team: TeamIdx, now: number) {
   if (!room.teams[team].captain) fail('no_captain', 'That team has no captain yet.');
   room.teams[team].captain = null;

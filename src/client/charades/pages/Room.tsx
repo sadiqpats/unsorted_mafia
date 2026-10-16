@@ -141,13 +141,67 @@ function HostPanel({ view, send, serverNow }: { view: CView; send: Send; serverN
       <div className="space-y-5">
         <Scoreboard view={view} />
         <RoundLine view={view} />
-        {view.status === 'over' ? <HostOver view={view} send={send} /> : <HostTurn view={view} send={send} left={left} />}
+        {view.status === 'over' ? <HostOver view={view} send={send} /> : <HostMain view={view} send={send} left={left} />}
       </div>
       <aside className="space-y-5">
         <HostTools view={view} send={send} />
         <History view={view} />
       </aside>
     </div>
+  );
+}
+
+/**
+ * What the host's phone shows mid-game. A host who also captains a team gets that
+ * team's captain controls on their own turn (and never sees their movie early),
+ * the movie picker when the rival team picks, and the normal judge controls otherwise.
+ */
+function HostMain({ view, send, left }: { view: CView; send: Send; left: number | null }) {
+  const me = view.me as Extract<CView['me'], { kind: 'host' }>;
+  const t = view.turn;
+  const team = me.captainTeam;
+  if (team === null || !t) return <HostTurn view={view} send={send} left={left} />;
+  // Seen as a captain: they confirm their own team's guess (there's no separate judge for them).
+  const asCaptain = { ...view, settings: { ...view.settings, hostSeesMovie: false }, me: { kind: 'captain', team, name: view.hostName, rivalNote: me.rivalNote } } as CView;
+  const badge = (
+    <p className="text-center">
+      <span className={`chip team-chip-${team}`}>
+        👑 Host + captain · <b>{view.teams[team].name}</b>
+      </span>
+    </p>
+  );
+  if (t.team === team && t.stage !== 'approval' && t.stage !== 'done') {
+    return (
+      <div className="space-y-4">
+        {badge}
+        <MyTurn view={asCaptain} send={send} left={left} />
+        {t.stage === 'acting' && <HostPause view={view} send={send} />}
+      </div>
+    );
+  }
+  if (t.team !== team && t.stage === 'picking' && view.settings.picker === 'rival') {
+    return (
+      <div className="space-y-4">
+        {badge}
+        <RivalPicker view={asCaptain} send={send} note={me.rivalNote} />
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-4">
+      {badge}
+      <HostTurn view={view} send={send} left={left} />
+    </div>
+  );
+}
+
+function HostPause({ view, send }: { view: CView; send: Send }) {
+  const { act, busy } = useAct(send);
+  const paused = view.turn?.pausedLeft !== null;
+  return (
+    <button className="btn btn-ghost w-full" disabled={busy} onClick={() => act({ type: paused ? 'resume' : 'pause', seq: view.seq })}>
+      {paused ? '▶ Resume the clock' : '⏸ Pause the clock'}
+    </button>
   );
 }
 
@@ -288,6 +342,9 @@ function TeamInvite({ view, team, url, send }: { view: CView; team: TeamIdx; url
   const { act } = useAct(send);
   const confirm = useConfirm();
   const t = view.teams[team];
+  const hostTeam = view.me.kind === 'host' ? view.me.captainTeam : null;
+  const mine = hostTeam === team;
+  const hostFree = view.me.kind === 'host' && hostTeam === null;
   const [name, setName] = useState(t.name);
   useEffect(() => setName(t.name), [t.name]);
   const save = (e?: FormEvent) => {
@@ -307,10 +364,15 @@ function TeamInvite({ view, team, url, send }: { view: CView; team: TeamIdx; url
           <span>
             <span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${t.captain.online ? 'bg-[#6fe39b]' : 'bg-white/30'}`} aria-hidden="true" />
             Captain <b>{t.captain.name}</b>
+            {mine && ' (you, on this phone)'}
           </span>
           <button
             className="text-xs text-white/70 underline"
-            onClick={async () => (await confirm({ title: 'Free this seat?', body: `${t.captain!.name} will be signed out so someone else can be ${t.name}’s captain.`, confirm: 'Free the seat', danger: true })) && act({ type: 'kick_captain', team })}
+            onClick={async () =>
+              mine
+                ? act({ type: 'kick_captain', team })
+                : (await confirm({ title: 'Free this seat?', body: `${t.captain!.name} will be signed out so someone else can be ${t.name}’s captain.`, confirm: 'Free the seat', danger: true })) && act({ type: 'kick_captain', team })
+            }
           >
             Free seat
           </button>
@@ -319,6 +381,11 @@ function TeamInvite({ view, team, url, send }: { view: CView; team: TeamIdx; url
         <div className="grid place-items-center gap-1.5 py-1">
           <QR text={url} size={132} />
           <span className="text-xs text-white/75">Scan to be {t.name}’s captain</span>
+          {hostFree && (
+            <button className="btn btn-marigold mt-1 !min-h-10 w-full !py-1.5 text-sm" onClick={() => act({ type: 'claim_captain', team })}>
+              🙋 I’ll captain {t.name} (on this phone)
+            </button>
+          )}
         </div>
       )}
     </div>
