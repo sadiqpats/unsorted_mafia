@@ -5,9 +5,9 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 | Suite | Command | Result |
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ no errors |
-| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 161 / 161 |
+| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 164 / 164 |
 | Integration (real server + socket/HTTP clients) | `npm test` | ✅ 33 / 33 |
-| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 25 / 25 |
+| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 27 / 27 |
 | Production build | `npm run build` | ✅ |
 
 ## Dumb Charades
@@ -62,6 +62,10 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 ## Thief & anonymous Mafia plan
 - **Unit (`roles.test.ts`):** a Thief with the stolen Mafia Hit joins the vote (team, changeable); the plan never contains a voter's id or name; 2 Mafia + Thief = 3 anonymous votes and **one** kill; the anonymous order changes between nights; Resurrect can be stolen from round 2, cancelling the Imposter's Dawn revive, and the Thief revives at night.
 - **End-to-end (`gameplay.spec.ts`):** the Thief steals the Mafia Hit, sees “you are Mafia N” and no Mafia names; each Mafia sees “Mafia N wants to kill X” and never the Thief's name; the shared target dies. The Godfather test checks the anonymous plan and the named family reminder.
+
+## Godfather (Evil), the clock, Bollywood Mafia Night
+- **Unit:** the Godfather is Evil and doesn't count for a Mafia takeover (1 Mafia + Godfather vs 2 plays on; 2 Mafia vs 2 ends it) but wins with them; the clock is always on (Dawn 30 s and Night 60 s after a break nobody can act in, an open-ended discussion, a 60 s vote; a missed action just doesn't count); Bollywood names, illustrations and announcement text.
+- **End-to-end (`bollywood.spec.ts`):** Bollywood cards show “Gabbar (Mafia)” / “Munna MBBS (Doctor)”; the break shows “Night begins in…” then the panel opens. The gameplay tests open the vote from the Day discussion.
 
 ## Sound modes & the dead's updates
 - **Unit (`announcements.test.ts`):** kills, quiet nights, vote-outs and the final result are tagged for sound design.

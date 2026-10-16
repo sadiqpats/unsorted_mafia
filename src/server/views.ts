@@ -90,6 +90,7 @@ export function buildPublic(room: Room, connected: Set<string>, now: number): Pu
       round: g.round,
       phaseSeq: g.phaseSeq,
       phaseEndsAt: g.phaseEndsAt,
+      phaseOpensAt: g.phaseOpensAt ?? null,
       paused: g.pausedRemainingMs !== null,
       pausedRemainingMs: g.pausedRemainingMs,
       nightProgress,
@@ -217,7 +218,7 @@ function buildHost(room: Room): HostPanel {
   if (g?.phase === 'voting') for (const p of eligibleVoters(room)) voteSubmitted[p.id] = !!g.day.votes[p.id];
   let alignmentAlive: Record<Alignment, number> | null = null;
   if (g && secrets) {
-    alignmentAlive = { good: 0, mafia: 0, neutral: 0 };
+    alignmentAlive = { good: 0, mafia: 0, evil: 0, neutral: 0 };
     for (const p of room.players) if (p.alive) alignmentAlive[roleAlignment(p.roleId, g.settings)]++;
   }
   return {

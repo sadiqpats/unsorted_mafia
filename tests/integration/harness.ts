@@ -85,6 +85,8 @@ export async function createLobby(base: string, n: number, opts: { hostPlays?: b
     await client.connected();
     players.push({ client, id: j.body.playerId, token: j.body.token, name });
   }
+  // No opening break between phases in tests (it's covered by unit tests).
+  await host.send({ type: 'update_settings', patch: { bufferSeconds: 0 } });
   return { code, host, hostToken, players };
 }
 

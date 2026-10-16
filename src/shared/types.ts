@@ -1,6 +1,7 @@
 import type { Settings } from './settings';
 
-export type Alignment = 'good' | 'mafia' | 'neutral';
+/** evil = the Godfather: on the Mafia's side and wins with them, but not a Mafia member. */
+export type Alignment = 'good' | 'mafia' | 'evil' | 'neutral';
 
 export type Phase =
   | 'lobby'
@@ -156,7 +157,10 @@ export interface Game {
   phaseSeq: number;
   phaseStartedAt: number;
   phaseEndsAt: number | null;
+  /** Actions open at this time (after the short break that starts Dawn and Night). */
+  phaseOpensAt?: number;
   pausedRemainingMs: number | null;
+  pausedAt?: number | null;
   night: { actions: Record<string, NightAction> };
   day: { votes: Record<string, Vote>; runoff: string[] | null; runoffUsed: boolean };
   pendingTie: string[] | null;

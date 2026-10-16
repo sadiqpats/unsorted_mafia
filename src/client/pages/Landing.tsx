@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ROLES, ROLE_ORDER } from '../../shared/roles';
+import { BOLLYWOOD, ROLES, ROLE_ORDER } from '../../shared/roles';
 import { defaultSettings } from '../../shared/settings';
 import { RoleArt } from '../components/RoleArt';
 import { OtherGame } from '../components/OtherGame';
@@ -84,8 +84,12 @@ export default function Landing() {
               const a = r.alignment(settings as never);
               return (
                 <article key={id} className="card group flex flex-col items-center p-3 text-center sm:p-5 transition hover:-translate-y-1 hover:border-gold/50">
-                  <RoleArt art={r.art} alignment={a} size={72} />
+                  <span className="relative">
+                    <RoleArt art={r.art} alignment={a} size={72} />
+                    <RoleArt art={BOLLYWOOD[id].art} alignment={a} size={32} className="absolute -bottom-1 -right-3 rounded-full ring-2 ring-coal" />
+                  </span>
                   <h3 className="mt-3 font-[family-name:var(--font-display)] text-lg text-bone">{r.name}</h3>
+                  <p className="text-xs font-semibold text-[#ffcf6b]">🎬 {BOLLYWOOD[id].name}</p>
                   <div className="mt-1.5">
                     <AlignmentBadge alignment={a} />
                   </div>
@@ -105,7 +109,7 @@ export default function Landing() {
                 <b className="text-gold">Town (Good)</b> wins when every Mafia member is eliminated.
               </li>
               <li>
-                <b className="text-ember">Mafia</b> wins when they equal or outnumber everyone else alive.
+                <b className="text-ember">Mafia</b> wins when its members equal or outnumber everyone else alive. The <b className="text-[#e07ac8]">Godfather</b> (Evil) doesn’t count towards that, but wins with them.
               </li>
               <li>
                 <b className="text-neutral">Neutrals</b> have their own goals — the Joker wants to be voted out; the Thief and Imposter want to survive.

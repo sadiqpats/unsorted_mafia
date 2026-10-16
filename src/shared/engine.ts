@@ -7,7 +7,7 @@
  *
  * Resolution order (night):  see NIGHT ORDER below and docs/RULES.md.
  */
-import { ABILITIES, ROLES, ROLE_ORDER, isMafiaTeam, roleAlignment, type AbilityDef } from './roles';
+import { ABILITIES, ROLES, ROLE_ORDER, isMafiaTeam, roleAlignment, roleTitle, themeText, type AbilityDef } from './roles';
 import { analyzeDistribution, suggestDistribution } from './distribution';
 import { MAX_PLAYERS, defaultSettings, fillTemplate, mergeSettings, type Settings, type SettingsPatch } from './settings';
 import type { EventTag, Game, LogEntry, MorningReport, NightAction, Phase, Player, Room, Verdict, WinResult } from './types';
@@ -305,23 +305,23 @@ export function startGame(room: Room, now: number, rng: Rng, opts: { force?: boo
   room.status = 'active';
   enterPhase(room, 'reveal', now);
   addLog(room, now, 'start', `The game has begun with ${n} players. Check your phone — privately.`);
-  addLog(room, now, 'roles', 'Roles: ' + seated.map((p) => `${p.name}=${ROLES[p.roleId!].name}`).join(', '), 'host');
+  addLog(room, now, 'roles', 'Roles: ' + seated.map((p) => `${p.name}=${roleTitle(p.roleId, room.settings)}`).join(', '), 'host');
 }
 
 // ---------------------------------------------------------------- phases
 
-/** With timers off (default) no phase has a clock: it ends when everyone has acted (or the host moves on). */
+/**
+ * The clock (always on): Dawn and Night are timed, the Day's discussion is open-ended (the
+ * host starts the vote) and the vote is timed. Role reveal ends when everyone has looked.
+ */
 function phaseDuration(s: Settings, phase: Phase): number | null {
-  if (!s.timers) return null;
   switch (phase) {
-    case 'reveal':
-      return s.revealSeconds;
     case 'prenight':
       return s.preNightSeconds;
     case 'night':
       return s.nightSeconds;
     case 'voting':
-      return s.daySeconds;
+      return s.voteSeconds ?? 60;
     default:
       return null;
   }
@@ -336,9 +336,19 @@ function enterPhase(room: Room, phase: Phase, now: number) {
   g.phase = phase;
   g.phaseSeq += 1;
   g.phaseStartedAt = now;
+  // Dawn and Night open with a short break (the news lands, everyone gets ready), then the clock runs.
+  const buffer = phase === 'prenight' || phase === 'night' ? (g.settings.bufferSeconds ?? 8) : 0;
+  g.phaseOpensAt = buffer > 0 ? now + buffer * 1000 : undefined;
   const d = phaseDuration(g.settings, phase);
-  g.phaseEndsAt = d === null ? null : now + d * 1000;
+  g.phaseEndsAt = d === null ? null : (g.phaseOpensAt ?? now) + d * 1000;
   g.pausedRemainingMs = null;
+  g.pausedAt = null;
+}
+
+/** Are actions open yet (past the break at the start of Dawn / Night)? */
+export function phaseOpen(room: Room, now: number): boolean {
+  const g = room.game;
+  return !!g && g.pausedRemainingMs === null && (g.phaseOpensAt === undefined || now >= g.phaseOpensAt);
 }
 
 /**
@@ -380,18 +390,28 @@ function startNight(room: Room, now: number) {
   addLog(room, now, 'phase', `Night ${g.round} began.`, 'host');
 }
 
-/** Day = morning news + discussion + voting in one phase. It ends when every eligible player has voted. */
+/**
+ * Day = the news + an open-ended discussion (no clock). The host starts the vote, which is
+ * timed. A runoff goes straight to a new vote.
+ */
 function startDay(room: Room, now: number, runoff: string[] | null) {
   const g = room.game!;
   g.day = { votes: {}, runoff, runoffUsed: runoff ? true : false };
+  if (runoff) {
+    enterPhase(room, 'voting', now);
+    addLog(room, now, 'phase', `Runoff vote began between ${runoff.map((id) => getPlayer(room, id).name).join(' and ')}.`, 'host');
+    return;
+  }
+  enterPhase(room, 'discussion', now);
+  // Phase changes are shown on screen; they don't clutter the public announcements.
+  addLog(room, now, 'phase', `Day ${g.round} began: discussion.`, 'host');
+}
+
+function startVoting(room: Room, now: number) {
+  const g = room.game!;
+  g.day = { votes: {}, runoff: null, runoffUsed: false };
   enterPhase(room, 'voting', now);
-  addLog(
-    room,
-    now,
-    'phase',
-    runoff ? `Runoff vote began between ${runoff.map((id) => getPlayer(room, id).name).join(' and ')}.` : `Day ${g.round} began.`,
-    'host', // phase changes are shown on screen; they don't clutter the public announcements
-  );
+  addLog(room, now, 'phase', `Voting began (round ${g.round}).`, 'host');
 }
 
 /** Advance to the next phase. `by` is recorded in the log. */
@@ -406,8 +426,9 @@ export function advancePhase(room: Room, now: number, rng: Rng, by: 'timer' | 'h
     case 'night':
       return resolveNight(room, now, rng);
     case 'morning':
-    case 'discussion':
       return startDay(room, now, null);
+    case 'discussion':
+      return startVoting(room, now);
     case 'voting':
       return resolveVotes(room, now);
     case 'verdict':
@@ -424,12 +445,12 @@ export function tick(room: Room, now: number, rng: Rng): boolean {
   const g = room.game;
   if (g.pausedRemainingMs !== null || g.phase === 'game_over') return false;
   const s = g.settings;
-  // Everyone has acted → move on (this is the whole flow when timers are off).
+  // Everyone has acted → move on early.
   if (g.phase === 'reveal' && room.players.every((p) => p.revealAck)) {
     advancePhase(room, now, rng, 'auto');
     return true;
   }
-  if ((g.phase === 'night' || g.phase === 'prenight') && nightComplete(room)) {
+  if ((g.phase === 'night' || g.phase === 'prenight') && phaseOpen(room, now) && nightComplete(room)) {
     advancePhase(room, now, rng, 'auto');
     return true;
   }
@@ -437,7 +458,8 @@ export function tick(room: Room, now: number, rng: Rng): boolean {
     advancePhase(room, now, rng, 'auto');
     return true;
   }
-  if (s.timers && g.phaseEndsAt !== null && now >= g.phaseEndsAt && !(g.phase === 'verdict' && g.pendingTie)) {
+  // Time's up: whoever hasn't chosen simply doesn't count, and the game moves on.
+  if (g.phaseEndsAt !== null && now >= g.phaseEndsAt && !(g.phase === 'verdict' && g.pendingTie)) {
     advancePhase(room, now, rng, 'timer');
     return true;
   }
@@ -632,6 +654,7 @@ export function submitNightAction(
   now: number,
 ) {
   const g = requirePhase(room, room.game?.phase === 'prenight' ? 'prenight' : 'night', input.phaseSeq);
+  if (!phaseOpen(room, now)) fail('not_open', 'Hold on — it opens in a moment.');
   const opt = nightOptions(room, playerId).find((o) => o.abilityId === input.abilityId);
   if (!opt) fail('not_eligible', 'You cannot use that ability right now.');
   if (input.targetId !== null && !opt!.targets.includes(input.targetId)) fail('invalid_target', 'That target is not allowed.');
@@ -838,7 +861,7 @@ function doRevive(room: Room, ctx: NightCtx, a: NightAction, now: number, rng: R
   g.stats.revives++;
   addPrivate(room, rng, now, actor.id, 'revive', `It worked — ${t.name} is back in the game.`);
   addPrivate(room, rng, now, t.id, 'revive', 'You have been brought back to life. Welcome back.');
-  addLog(room, now, 'night', `${actor.name} (${ROLES[actor.roleId!].name}) revived ${t.name}.`, 'host');
+  addLog(room, now, 'night', `${actor.name} (${roleTitle(actor.roleId, s)}) revived ${t.name}.`, 'host');
 }
 
 /**
@@ -937,7 +960,7 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
   const lines: [string, EventTag][] = [];
   for (const id of ctx.deaths) {
     const p = getPlayer(room, id);
-    lines.push([fillTemplate(A.nightDeath, { name: p.name }) + (s.revealRoleOnDeath ? ` They were the ${ROLES[p.roleId!].name}.` : ''), 'kill']);
+    lines.push([fillTemplate(A.nightDeath, { name: p.name }) + (s.revealRoleOnDeath ? ` They were ${roleTitle(p.roleId, s)}.` : ''), 'kill']);
   }
   if (!ctx.deaths.length) lines.push([A.noDeath, 'quiet']);
   if (ctx.saved.length && s.announceSaves) lines.push(['Someone was attacked in the night — but survived.', 'saved']);
@@ -980,7 +1003,7 @@ export function resolvePreNight(room: Room, now: number, rng: Rng) {
   }
   const lines: [string, EventTag][] = [];
   for (const id of ctx.revived) lines.push([fillTemplate(A.revived, { name: getPlayer(room, id).name }), 'revive']);
-  if (ctx.stolen.length) lines.push([A.theft, 'theft']);
+  if (ctx.stolen.length) lines.push([themeText(A.theft, g.settings), 'theft']);
   if (!lines.length) lines.push([A.quietPreNight, 'dawn-quiet']);
   for (const [l, tag] of lines) addLog(room, now, 'prenight', l, 'public', tag);
   const win = checkWin(room);
@@ -1124,15 +1147,15 @@ function eliminateByVote(room: Room, targetId: string, verdict: Verdict, now: nu
   g.stats.voteEliminations++;
   verdict.eliminatedId = t.id;
   g.lastVerdict = verdict;
-  addLog(room, now, 'verdict', fillTemplate(s.announcements.voteOut, { name: t.name }) + (s.revealRoleOnDeath && t.roleId !== 'jester' ? ` They were the ${ROLES[t.roleId!].name}.` : ''), 'public', 'voteout');
+  addLog(room, now, 'verdict', fillTemplate(s.announcements.voteOut, { name: t.name }) + (s.revealRoleOnDeath && t.roleId !== 'jester' ? ` They were ${roleTitle(t.roleId, s)}.` : ''), 'public', 'voteout');
   if (t.roleId === 'jester') {
     verdict.jesterWin = true;
     g.jesterWinners.push(t.id);
     // Saying "they were the Jester" reveals a role, so mid-game it is only public if roles are revealed on death.
     const announceNow = s.jesterEndsGame || s.revealRoleOnDeath;
-    addLog(room, now, 'verdict', fillTemplate(s.announcements.jesterWin, { name: t.name }), announceNow ? 'public' : 'host', 'joker');
+    addLog(room, now, 'verdict', themeText(fillTemplate(s.announcements.jesterWin, { name: t.name }), s), announceNow ? 'public' : 'host', 'joker');
     if (s.jesterEndsGame) {
-      return endGame(room, { faction: 'jester', winnerIds: [t.id], reason: `${t.name} the Joker tricked the town into voting them out.` }, now);
+      return endGame(room, { faction: 'jester', winnerIds: [t.id], reason: themeText(`${t.name} the Joker tricked the town into voting them out.`, s) }, now);
     }
   }
   const win = checkWin(room);
@@ -1169,8 +1192,9 @@ export function checkWin(room: Room): WinResult | null {
   const alive = alivePlayers(room);
   // The Town wins when every MAFIA member (the killers) is dead — the Godfather does not count.
   const killers = alive.filter((p) => isMafiaTeam(p.roleId, s)).length;
-  // For a Mafia takeover, everyone on the Mafia side counts (Mafia + Godfather).
-  const mafiaSide = alive.filter((p) => roleAlignment(p.roleId, s) === 'mafia').length;
+  // A Mafia takeover counts Mafia MEMBERS only: the Godfather (Evil) is on their side but
+  // doesn't count, so 1 Mafia + Godfather vs 2 others plays on; 2 Mafia vs 2 others is a Mafia win.
+  const mafiaSide = killers;
   const others = alive.length - mafiaSide;
   let faction: WinResult['faction'] | null = null;
   let reason = '';
@@ -1187,7 +1211,10 @@ export function checkWin(room: Room): WinResult | null {
   if (!faction) return null;
   const winners = new Set<string>();
   if (faction === 'good' || faction === 'mafia') {
-    for (const p of room.players) if (roleAlignment(p.roleId, s) === faction) winners.add(p.id);
+    for (const p of room.players) {
+      const a = roleAlignment(p.roleId, s);
+      if (a === faction || (faction === 'mafia' && a === 'evil')) winners.add(p.id); // the Godfather wins with the Mafia
+    }
   }
   for (const p of alive) if (p.roleId && ROLES[p.roleId].winsBySurviving) winners.add(p.id);
   for (const id of room.game?.jesterWinners ?? []) winners.add(id);
@@ -1202,11 +1229,11 @@ function endGame(room: Room, win: WinResult, now: number) {
   enterPhase(room, 'game_over', now);
   room.status = 'over';
   if (!g.settings.jesterEndsGame && !g.settings.revealRoleOnDeath) {
-    for (const id of g.jesterWinners) addLog(room, now, 'verdict', fillTemplate(g.settings.announcements.jesterWin, { name: getPlayer(room, id).name }), 'public', 'joker');
+    for (const id of g.jesterWinners) addLog(room, now, 'verdict', themeText(fillTemplate(g.settings.announcements.jesterWin, { name: getPlayer(room, id).name }), g.settings), 'public', 'joker');
   }
   room.gamesPlayed++;
   const label = { good: 'The Town wins!', mafia: 'The Mafia wins!', jester: 'The Joker wins!', draw: 'It’s a draw.', none: 'Game ended.' }[win.faction];
-  addLog(room, now, 'gameover', `${label} ${win.reason}`, 'public', win.faction === 'good' ? 'win-town' : win.faction === 'mafia' ? 'win-mafia' : 'win-other');
+  addLog(room, now, 'gameover', themeText(`${label} ${win.reason}`, g.settings), 'public', win.faction === 'good' ? 'win-town' : win.faction === 'mafia' ? 'win-mafia' : 'win-other');
 }
 
 // ---------------------------------------------------------------- host controls
@@ -1216,6 +1243,7 @@ export function pauseGame(room: Room, now: number) {
   if (g.pausedRemainingMs !== null) return;
   g.pausedRemainingMs = g.phaseEndsAt === null ? -1 : Math.max(0, g.phaseEndsAt - now);
   g.phaseEndsAt = null;
+  g.pausedAt = now;
   addLog(room, now, 'pause', 'The Game Master paused the game.');
 }
 
@@ -1223,7 +1251,10 @@ export function resumeGame(room: Room, now: number) {
   const g = requireGame(room);
   if (g.pausedRemainingMs === null) return;
   g.phaseEndsAt = g.pausedRemainingMs < 0 ? null : now + g.pausedRemainingMs;
+  // A pause during the opening break pushes the opening back by the same amount.
+  if (g.pausedAt && g.phaseOpensAt && g.phaseOpensAt > g.pausedAt) g.phaseOpensAt += now - g.pausedAt;
   g.pausedRemainingMs = null;
+  g.pausedAt = null;
   addLog(room, now, 'pause', 'The game has resumed.');
 }
 
@@ -1242,7 +1273,7 @@ export function hostEliminate(room: Room, playerId: string, now: number) {
   if (!p.alive) fail('invalid_target', `${p.name} is already out.`);
   killPlayer(room, p, 'host');
   delete g.day.votes[p.id];
-  addLog(room, now, 'correction', `Game Master correction: ${p.name} has been removed from play.` + (g.settings.revealRoleOnDeath ? ` They were the ${ROLES[p.roleId!].name}.` : ''), 'public', 'removed');
+  addLog(room, now, 'correction', `Game Master correction: ${p.name} has been removed from play.` + (g.settings.revealRoleOnDeath ? ` They were ${roleTitle(p.roleId, g.settings)}.` : ''), 'public', 'removed');
   const win = checkWin(room);
   if (win) endGame(room, win, now);
 }

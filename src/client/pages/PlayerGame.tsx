@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { NightOption } from '../../shared/engine';
 import type { Ack, CommandInput } from '../../shared/protocol';
-import { ABILITIES, ROLES, roleAlignment } from '../../shared/roles';
+import { ABILITIES, ROLES, roleAlignment, roleArt, roleShort, roleTitle, themeText } from '../../shared/roles';
 import type { Alignment } from '../../shared/types';
 import type { ClientView, PublicPlayer } from '../../shared/view-types';
 import { Avatar } from '../components/Avatar';
@@ -13,7 +13,7 @@ import { PhotoPicker } from '../components/PhotoPicker';
 import { RoleArt } from '../components/RoleArt';
 import { uploadPhoto } from '../lib/photo';
 import { loadSession } from '../lib/session';
-import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, PlayerRow, Section, Timer, useToast } from '../components/ui';
+import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, PlayerRow, Section, Timer, useCountdown, useToast } from '../components/ui';
 
 type Send = (c: CommandInput) => Promise<Ack>;
 
@@ -50,6 +50,14 @@ const nameOf = (view: ClientView, id: string | null | undefined) => (id ? (view.
 
 const ACTION_PHASES = ['prenight', 'night', 'voting'];
 
+/** The announcements list without the lines already shown in this phase's news card (no repeats). */
+function withoutNews(view: ClientView) {
+  const g = view.game;
+  if (!g || !['prenight', 'night', 'discussion', 'voting'].includes(g.phase)) return view.feed;
+  const shown = new Set(g.news.map((n) => n.seq));
+  return view.feed.filter((e) => !shown.has(e.seq));
+}
+
 function CheckMark() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" className="check-draw text-ok" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -76,7 +84,8 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
         </div>
       )}
       {phase === 'reveal' && <RevealPanel view={view} send={send} />}
-      {(phase === 'night' || phase === 'prenight') && <NightPanel key={g.phaseSeq} view={view} send={send} />}
+      {(phase === 'night' || phase === 'prenight') && <NightPanel key={g.phaseSeq} view={view} send={send} serverNow={serverNow} />}
+      {phase === 'discussion' && <DiscussionPanel view={view} />}
       {phase === 'voting' && <DayPanel key={g.phaseSeq} view={view} send={send} />}
       {phase === 'verdict' && <VerdictPanel view={view} />}
       {phase === 'game_over' && <GameOverPanel view={view} />}
@@ -85,7 +94,7 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
       {/* The dead have no action, so they always get the full running commentary. */}
       {!me.alive && ACTION_PHASES.includes(phase) && (
         <Section title="Announcements">
-          <Feed entries={view.feed} limit={20} inGame />
+          <Feed entries={withoutNews(view)} limit={20} inGame />
         </Section>
       )}
       {!ACTION_PHASES.includes(phase) && (
@@ -97,7 +106,8 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
             </Section>
           )}
           <Section title="Announcements">
-            <Feed entries={view.feed} limit={12} inGame />
+            {/* Lines already in this phase's news card aren't repeated here. */}
+            <Feed entries={withoutNews(view)} limit={12} inGame />
           </Section>
         </>
       )}
@@ -111,10 +121,10 @@ function PhaseHeader({ view, serverNow }: { view: ClientView; serverNow: () => n
   return (
     <div className="card flex items-center justify-between gap-3 p-4">
       <div>
-        <div className="eyebrow">{roundLabel || 'Mafia Night'}</div>
+        <div className="eyebrow">{roundLabel || (view.settings.bollywood ? 'Bollywood Mafia Night' : 'Mafia Night')}</div>
         <h1 className="font-[family-name:var(--font-display)] text-2xl text-bone">{PHASE_LABEL[g.phase]}</h1>
       </div>
-      <Timer endsAt={g.phaseEndsAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
+      <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
     </div>
   );
 }
@@ -144,7 +154,7 @@ function DeadRoles({ view }: { view: ClientView }) {
         {view.players.map((p) => (
           <li key={p.id} className="flex justify-between gap-2 rounded-lg bg-black/30 px-3 py-2">
             <span>{p.name}</span>
-            <span className="text-gold">{ROLES[roles[p.id]]?.name ?? '—'}</span>
+            <span className="text-gold">{roleTitle(roles[p.id], view.settings) || '—'}</span>
           </li>
         ))}
       </ul>
@@ -194,14 +204,15 @@ function PlayerLobby({ view, send }: { view: ClientView; send: Send }) {
         <div className="mb-3 flex flex-wrap gap-2 text-xs">
           <span className="chip text-good">🛡️ Town {d.byAlignment.good}</span>
           <span className="chip text-ember">🗡 Mafia {d.byAlignment.mafia}</span>
+          {d.byAlignment.evil > 0 && <span className="chip text-[#e07ac8]">😈 Evil {d.byAlignment.evil}</span>}
           <span className="chip text-neutral">◆ Neutral {d.byAlignment.neutral}</span>
         </div>
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {counts.map(([id, c]) => (
             <li key={id} className="flex items-center gap-2 rounded-lg border border-line/60 p-2 text-sm">
-              <RoleArt art={ROLES[id].art} alignment={roleAlignment(id, view.settings)} size={32} />
+              <RoleArt art={roleArt(id, view.settings)} alignment={roleAlignment(id, view.settings)} size={32} />
               <span>
-                {ROLES[id].name} {c > 1 && <span className="text-mute">×{c}</span>}
+                {roleTitle(id, view.settings)} {c > 1 && <span className="text-mute">×{c}</span>}
               </span>
             </li>
           ))}
@@ -246,11 +257,11 @@ function PlayersList({ view, lobby = false }: { view: ClientView; lobby?: boolea
             <>
               {p.id === view.me?.id && <span className="text-gold">You</span>}
               {lobby && <span>{p.ready ? '✓ Ready' : 'Not ready'}</span>}
-              {p.revealedRoleId && <span>{ROLES[p.revealedRoleId]?.name}</span>}
+              {p.revealedRoleId && <span>{roleTitle(p.revealedRoleId, view.settings)}</span>}
               {/* Nothing secret in this always-visible list: a neighbour could glance at an awake phone.
                   Mafia teammates live behind the hold-to-reveal card and the night panel; the dead's
                   role list sits behind its own shield (DeadRoles). */}
-              {!p.revealedRoleId && view.game?.phase === 'game_over' && view.me?.allRoles?.[p.id] && <span className="text-gold">{ROLES[view.me.allRoles[p.id]]?.name}</span>}
+              {!p.revealedRoleId && view.game?.phase === 'game_over' && view.me?.allRoles?.[p.id] && <span className="text-gold">{roleTitle(view.me.allRoles[p.id], view.settings)}</span>}
             </>
           }
         />
@@ -270,7 +281,7 @@ function RevealPanel({ view, send }: { view: ClientView; send: Send }) {
       <p className="text-center text-sm text-mute">Make sure nobody can see your screen.</p>
       <HoldToReveal>
         {/* Team info first: a held card can't be scrolled, so it must be visible straight away. */}
-        {(me.mafia || me.knownMafia) && <RoleBadge roleId={me.roleId!} alignment={me.alignment!} />}
+        {(me.mafia || me.knownMafia) && <RoleBadge roleId={me.roleId!} alignment={me.alignment!} settings={view.settings} />}
         {me.mafia && <MafiaTeam view={view} />}
         {me.knownMafia && <GodfatherKnows view={view} />}
         <div className={me.mafia || me.knownMafia ? 'mt-5 border-t border-line/50 pt-4' : ''}>
@@ -285,13 +296,14 @@ function RevealPanel({ view, send }: { view: ClientView; send: Send }) {
 }
 
 /** Small "You are the Mafia" header shown above the team list on the role card. */
-function RoleBadge({ roleId, alignment }: { roleId: string; alignment: Alignment }) {
+function RoleBadge({ roleId, alignment, settings }: { roleId: string; alignment: Alignment; settings: ClientView['settings'] }) {
   return (
     <div className="flex items-center gap-3">
-      <RoleArt art={ROLES[roleId].art} alignment={alignment} size={56} />
+      <RoleArt art={roleArt(roleId, settings)} alignment={alignment} size={56} />
       <div className="text-left">
-        <div className="eyebrow !text-[0.62rem]">You are the</div>
-        <div className="brand-title text-2xl font-bold">{ROLES[roleId].name}</div>
+        <div className="eyebrow !text-[0.62rem]">You are{settings.bollywood ? '' : ' the'}</div>
+        <div className="brand-title text-2xl font-bold">{roleShort(roleId, settings)}</div>
+        {settings.bollywood && <div className="text-xs text-mute">({ROLES[roleId].name})</div>}
       </div>
     </div>
   );
@@ -319,7 +331,7 @@ function MafiaTeam({ view }: { view: ClientView }) {
           );
         })}
       </ul>
-      <p className="mt-2 text-xs text-mute">You never learn who the Godfather is.</p>
+      <p className="mt-2 text-xs text-mute">{themeText('You never learn who the Godfather is.', view.settings)}</p>
     </div>
   );
 }
@@ -344,7 +356,7 @@ function GodfatherKnows({ view }: { view: ClientView }) {
           );
         })}
       </ul>
-      <p className="mt-2 text-xs text-mute">They don’t know you are the Godfather. Protect them by day.</p>
+      <p className="mt-2 text-xs text-mute">{themeText('They don’t know you are the Godfather. Protect them by day.', view.settings)}</p>
     </div>
   );
 }
@@ -396,9 +408,12 @@ function Notebook({ view }: { view: ClientView }) {
 
 // ======================================================================= night
 
-function NightPanel({ view, send }: { view: ClientView; send: Send }) {
+function NightPanel({ view, send, serverNow }: { view: ClientView; send: Send; serverNow: () => number }) {
   const me = view.me!;
   const night = me.night;
+  const g = view.game!;
+  const toOpen = useCountdown(g.phaseOpensAt, serverNow, g.pausedRemainingMs);
+  const waiting = toOpen !== null && toOpen > 0 && g.pausedRemainingMs === null;
   if (!night || night.options.length === 0) {
     // Nothing to do (e.g. eliminated): still see what just happened.
     return (
@@ -413,6 +428,19 @@ function NightPanel({ view, send }: { view: ClientView; send: Send }) {
   }
   const allDone = night.options.every((o) => o.abilityId in night.submitted);
   const pre = view.game!.phase === 'prenight';
+  if (waiting) {
+    // The short break at the start of Dawn/Night: the news lands, everyone gets ready.
+    return (
+      <div className="space-y-3">
+        <PhaseNews view={view} />
+        <div className="card p-6 text-center" data-testid="get-ready">
+          <p className="eyebrow">{pre ? 'Dawn' : 'Night'} begins in</p>
+          <p className="mt-1 font-[family-name:var(--font-display)] text-6xl tabular-nums text-gold">{Math.ceil(toOpen / 1000)}</p>
+          <p className="mt-2 text-sm text-mute">Then you have {pre ? view.settings.preNightSeconds : view.settings.nightSeconds} seconds to choose. Anything not chosen in time doesn’t count.</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-3">
       <PhaseNews view={view} />
@@ -608,11 +636,34 @@ function MafiaVotes({ view }: { view: ClientView }) {
 // ======================================================================= day
 
 /** Day = news + discussion + secret ballot. The day ends once every eligible player has voted. */
+/** Day: the news, then talk. No clock — the host opens the vote when the table is ready. */
+function DiscussionPanel({ view }: { view: ClientView }) {
+  return (
+    <div className="space-y-3">
+      <PhaseNews view={view} />
+      {view.me!.alive && freshNotes(view).length > 0 && (
+        <PrivacyShield label="You have a private message">
+          <div className="space-y-2 pt-6">
+            <PrivateNotes view={view} />
+          </div>
+        </PrivacyShield>
+      )}
+      <div className="card p-5 text-center" data-testid="discussion">
+        <div className="text-3xl" aria-hidden="true">
+          🗣️
+        </div>
+        <p className="mt-1 font-[family-name:var(--font-display)] text-xl text-bone">Discuss. Accuse. Defend.</p>
+        <p className="mt-1 text-sm text-mute">Take your time. The host opens the vote when the table is ready — then you have {view.settings.voteSeconds ?? 60} seconds.</p>
+      </div>
+    </div>
+  );
+}
+
 function DayPanel({ view, send }: { view: ClientView; send: Send }) {
   return (
     <div className="space-y-3">
       <PhaseNews view={view} />
-      <p className="text-center text-sm text-mute">Discuss, then vote. The day ends when everyone has voted.</p>
+      <p className="text-center text-sm text-mute">Vote before the clock runs out — a missing vote simply doesn’t count.</p>
       <VotingPanel view={view} send={send} />
     </div>
   );
@@ -772,7 +823,9 @@ export function GameOverPanel({ view, hostControls }: { view: ClientView; hostCo
   const g = view.game!;
   const w = g.winner!;
   const winners = new Set(w.winnerIds);
-  const headline = { good: 'The Town Prevails', mafia: 'The Mafia Rules', jester: 'The Joker Laughs Last', draw: 'Nobody Survives', none: 'Game Ended' }[w.faction];
+  const headline = view.settings.bollywood
+    ? { good: 'Gaon Bach Gaya!', mafia: 'Gabbar Ka Raaj', jester: 'Baburao Hasta Hai!', draw: 'Koi Nahi Bacha', none: 'Game Khatam' }[w.faction]
+    : { good: 'The Town Prevails', mafia: 'The Mafia Rules', jester: 'The Joker Laughs Last', draw: 'Nobody Survives', none: 'Game Ended' }[w.faction];
   const me = view.me;
   const iWon = me ? winners.has(me.id) : false;
   const stats = g.stats;
@@ -795,13 +848,13 @@ export function GameOverPanel({ view, hostControls }: { view: ClientView; hostCo
             return (
               <li key={p.id} className={`flex items-center gap-3 rounded-xl border p-2.5 ${winners.has(p.id) ? 'border-gold/60 bg-gold/5' : 'border-line/60'}`}>
                 <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={44} />
-                {r && <RoleArt art={r.art} alignment={a} size={36} />}
+                {r && <RoleArt art={roleArt(p.revealedRoleId, view.settings)} alignment={a} size={36} />}
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">
                     {p.name} {winners.has(p.id) && <span className="text-gold">🏆</span>}
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-mute">
-                    {r?.name} {a && <AlignmentBadge alignment={a} />} <span>{p.alive ? 'Survived' : '☠ Eliminated'}</span>
+                    {roleTitle(p.revealedRoleId, view.settings)} {a && <AlignmentBadge alignment={a} />} <span>{p.alive ? 'Survived' : '☠ Eliminated'}</span>
                   </div>
                 </div>
               </li>

@@ -5,7 +5,7 @@ import { revealPlan } from '../lib/reveal';
 import { music } from '../lib/sound';
 import type { EventTag } from '../../shared/types';
 
-type Scene = 'dawn' | 'night' | 'day' | 'runoff' | 'tie' | 'over' | 'reveal';
+type Scene = 'dawn' | 'night' | 'day' | 'vote' | 'runoff' | 'tie' | 'over' | 'reveal';
 
 const EMBLEM: Record<Scene, ReactElement> = {
   dawn: (
@@ -31,6 +31,14 @@ const EMBLEM: Record<Scene, ReactElement> = {
       {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
         <path key={a} d="M32 14v-6" transform={`rotate(${a} 32 32)`} className="curtain-ray" />
       ))}
+    </>
+  ),
+  vote: (
+    <>
+      <rect x="14" y="30" width="36" height="22" rx="3" />
+      <path d="M22 30v-4h20v4" />
+      <path d="M26 18h12v14H26z" className="curtain-rise" />
+      <path d="M29 23h6M29 27h4" opacity="0.6" />
     </>
   ),
   runoff: (
@@ -64,6 +72,7 @@ const TITLE: Record<Scene, string> = {
   dawn: 'Dawn',
   night: 'Night Falls',
   day: 'Day Breaks',
+  vote: 'Time to Vote',
   runoff: 'Runoff Vote',
   tie: 'A Tie',
   over: 'The End',
@@ -155,7 +164,7 @@ export function usePhaseFx(view: ClientView | null) {
   useEffect(() => {
     const body = document.body;
     const phase = g?.phase ?? 'lobby';
-    const cls = phase === 'prenight' ? 'phase-dawn' : phase === 'night' ? 'phase-night' : phase === 'voting' || phase === 'verdict' ? 'phase-day' : phase === 'game_over' ? 'phase-over' : 'phase-lobby';
+    const cls = phase === 'prenight' ? 'phase-dawn' : phase === 'night' ? 'phase-night' : phase === 'voting' || phase === 'discussion' || phase === 'verdict' ? 'phase-day' : phase === 'game_over' ? 'phase-over' : 'phase-lobby';
     body.classList.remove('phase-dawn', 'phase-night', 'phase-day', 'phase-over', 'phase-lobby', 'night-mode');
     body.classList.add(cls);
     if (phase === 'night' || phase === 'prenight') body.classList.add('night-mode');
@@ -182,7 +191,8 @@ export function usePhaseFx(view: ClientView | null) {
       let s: Scene | null = null;
       if (g.phase === 'prenight') s = 'dawn';
       else if (g.phase === 'night') s = 'night';
-      else if (g.phase === 'voting') s = g.runoff ? 'runoff' : 'day';
+      else if (g.phase === 'discussion') s = 'day';
+      else if (g.phase === 'voting') s = g.runoff ? 'runoff' : 'vote';
       else if (g.phase === 'verdict') s = 'tie';
       else if (g.phase === 'game_over') s = 'over';
       else if (g.phase === 'reveal') s = 'reveal';
@@ -190,7 +200,7 @@ export function usePhaseFx(view: ClientView | null) {
         if (s === 'dawn') play('dawn');
         if (s === 'night') play('night');
         if (s === 'day') play('day');
-        if (s === 'runoff') play('tension');
+        if (s === 'runoff' || s === 'vote') play('tension');
         buzz(s === 'over' ? [80, 60, 80, 60, 160] : [60]);
         setScene({ scene: s, sub: s === 'over' || s === 'reveal' ? '' : `Round ${g.round}`, key });
         later(2.2, () => setScene(null));

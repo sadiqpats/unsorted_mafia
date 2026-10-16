@@ -48,7 +48,7 @@ describe('Mafia', () => {
     g.act(0, 'mafia_kill', 1);
     g.advance();
     expect(g.P(1).alive).toBe(false);
-    expect(g.room.game!.phase).toBe('voting'); // Day starts straight after the night
+    expect(g.room.game!.phase).toBe('discussion'); // Day (discussion) starts straight after the night
     expect(news(g, 'morning')).toEqual(['P1 was killed during the night.']);
   });
 
@@ -104,6 +104,7 @@ describe('Godfather', () => {
     g.advance();
     expect(news(g, 'morning').join()).toContain('P3 has been silenced');
     expect(news(g, 'morning').join()).not.toContain('P0');
+    g.goToVoting();
     expect(() => g.vote(3, 1)).not.toThrow(); // silenced = can't speak, but can still vote
   });
 
@@ -118,14 +119,28 @@ describe('Godfather', () => {
     expect(g.room.game!.winner!.winnerIds).not.toContain('p0');
   });
 
-  it('counts on the Mafia side for a takeover and wins with them', () => {
+  it('is Evil: does NOT count for a Mafia takeover, but wins when the Mafia win', () => {
+    // 1 Mafia + Godfather vs 2 Villagers: the game goes on (only Mafia members count).
     const g = setup(['godfather', 'mafia', V, V, V, V]);
     g.goToNight();
     hostEliminate(g.room, 'p2', 0);
-    expect(g.room.status).toBe('active'); // 2 (Mafia + Godfather) vs 3
+    hostEliminate(g.room, 'p3', 0); // Mafia 1 vs Godfather + 2 Villagers
+    expect(g.room.status).toBe('active');
+    hostEliminate(g.room, 'p4', 0); // Mafia 1 vs Godfather + 1 Villager → still 1 vs 2
+    expect(g.room.status).toBe('active');
+    hostEliminate(g.room, 'p0', 0); // the Godfather gone: Mafia 1 vs Villager 1 → Mafia win
+    expect(g.room.game!.winner).toMatchObject({ faction: 'mafia' });
+    expect(g.room.game!.winner!.winnerIds).toEqual(expect.arrayContaining(['p0', 'p1'])); // the dead Godfather still wins with them
+    expect(ROLES.godfather.alignment({} as never)).toBe('evil');
+  });
+
+  it('2 Mafia vs 2 others is an immediate Mafia win', () => {
+    const g = setup(['mafia', 'mafia', V, V, V, V]);
+    g.goToNight();
+    hostEliminate(g.room, 'p2', 0);
+    expect(g.room.status).toBe('active'); // 2 vs 3
     hostEliminate(g.room, 'p3', 0); // 2 vs 2
     expect(g.room.game!.winner).toMatchObject({ faction: 'mafia' });
-    expect(g.room.game!.winner!.winnerIds).toEqual(expect.arrayContaining(['p0', 'p1']));
   });
 });
 
@@ -440,11 +455,37 @@ describe('roles stay secret until the game is over', () => {
     g.goToNight();
     g.act(0, 'mafia_kill', 3);
     g.advance();
+    g.goToVoting();
     for (const i of [0, 1, 2, 5]) g.vote(i, 4); // vote out P4
     g.advance();
     expect(g.P(4).alive).toBe(false);
     const text = g.publicLog().join('\n');
     expect(text).not.toMatch(/Villager|Doctor|Detective|Mafia\b|They were/);
     expect(checkWin(g.room)).toBeNull();
+  });
+});
+
+describe('Bollywood Mafia Night', () => {
+  it('names every character both ways and swaps names in text (but never the team name "Mafia")', async () => {
+    const { roleTitle, roleShort, roleBoth, roleArt, themeText, BOLLYWOOD } = await import('../../src/shared/roles');
+    expect(Object.keys(BOLLYWOOD).sort()).toEqual([...Object.keys(ROLES)].sort());
+    expect(roleTitle('mafia', { bollywood: true })).toBe('Gabbar (Mafia)');
+    expect(roleTitle('mafia', { bollywood: false })).toBe('Mafia');
+    expect(roleShort('jester', { bollywood: true })).toBe('Baburao');
+    expect(roleBoth('godfather')).toBe('Godfather / Badde Sahab');
+    expect(roleArt('doctor', { bollywood: true })).toBe('bw-munna');
+    expect(roleArt('doctor', {})).toBe(ROLES.doctor.art);
+    expect(themeText('At dawn, the Thief struck. The Godfather knows the Mafia.', { bollywood: true })).toBe('At dawn, Bunty struck. Badde Sahab knows the Mafia.');
+    expect(themeText('the Joker', { bollywood: false })).toBe('the Joker');
+  });
+
+  it('announcements and the game-over line use the Bollywood names', () => {
+    const g = setup(['mafia', 'jester', V, V, V], { bollywood: true });
+    g.goToVoting();
+    for (const i of [0, 2, 3, 4]) g.vote(i, 1);
+    g.vote(1, 0);
+    g.advance();
+    expect(g.publicLog().join('\n')).toContain('Baburao');
+    expect(g.publicLog().join('\n')).not.toContain('the Joker');
   });
 });

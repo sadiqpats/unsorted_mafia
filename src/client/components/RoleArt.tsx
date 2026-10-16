@@ -94,9 +94,155 @@ const ART: Record<string, ReactElement> = {
   ),
 };
 
+/**
+ * Bollywood Mafia Night portraits (same gold line style). Faces are drawn inside the
+ * medallion: head ~ centre (32, 30), shoulders at the bottom.
+ */
+const BW: Record<string, ReactElement> = {
+  // Gabbar: wild hair, heavy brows, thick beard, ammo belt across the chest.
+  'bw-gabbar': (
+    <>
+      <path d="M20 26c0-9 6-14 12-14s12 5 12 14" />
+      <path d="M18 24c1-4 3-6 5-7M46 24c-1-4-3-6-5-7M24 14l2 3M32 12v3M40 14l-2 3" />
+      <path d="M24 26l6 2M40 26l-6 2" strokeWidth="2.8" />
+      <circle cx="27.5" cy="30" r="1.2" fill="#e2c27d" />
+      <circle cx="36.5" cy="30" r="1.2" fill="#e2c27d" />
+      <path d="M22 32c0 10 4 15 10 15s10-5 10-15" />
+      <path d="M25 37c2 1 4 1 7 0 3 1 5 1 7 0" />
+      <path d="M26 41c2 3 10 3 12 0" opacity="0.7" />
+      <path d="M14 58l36-12" strokeWidth="3.2" />
+      {[18, 24, 30, 36, 42].map((x, i) => (
+        <path key={x} d={`M${x} ${56.7 - i * 2} l1.6 4`} strokeWidth="1.6" />
+      ))}
+    </>
+  ),
+  // Badde Sahab: slicked hair, dark glasses, cigar with smoke, bow tie.
+  'bw-baddesahab': (
+    <>
+      <path d="M21 28c0-10 5-15 11-15s11 5 11 15" />
+      <path d="M21 22c4-5 10-6 22-1" />
+      <rect x="22.5" y="27" width="8" height="5" rx="2" fill="#e2c27d" fillOpacity="0.35" />
+      <rect x="33.5" y="27" width="8" height="5" rx="2" fill="#e2c27d" fillOpacity="0.35" />
+      <path d="M30.5 29h3" />
+      <path d="M22 31c0 9 4 14 10 14s10-5 10-14" />
+      <path d="M28 39h7" />
+      <path d="M35 39h9" strokeWidth="2.6" />
+      <path d="M46 37c2-2 0-4 2-6M49 35c2-2 0-4 2-6" opacity="0.6" />
+      <path d="M26 50l6 3 6-3-6-2z" fill="#e2c27d" fillOpacity="0.3" />
+      <path d="M16 58c3-6 9-9 16-9s13 3 16 9" />
+    </>
+  ),
+  // Gao Wallon: turban, big moustache, lathi.
+  'bw-gaowallon': (
+    <>
+      <path d="M19 25c0-7 6-11 13-11s13 4 13 11c-4-2-9-3-13-3s-9 1-13 3z" fill="#e2c27d" fillOpacity="0.25" />
+      <path d="M21 19c5 2 17 2 22 0M23 15c4 1 14 1 18 0" opacity="0.7" />
+      <path d="M43 18c4-1 6 1 6 4" />
+      <circle cx="27.5" cy="30" r="1.2" fill="#e2c27d" />
+      <circle cx="36.5" cy="30" r="1.2" fill="#e2c27d" />
+      <path d="M21 26c0 12 5 18 11 18s11-6 11-18" />
+      <path d="M24 37c3-3 5-2 8-1 3-1 5-2 8 1" strokeWidth="2.8" />
+      <path d="M14 58c3-6 9-9 18-9s15 3 18 9" />
+      <path d="M50 22l-2 36" strokeWidth="2.6" />
+    </>
+  ),
+  // Baburao: round spectacles, bald top with side hair, moustache, vest.
+  'bw-baburao': (
+    <>
+      <path d="M21 30c0-11 5-16 11-16s11 5 11 16" />
+      <path d="M20 26c-2 1-2 4 0 6M44 26c2 1 2 4 0 6" />
+      <circle cx="27" cy="30" r="4" />
+      <circle cx="37" cy="30" r="4" />
+      <path d="M31 30h2" />
+      <circle cx="27" cy="30" r="1" fill="#e2c27d" />
+      <circle cx="37" cy="30" r="1" fill="#e2c27d" />
+      <path d="M22 32c0 9 4 13 10 13s10-4 10-13" />
+      <path d="M26 38c2-2 4-2 6-1 2-1 4-1 6 1" strokeWidth="2.4" />
+      <path d="M29 42c2 1 4 1 6 0" opacity="0.7" />
+      <path d="M16 58c3-6 8-9 16-9s13 3 16 9" />
+      <path d="M26 49l2 9M38 49l-2 9" opacity="0.7" />
+    </>
+  ),
+  // Babaji: hair bun, tilak, long flowing beard, rudraksha beads.
+  'bw-babaji': (
+    <>
+      <circle cx="32" cy="11" r="4" />
+      <path d="M21 27c0-9 5-13 11-13s11 4 11 13" />
+      <path d="M30 19v6M34 19v6M28.5 21.5h7" stroke="#e0473f" />
+      <circle cx="27.5" cy="29" r="1.2" fill="#e2c27d" />
+      <circle cx="36.5" cy="29" r="1.2" fill="#e2c27d" />
+      <path d="M21 30c0 8 2 18 11 24 9-6 11-16 11-24" />
+      <path d="M26 35c2 1 4 1 6 0 2 1 4 1 6 0" />
+      <path d="M28 41l1 8M32 41v10M36 41l-1 8" opacity="0.6" />
+      {[16, 20, 24, 40, 44, 48].map((x) => (
+        <circle key={x} cx={x} cy={x < 32 ? 50 + (x - 16) / 2 : 56 - (x - 40) / 2} r="1.4" fill="#e2c27d" />
+      ))}
+    </>
+  ),
+  // Munna MBBS: curly hair, easy grin, stethoscope round the neck.
+  'bw-munna': (
+    <>
+      <path d="M21 26c-1-6 1-10 4-11 1-3 4-3 6-2 2-2 6-1 7 1 3 0 6 4 5 12" />
+      <path d="M24 18c1 1 2 1 3 0M31 16c1 1 2 1 3 0M37 18c1 1 2 1 3 0" opacity="0.7" />
+      <circle cx="27.5" cy="29" r="1.2" fill="#e2c27d" />
+      <circle cx="36.5" cy="29" r="1.2" fill="#e2c27d" />
+      <path d="M21 27c0 10 5 16 11 16s11-6 11-16" />
+      <path d="M26 36c3 3 9 3 12 0" />
+      <path d="M16 58c3-6 8-9 16-9s13 3 16 9" />
+      <path d="M24 47c0 6 3 9 8 9s8-3 8-9" stroke="#e0473f" />
+      <circle cx="32" cy="57" r="2" stroke="#e0473f" />
+    </>
+  ),
+  // ACP Pradyuman: police cap with badge, moustache, the famous hand gesture.
+  'bw-acp': (
+    <>
+      <path d="M18 20c4-6 24-6 28 0l-3 4H21z" fill="#e2c27d" fillOpacity="0.25" />
+      <path d="M20 24h24" strokeWidth="2.6" />
+      <circle cx="32" cy="17" r="2" fill="#e2c27d" />
+      <circle cx="27.5" cy="30" r="1.2" fill="#e2c27d" />
+      <circle cx="36.5" cy="30" r="1.2" fill="#e2c27d" />
+      <path d="M22 26c0 10 4 16 10 16s10-6 10-16" />
+      <path d="M25 37c3-2 5-2 7-1 2-1 4-1 7 1" strokeWidth="2.6" />
+      <path d="M16 58c3-6 8-9 16-9s13 3 16 9" />
+      <path d="M46 44v-8M49 44v-9M52 45v-6" strokeWidth="2.2" />
+      <path d="M44 46c2 4 7 4 9 0" />
+    </>
+  ),
+  // Bunty: backwards cap, shades, cheeky grin, money bag.
+  'bw-bunty': (
+    <>
+      <path d="M21 24c1-7 6-10 11-10s10 3 11 10z" fill="#e2c27d" fillOpacity="0.25" />
+      <path d="M21 24c-3 0-5 1-6 2" strokeWidth="2.4" />
+      <path d="M22 28h20" />
+      <path d="M23 28c0 3 2 4 4 4s4-1 4-4M33 28c0 3 2 4 4 4s4-1 4-4" fill="#e2c27d" fillOpacity="0.4" />
+      <path d="M22 30c0 9 4 14 10 14s10-5 10-14" />
+      <path d="M27 38c2 2 6 2 9-1" />
+      <path d="M16 58c3-6 8-9 16-9s13 3 16 9" />
+      <path d="M46 46c-3 2-4 6-2 9 2 3 8 3 10 0 2-3 1-7-2-9" />
+      <path d="M47 45l2-2 2 2" />
+      <path d="M49 50v4M48 51h2.5" strokeWidth="1.4" />
+    </>
+  ),
+  // Pradhan Ji: Gandhi cap, round specs, moustache, gamchha over the shoulder.
+  'bw-pradhan': (
+    <>
+      <path d="M21 21l3-6h16l3 6z" fill="#e2c27d" fillOpacity="0.25" />
+      <path d="M21 21h22" />
+      <circle cx="27.5" cy="29" r="3.2" />
+      <circle cx="36.5" cy="29" r="3.2" />
+      <path d="M30.7 29h2.6" />
+      <path d="M22 25c0 11 4 17 10 17s10-6 10-17" />
+      <path d="M26 36c2-2 4-2 6-1 2-1 4-1 6 1" strokeWidth="2.4" />
+      <path d="M16 58c3-6 8-9 16-9s13 3 16 9" />
+      <path d="M22 49l14 9M27 47l14 9" stroke="#e0473f" opacity="0.8" />
+    </>
+  ),
+};
+
 const RING: Record<Alignment | 'none', string> = {
   good: '#c9a45c',
   mafia: '#b0202a',
+  evil: '#8e2f7a',
   neutral: '#9d8ccc',
   none: '#5a4f4a',
 };
@@ -114,7 +260,7 @@ export function RoleArt({ art, alignment, size = 96, className = '' }: { art: st
       <circle cx="32" cy="32" r="31" fill={`url(#bg-${art})`} stroke={ring} strokeWidth="1.2" />
       <circle cx="32" cy="32" r="27.5" fill="none" stroke={ring} strokeOpacity="0.35" strokeWidth="0.6" strokeDasharray="1.5 2.5" />
       <g fill="none" stroke="#e2c27d" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        {ART[art] ?? ART.unknown}
+        {ART[art] ?? BW[art] ?? ART.unknown}
       </g>
     </svg>
   );

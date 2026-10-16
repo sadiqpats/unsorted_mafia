@@ -35,6 +35,8 @@ export const SettingsSchema = z.object({
    * Dawn and Night and every event sound on every phone.
    */
   playMode: z.enum(['offline', 'online']),
+  /** Bollywood Mafia Night: every character shows its Bollywood name ("Gabbar (Mafia)") and illustration. */
+  bollywood: z.boolean(),
 
   // ---- Timers ----
   /** Off (default): every phase ends as soon as everyone has acted — no clock. On: phases also end when their timer runs out. */
@@ -43,6 +45,10 @@ export const SettingsSchema = z.object({
   preNightSeconds: seconds(10, 300),
   nightSeconds: seconds(15, 600),
   daySeconds: seconds(30, 3600),
+  /** The vote (after the open-ended discussion): how long players have to cast it. */
+  voteSeconds: seconds(15, 600),
+  /** A short break at the start of Dawn and Night so the news lands before the clock starts. */
+  bufferSeconds: z.number().int().min(0).max(15),
 
   // ---- Flow ----
   /** The Dawn round before every night where the Thief steals and the Imposter revives. Runs whenever either role is in the setup, even after they die. */
@@ -128,11 +134,14 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     playerCount,
     hostPlays: false,
     playMode: 'offline',
-    timers: false,
+    bollywood: false,
+    timers: true,
     revealSeconds: 30,
     preNightSeconds: 30,
     nightSeconds: 60,
     daySeconds: 300,
+    voteSeconds: 60,
+    bufferSeconds: 8,
     preNightRound: true,
     allowVoteChange: false,
     allowSelfVote: false,

@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { advanceTo, nextIfStill, nightAct, revealAndAck, setupTable, skipRest, vote, waitPhase } from './helpers';
 
-test('5 players, no timers: full match — Mafia kill, Detective result, refresh, Town wins', async ({ browser }) => {
+test('5 players: full match — Mafia kill, Detective result, refresh, open discussion, timed vote, Town wins', async ({ browser }) => {
   const t = await setupTable(browser, 5, { mafia: 1, detective: 1, doctor: 1, villager: 2 });
   // Each phone privately shows exactly the role the server dealt; when all have seen it, Night starts by itself.
   for (const s of t.seats) expect(await revealAndAck(s)).toBe(s.role);
   await expect(t.host.getByTestId('host-phase')).toHaveText('Night');
-  await expect(t.host.getByRole('timer')).toHaveCount(0); // no clock by default
+  await expect(t.host.getByRole('timer')).toHaveCount(1); // the clock is always on (Night: 60 s)
 
   const mafia = t.byRole('Mafia')[0];
   const det = t.byRole('Detective')[0];
@@ -31,7 +31,7 @@ test('5 players, no timers: full match — Mafia kill, Detective result, refresh
   expect(await other.page.locator('body').innerText()).not.toMatch(/They were the/);
 
   // The Detective's result is private (inside their ballot panel).
-  await det.page.getByRole('button', { name: 'Open your ballot' }).click();
+  await det.page.getByRole('button', { name: 'You have a private message' }).click();
   await expect(det.page.getByTestId('private-note')).toContainText(`${mafia.name} is SUSPICIOUS`);
   expect(await other.page.content()).not.toContain('SUSPICIOUS');
 
@@ -44,6 +44,9 @@ test('5 players, no timers: full match — Mafia kill, Detective result, refresh
   await expect(other.page.getByRole('dialog').locator('.flip-back h3')).toHaveText('Villager');
   await other.page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
 
+  // Day is an open discussion; the host opens the 60-second vote.
+  await expect(det.page.getByTestId('discussion')).toBeVisible();
+  await advanceTo(t, 'Vote');
   await expect(victim.page.getByText('Dead players cannot vote.')).toBeVisible();
   for (const s of [det, doc, other]) await vote(s, mafia.name);
   await vote(mafia, det.name); // last vote → the Day ends by itself
@@ -109,12 +112,13 @@ test('Godfather knows the Mafia and silences a player, who must stay quiet but c
   await expect(silenced.page.getByText('You can still vote.')).toBeVisible();
   // Announced once — not repeated in a second line.
   expect(await silenced.page.getByText(/has been silenced/).count()).toBe(1);
+  await advanceTo(t, 'Vote');
   await vote(silenced, gf.name); // the ballot works for a silenced player
 });
 
 test('Judge’s double vote changes the outcome', async ({ browser }) => {
   const t = await setupTable(browser, 5, { mafia: 1, judge: 1, villager: 3 });
-  await advanceTo(t, 'Day');
+  await advanceTo(t, 'Vote');
   const m = t.byRole('Mafia')[0];
   const judge = t.byRole('Judge')[0];
   const [v1, v2] = t.byRole('Villager');
@@ -123,14 +127,14 @@ test('Judge’s double vote changes the outcome', async ({ browser }) => {
   await vote(m, v2.name);
   await vote(v2, m.name);
   await expect(t.host.getByText(`${judge.name} → ${m.name} (×2)`)).toBeVisible();
-  await nextIfStill(t, 'Day'); // one player hasn't voted; the host closes the day
+  await nextIfStill(t, 'Vote'); // one player hasn't voted; the host closes the vote
   await expect(v1.page.getByText(new RegExp(`The town has eliminated ${m.name}\\.$`)).first()).toBeVisible();
   await expect(v1.page.getByText('The Town Prevails')).toBeVisible();
 });
 
 test('Joker wins by being voted out', async ({ browser }) => {
   const t = await setupTable(browser, 5, { mafia: 1, jester: 1, villager: 3 });
-  await advanceTo(t, 'Day');
+  await advanceTo(t, 'Vote');
   const jester = t.byRole('Joker')[0];
   for (const s of t.seats) await vote(s, s === jester ? t.byRole('Mafia')[0].name : jester.name);
   for (const s of t.seats) await expect(s.page.getByText('The Joker Laughs Last')).toBeVisible();
@@ -156,7 +160,7 @@ test('Dawn: the Thief steals a power for the round without learning whose; the r
   await nightAct(thief, 'investigate', mafia.name);
   await skipRest(t, new Set([thief.name]));
   await expect(t.host.getByTestId('host-phase')).toHaveText('Day');
-  await thief.page.getByRole('button', { name: 'Open your ballot' }).click();
+  await thief.page.getByRole('button', { name: 'You have a private message' }).click();
   await expect(thief.page.getByTestId('private-note').filter({ hasText: 'SUSPICIOUS' })).toContainText(`${mafia.name} is SUSPICIOUS`);
 });
 

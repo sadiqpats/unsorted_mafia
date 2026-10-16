@@ -4,7 +4,7 @@ import { advanceTo, setupTable, vote, type Table } from './helpers';
 /** The town votes out one Mafia member per day (nights pass with no action) until the Town wins. */
 async function playToTownWin(t: Table) {
   for (let day = 1; day <= 10; day++) {
-    await advanceTo(t, 'Day');
+    await advanceTo(t, 'Vote');
     const alive = await t.alive();
     const mafia = alive.filter((s) => s.role === 'Mafia'); // the Town wins once every Mafia member is dead
     const target = mafia[0];

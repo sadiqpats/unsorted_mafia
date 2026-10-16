@@ -205,14 +205,15 @@ export const ROLES: Record<string, RoleDef> = {
     description: 'A made member of the family. You know your fellow Mafia and hunt together after dark.',
     abilityText: 'Each night, vote with the Mafia on one player to eliminate.',
     howTo: 'At night, open your secret panel and pick a target. Your teammates see your pick. Picks show as “Mafia 1/2/3” (names hidden — a Thief may be voting too). Most picks wins; a tie goes to the first-seated member.',
-    winCondition: 'Win when the Mafia side equals or outnumbers everyone else still alive.',
+    winCondition: 'Win when the Mafia members equal or outnumber everyone else still alive (the Godfather doesn’t count towards that, but wins with you).',
     abilities: [{ id: 'mafia_kill' }],
     art: 'fedora',
   },
   godfather: {
     id: 'godfather',
     name: 'Godfather',
-    alignment: () => 'mafia',
+    // Evil: sides with the Mafia and wins with them, but is not a Mafia member and doesn't count for their takeover.
+    alignment: () => 'evil',
     // Not a Mafia member: does not kill, and the Mafia do not know who he is.
     mafiaTeam: () => false,
     knowsMafia: true,
@@ -221,7 +222,7 @@ export const ROLES: Record<string, RoleDef> = {
     description: 'The Mafia’s silent patron. You know exactly who the Mafia are — they have no idea who you are.',
     abilityText: 'You privately know who the Mafia are. Each night, silence one player for the next day. Defend the Mafia in discussion.',
     howTo: 'Your role card lists the Mafia. At night, choose someone to silence — they cannot speak during the next day’s discussion (they can still vote) and never learn who did it. By day, protect the Mafia without giving yourself away.',
-    winCondition: 'Win with the Mafia. The Town wins once every Mafia member is dead, even if you are still alive.',
+    winCondition: 'Evil: win when the Mafia win. You don’t count towards their takeover, and the Town wins once every Mafia member is dead, even if you are still alive.',
     abilities: [{ id: 'silence' }],
     investigatesAs: (s) => (s.godfatherAppearsInnocent ? 'good' : 'mafia'),
     art: 'puppet',
@@ -358,5 +359,69 @@ export function isMafiaTeam(roleId: string | null, s: Settings): boolean {
 export const ALIGNMENT_LABEL: Record<Alignment, string> = {
   good: 'Town (Good)',
   mafia: 'Mafia',
+  evil: 'Evil',
   neutral: 'Neutral',
 };
+
+
+// ------------------------------------------------------------------ Bollywood Mafia Night
+
+/** Bollywood names and illustrations. Abilities and rules are exactly the same. */
+export const BOLLYWOOD: Record<string, { name: string; art: string }> = {
+  mafia: { name: 'Gabbar', art: 'bw-gabbar' },
+  godfather: { name: 'Badde Sahab', art: 'bw-baddesahab' },
+  villager: { name: 'Gao Wallon', art: 'bw-gaowallon' },
+  jester: { name: 'Baburao', art: 'bw-baburao' },
+  imposter: { name: 'Babaji', art: 'bw-babaji' },
+  doctor: { name: 'Munna MBBS', art: 'bw-munna' },
+  detective: { name: 'ACP Pradyuman', art: 'bw-acp' },
+  thief: { name: 'Bunty', art: 'bw-bunty' },
+  judge: { name: 'Pradhan Ji', art: 'bw-pradhan' },
+};
+
+type Themed = { bollywood?: boolean } | null | undefined;
+
+/** The name to show in a game: "Gabbar (Mafia)" in a Bollywood game, otherwise "Mafia". */
+export function roleTitle(roleId: string | null | undefined, s?: Themed): string {
+  if (!roleId || !ROLES[roleId]) return '';
+  const bw = s?.bollywood ? BOLLYWOOD[roleId] : undefined;
+  return bw ? `${bw.name} (${ROLES[roleId].name})` : ROLES[roleId].name;
+}
+
+/** Just the headline name: "Gabbar" in a Bollywood game, otherwise "Mafia". */
+export function roleShort(roleId: string | null | undefined, s?: Themed): string {
+  if (!roleId || !ROLES[roleId]) return '';
+  return (s?.bollywood && BOLLYWOOD[roleId]?.name) || ROLES[roleId].name;
+}
+
+/** Both names, for the guide: "Mafia / Gabbar". */
+export function roleBoth(roleId: string): string {
+  return BOLLYWOOD[roleId] ? `${ROLES[roleId].name} / ${BOLLYWOOD[roleId].name}` : ROLES[roleId]?.name ?? '';
+}
+
+/** Which illustration to draw. */
+export function roleArt(roleId: string | null | undefined, s?: Themed): string {
+  if (!roleId || !ROLES[roleId]) return 'unknown';
+  return (s?.bollywood && BOLLYWOOD[roleId]?.art) || ROLES[roleId].art;
+}
+
+/**
+ * Swap character names inside role text and announcements for a Bollywood game
+ * ("the Godfather" → "Badde Sahab"). "Mafia" is left alone: it's also the team's name.
+ */
+export function themeText(text: string, s?: Themed): string {
+  if (!s?.bollywood) return text;
+  const map: [RegExp, string][] = [
+    [/\b(?:[Tt]he )?Godfather\b/g, BOLLYWOOD.godfather.name],
+    [/\b(?:[Tt]he )?Detective\b/g, BOLLYWOOD.detective.name],
+    [/\b(?:[Tt]he )?Doctor\b/g, BOLLYWOOD.doctor.name],
+    [/\b(?:[Tt]he )?Judge\b/g, BOLLYWOOD.judge.name],
+    [/\b(?:[Tt]he )?Thief\b/g, BOLLYWOOD.thief.name],
+    [/\b(?:[Tt]he )?Imposter\b/g, BOLLYWOOD.imposter.name],
+    [/\b(?:[Tt]he )?Joker\b/g, BOLLYWOOD.jester.name],
+    [/\b(?:[Tt]he )?Villagers?\b/g, BOLLYWOOD.villager.name],
+  ];
+  let out = text;
+  for (const [re, name] of map) out = out.replace(re, name);
+  return out;
+}

@@ -199,7 +199,7 @@ describe('night flow & anti-cheat', () => {
     expect(tick(g.room, g.clock(), g.rng)).toBe(false);
     g.act(4, 'decoy', null);
     expect(tick(g.room, g.clock(), g.rng)).toBe(true);
-    expect(g.room.game!.phase).toBe('voting'); // Day
+    expect(g.room.game!.phase).toBe('discussion'); // Day
     expect(g.room.game!.stats.suspicion.p0).toBe(2);
   });
 
@@ -224,15 +224,35 @@ describe('night flow & anti-cheat', () => {
 });
 
 describe('timers, pause and host corrections', () => {
-  it('no timers by default: nothing ever advances on time, only when everyone has acted', () => {
-    const g = setup(['mafia', V, V, V, V]);
-    expect(g.room.game!.settings.timers).toBe(false);
-    expect(g.room.game!.phaseEndsAt).toBeNull();
-    expect(tick(g.room, T0 + 1e12, g.rng)).toBe(false);
+  it('the clock is always on: Dawn 30 s and Night 60 s after a short break, an open-ended discussion, a 60 s vote', () => {
+    const g = setup(['mafia', 'thief', V, V, V], { bufferSeconds: 8 });
+    expect(g.room.game!.phaseEndsAt).toBeNull(); // role reveal: until everyone has looked
     for (const p of g.room.players) acknowledgeRole(g.room, p.id);
-    expect(tick(g.room, g.clock(), g.rng)).toBe(true);
-    expect(g.room.game!.phase).toBe('night');
-    expect(g.room.game!.phaseEndsAt).toBeNull();
+    const t1 = g.clock();
+    expect(tick(g.room, t1, g.rng)).toBe(true);
+    const gm = g.room.game!;
+    expect(gm.phase).toBe('prenight');
+    expect(gm.phaseOpensAt).toBe(t1 + 8000);
+    expect(gm.phaseEndsAt).toBe(t1 + 8000 + 30_000);
+    // Nobody can act during the break.
+    expect(() => submitNightAction(g.room, 'p1', { abilityId: 'steal', targetId: 'mafia_kill', phaseSeq: g.seq() }, t1 + 1000)).toThrow(/opens in a moment/);
+    // Time runs out with nobody acting: Dawn simply ends, then Night (60 s after its own break).
+    expect(tick(g.room, gm.phaseEndsAt! + 1, g.rng)).toBe(true);
+    expect(gm.phase).toBe('night');
+    const nightStart = gm.phaseStartedAt;
+    expect(gm.phaseEndsAt).toBe(nightStart + 8000 + 60_000);
+    expect(tick(g.room, gm.phaseEndsAt! + 1, g.rng)).toBe(true);
+    // Day: the discussion never ends on its own.
+    expect(gm.phase).toBe('discussion');
+    expect(gm.phaseEndsAt).toBeNull();
+    expect(tick(g.room, T0 + 1e12, g.rng)).toBe(false);
+    // The host opens the vote: 60 s, no break.
+    const v = g.clock();
+    advancePhase(g.room, v, g.rng, 'host');
+    expect(gm.phase).toBe('voting');
+    expect(gm.phaseEndsAt).toBe(v + 60_000);
+    expect(tick(g.room, gm.phaseEndsAt! + 1, g.rng)).toBe(true); // nobody voted: nobody out, the game goes on
+    expect(gm.phase).toBe('prenight');
   });
 
   it('the day ends as soon as every eligible player has voted', () => {
@@ -246,15 +266,15 @@ describe('timers, pause and host corrections', () => {
     expect(g.room.game!.phase).toBe('night');
   });
 
-  it('with timers on, a phase also ends when the clock runs out (a disconnected player cannot freeze it)', () => {
-    const g = setup(['mafia', V, V, V, V], { timers: true });
-    const ends = g.room.game!.phaseEndsAt!;
-    expect(tick(g.room, ends - 1, g.rng)).toBe(false);
-    expect(tick(g.room, ends + 1, g.rng)).toBe(true);
+  it('a phase ends when the clock runs out, even if someone never acts (their action just doesn’t count)', () => {
+    const g = setup(['mafia', V, V, V, V]);
+    for (const p of g.room.players) acknowledgeRole(g.room, p.id);
+    tick(g.room, g.clock(), g.rng);
     expect(g.room.game!.phase).toBe('night');
-    g.act(0, 'mafia_kill', 1);
-    tick(g.room, g.room.game!.phaseEndsAt! + 1, g.rng);
-    expect(g.room.game!.phase).toBe('voting');
+    g.act(0, 'mafia_kill', 1); // only the Mafia acts
+    expect(tick(g.room, g.room.game!.phaseEndsAt! - 1, g.rng)).toBe(false);
+    expect(tick(g.room, g.room.game!.phaseEndsAt! + 1, g.rng)).toBe(true);
+    expect(g.room.game!.phase).toBe('discussion');
     expect(g.P(1).alive).toBe(false);
   });
 

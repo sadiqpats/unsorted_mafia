@@ -28,7 +28,8 @@ export function setup(roles: string[], patch: SettingsPatch = {}) {
   const room = createRoom({ code: 'TEST', hostName: 'Host', hostTokenHash: 'h', hostPlays: false, now: T0, playerCount: roles.length });
   const counts: Record<string, number> = {};
   for (const r of roles) counts[r] = (counts[r] ?? 0) + 1;
-  updateSettings(room, { ...patch, roles: counts });
+  // No opening break in unit tests (actions are timestamped 1 s apart); tests of the break set it explicitly.
+  updateSettings(room, { bufferSeconds: 0, ...patch, roles: counts });
   roles.forEach((_, i) => addPlayer(room, { id: `p${i}`, name: `P${i}`, tokenHash: `t${i}`, now: T0 }));
   for (const p of room.players) p.ready = true;
   startGame(room, T0, rng);

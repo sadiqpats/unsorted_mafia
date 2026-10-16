@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { suggestDistribution } from '../../shared/distribution';
-import { ROLES, ROLE_ORDER } from '../../shared/roles';
+import { BOLLYWOOD, ROLES, ROLE_ORDER, roleBoth } from '../../shared/roles';
 import { MAX_PLAYERS, MIN_PLAYERS, defaultSettings } from '../../shared/settings';
 import type { Alignment } from '../../shared/types';
 import { GuideArt } from '../components/GuideArt';
@@ -108,12 +108,12 @@ const PHASES = [
 const HELP: [string, string][] = [
   ['My phone locked or I closed the tab', 'Reopen the link or scan the QR again. Your seat and role come back.'],
   ['I switched phones', 'The host taps Rejoin code next to your name. Type it on the Join page under “Rejoin”.'],
-  ['Someone left in the middle of a phase', 'The host presses Next phase. Their action is skipped and their vote doesn’t count.'],
+  ['Someone left in the middle of a phase', 'The clock moves on without them: their action is skipped and their vote doesn’t count. The host can also press Next phase.'],
   ['We made a mistake', 'The host can Eliminate or Restore anyone. It’s always announced, never secret.'],
   ['The vote tied', 'Nobody goes out (default). The host can switch to a runoff vote or decide themselves.'],
   ['The host’s phone died', 'The game keeps going. The host reopens the same link on the same device.'],
   ['Can we see who voted for whom?', 'Only if the host turns that on. By default you see vote totals.'],
-  ['Can we play with timers?', 'Yes, it’s a house rule. Then the host also gets Pause and +30s.'],
+  ['Can we change the timers?', 'Yes: House rules → Timers. The host can also Pause, add 30 s or press Next phase any time.'],
 ];
 
 function RoleMix() {
@@ -133,7 +133,7 @@ function RoleMix() {
               <RoleArt art={ROLES[id].art} alignment={sideOf(id)} size={52} />
               <span className="absolute -right-1 -top-1 grid h-6 min-w-6 place-items-center rounded-full bg-crimson px-1 text-xs font-bold text-bone">×{d[id]}</span>
             </div>
-            <span className="mt-1 text-[0.7rem] text-mute">{ROLES[id].name}</span>
+            <span className="mt-1 text-[0.7rem] text-mute">{roleBoth(id)}</span>
           </li>
         ))}
       </ul>
@@ -191,6 +191,7 @@ export default function Guide() {
               ['#round', '🌙 A round'],
               ['#win', '🏆 Winning'],
               ['#roles', '🃏 Characters'],
+              ['#bollywood', '🎬 Bollywood'],
               ['#fair', '🔒 Fair play'],
               ['#mix', '🎚️ Role mix'],
               ['#faq', '❓ Help'],
@@ -209,7 +210,7 @@ export default function Guide() {
             <Tile scene="phone" title="A phone each" text="Any browser. No app, no account." />
             <Tile scene="host" title="One host" text="Phone, tablet or laptop. Can also play." />
             <Tile scene="crowd" title="5–26 players" text="8–16 is the sweet spot." />
-            <Tile scene="clock" title="20–45 min" text="No timers. Nobody is rushed." />
+            <Tile scene="clock" title="20–45 min" text="Timed nights, open-ended talk." />
             <div className="col-span-2 sm:col-span-1">
               <Tile scene="tv" title="A TV (optional)" text="Shows everyone’s photo. Eliminated? Your photo gets cut." />
             </div>
@@ -285,7 +286,7 @@ export default function Guide() {
             ))}
           </ol>
           <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-            <Medal icon="✅" title="No timers" text="Each phase ends when everyone has tapped. The host can always press Next phase." />
+            <Medal icon="⏱️" title="The clock" text="Dawn 30 s and Night 60 s (after a short break), Day talk has no clock, then a 60 s vote. Miss it and it doesn’t count." />
             <Medal icon="👆" title="Everyone taps, every time" text="People without a power press the dummy button, so nobody gives themselves away." />
             <Medal icon="🤫" title="Silenced?" text="Don’t speak today, but you can still vote." />
             <Medal icon="🎭" title="Roles stay secret" text="Deaths are announced by name only. All roles are revealed at game over." />
@@ -299,7 +300,7 @@ export default function Guide() {
             {(
               [
                 ['cottage', 'good', 'Town', 'Every Mafia member is dead. (The Godfather doesn’t count.)', 'border-good/40'],
-                ['fedora', 'mafia', 'Mafia', 'Mafia + Godfather equal or outnumber everyone else.', 'border-crimson/50'],
+                ['fedora', 'mafia', 'Mafia', 'Mafia members equal or outnumber everyone else alive. The Godfather (Evil) doesn’t count, but wins with them.', 'border-crimson/50'],
                 ['joker', 'neutral', 'Neutrals', 'Joker: get voted out. Thief & Imposter: just survive.', 'border-neutral/40'],
               ] as const
             ).map(([art, side, title, text, border]) => (
@@ -327,8 +328,12 @@ export default function Guide() {
                   className="guide-tile card flex h-full w-full flex-col items-center p-3 text-center focus-ring"
                   aria-label={`${ROLES[id].name}: more details`}
                 >
-                  <RoleArt art={ROLES[id].art} alignment={sideOf(id)} size={72} />
+                  <span className="relative">
+                    <RoleArt art={ROLES[id].art} alignment={sideOf(id)} size={72} />
+                    <RoleArt art={BOLLYWOOD[id].art} alignment={sideOf(id)} size={34} className="absolute -bottom-1 -right-3 rounded-full ring-2 ring-coal" />
+                  </span>
                   <span className="brand-title mt-2 text-lg font-bold">{ROLES[id].name}</span>
+                  <span className="text-xs font-semibold text-[#ffcf6b]">🎬 {BOLLYWOOD[id].name}</span>
                   <span className="mt-1 scale-90">
                     <AlignmentBadge alignment={sideOf(id)} />
                   </span>
@@ -340,7 +345,29 @@ export default function Guide() {
           <p className="mt-3 text-center text-xs text-mute">The Thief’s and Imposter’s fine print is in their cards. Priest and Bodyguard are retired.</p>
         </Reveal>
 
-        <Modal open={!!role} onClose={() => setRole(null)} title={role ? ROLES[role].name : ''}>
+        {/* ---------------------------------------------------------- Bollywood Mafia Night */}
+        <Reveal id="bollywood">
+          <Heading eyebrow="Same game, filmi avatar" title="🎬 Bollywood Mafia Night" />
+          <div className="card p-4">
+            <p className="text-center text-sm text-mute">
+              The host can switch on <b className="text-bone">Bollywood Mafia Night</b> in House rules. Every character then plays as a Bollywood legend — same powers,
+              same rules, just more drama.
+            </p>
+            <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {ROLE_ORDER.map((id) => (
+                <li key={id} className="flex items-center gap-3 rounded-xl border border-line/60 bg-black/25 p-2">
+                  <RoleArt art={BOLLYWOOD[id].art} alignment={sideOf(id)} size={44} className="shrink-0" />
+                  <span className="min-w-0 text-sm">
+                    <b className="block truncate text-bone">{BOLLYWOOD[id].name}</b>
+                    <span className="text-xs text-mute">plays the {ROLES[id].name}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
+
+        <Modal open={!!role} onClose={() => setRole(null)} title={role ? roleBoth(role) : ''}>
           {role && (
             <div className="max-h-[70dvh] overflow-y-auto scrollbar-thin pr-1">
               <RoleDetails roleId={role} alignment={sideOf(role)} />

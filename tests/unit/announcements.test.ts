@@ -28,7 +28,7 @@ describe('announcements', () => {
     g.act(0, 'mafia_kill', 2);
     g.act(1, 'silence', 3);
     g.advance();
-    expect(g.room.game!.phase).toBe('voting');
+    expect(g.room.game!.phase).toBe('discussion');
     expect(news(g)).toEqual(['P2 was killed during the night.', 'P3 has been silenced and cannot speak today (they can still vote).']);
   });
 
@@ -95,6 +95,7 @@ describe('announcements', () => {
     g.goToNight();
     g.act(0, 'mafia_kill', 1);
     g.advance(); // Day: night news
+    g.advance(); // the host opens the vote
     for (const i of [0, 2, 3, 4]) g.vote(i, null);
     g.advance(); // Night 2: only the vote result, not last night's death again
     expect(news(g)).toEqual(['The town could not agree. Nobody was eliminated.']);
@@ -110,6 +111,7 @@ describe('event tags for sound design', () => {
     g.advance();
     const tags = () => g.room.log.filter((l) => l.tag).map((l) => l.tag);
     expect(tags()).toContain('kill');
+    g.advance(); // open the vote
     for (const p of g.room.players.filter((x) => x.alive && x.id !== 'p0')) submitVote(g.room, p.id, { targetId: 'p0', phaseSeq: g.seq() }, 1);
     g.advance();
     expect(tags()).toContain('voteout');

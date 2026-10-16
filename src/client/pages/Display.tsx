@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { PhaseCurtain, usePhaseFx } from '../components/PhaseCurtain';
 import { sounds } from '../lib/sound';
 import { useParams } from 'react-router-dom';
-import { ROLES, roleAlignment } from '../../shared/roles';
+import { ROLES, roleAlignment, roleTitle } from '../../shared/roles';
 import { Avatar } from '../components/Avatar';
 import type { PublicPlayer } from '../../shared/view-types';
 import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, QR, Timer, useTitle } from '../components/ui';
@@ -77,7 +77,7 @@ export default function Display() {
                 <p className="eyebrow">{g.round ? `Round ${g.round}` : ''}</p>
                 <h2 className="font-[family-name:var(--font-display)] text-5xl md:text-6xl">{PHASE_LABEL[g.phase]}</h2>
               </div>
-              <Timer endsAt={g.phaseEndsAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />
+              <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />
             </div>
             <p className="mt-2 font-[family-name:var(--font-serif)] text-2xl italic text-mute md:text-3xl">
               {
@@ -86,8 +86,8 @@ export default function Display() {
                   prenight: 'Dawn — everyone makes a choice on their phone.',
                   night: 'Everyone, eyes on your own screen. Make your choice.',
                   morning: 'The town wakes…',
-                  discussion: 'Discuss. Accuse. Defend.',
-                  voting: 'Discuss, then vote on your phones. Votes are secret.',
+                  discussion: 'Discuss. Accuse. Defend. The host opens the vote.',
+                  voting: 'Vote now — secretly, on your phone.',
                   verdict: 'The town has spoken.',
                   game_over: g.winner?.reason ?? '',
                   lobby: '',
@@ -136,13 +136,13 @@ function PhotoWall({ players, lobby = false, settings, winners = null }: { playe
             <div className={`mt-2 w-full truncate text-lg font-semibold ${p.alive ? 'text-bone' : 'text-mute line-through decoration-ember/80'}`}>{p.name}</div>
             <div className="min-h-5 text-xs text-mute">
               {lobby ? (p.ready ? '✓ Ready' : 'Joining…') : winners ? (
-                <span className={a === 'mafia' ? 'text-ember' : a === 'neutral' ? 'text-neutral' : 'text-good'}>
+                <span className={a === 'mafia' ? 'text-ember' : a === 'evil' ? 'text-[#e07ac8]' : a === 'neutral' ? 'text-neutral' : 'text-good'}>
                   {winners.includes(p.id) && '🏆 '}
-                  {r?.name}
+                  {roleTitle(p.revealedRoleId, settings)}
                   {!p.alive && ' · ☠'}
                 </span>
               ) : !p.alive ? (
-                <span className={a === 'mafia' ? 'text-ember' : a === 'neutral' ? 'text-neutral' : 'text-good'}>☠ {r ? r.name : 'Eliminated'}</span>
+                <span className={a === 'mafia' ? 'text-ember' : a === 'evil' ? 'text-[#e07ac8]' : a === 'neutral' ? 'text-neutral' : 'text-good'}>☠ {r ? roleTitle(p.revealedRoleId, settings) : 'Eliminated'}</span>
               ) : p.silenced ? (
                 '🤐 Silenced'
               ) : (

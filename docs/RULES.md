@@ -5,17 +5,37 @@ Every rule below can be changed by the host in the lobby (Host dashboard → Hou
 ## A round: Dawn → Night → Day
 
 ```
-lobby → role reveal → [Dawn] → Night → Day → [Dawn] → Night → Day … → game over
+lobby → role reveal → [Dawn] → Night → Day (discussion) → Vote → [Dawn] → Night → … → game over
 ```
 
-- **No timers by default** (`timers: false`). Each phase ends **as soon as everyone has acted**:
+- **The clock is always on:**
   - **Role reveal** ends when every player has tapped “I’ve seen my role”.
-  - **Dawn** and **Night** end when every living player has locked in a choice (players without a power press the dummy button).
-  - **Day** (news + discussion + secret vote) ends when every eligible player has voted.
-- The host can always press **Next phase** (for example if someone has left the table). The host can also turn **timers** on: Dawn, Night and Day then also end when their clock runs out.
+  - **Dawn: 30 s** and **Night: 60 s**, each after a short **break** (8 s by default, 0–15) so the news lands before the clock starts. Nobody can act during the break.
+  - **Day** is an open discussion with **no clock**. The host presses **🗳️ Start voting** when the table is ready.
+  - **Vote: 60 s.**
+  - A phase also ends early once everyone has acted (Dawn/Night) or voted (the vote, unless vote changes are allowed).
+  - **Anything not chosen in time simply doesn’t count**, and the game moves on.
+- The host can change every duration (House rules → Timers), Pause, add or remove 30 s, or press **Next phase** at any time.
 - **Dawn** happens before every night when a Thief or Imposter is in the setup (`preNightRound`, on by default). It keeps happening after they die, so its presence reveals nothing.
 - Each phase change increments `phaseSeq`. Actions must quote the current value, so late, replayed and double-clicked actions are rejected.
 - Phones show **only the action** during Dawn, Night and Day. Each phase opens with a short news card: Dawn shows yesterday's vote result, Night shows what happened at Dawn, and Day shows what happened in the night.
+
+## Bollywood Mafia Night
+A house rule (off by default). When on, every character shows its Bollywood name with the classic one in brackets, gets its own illustration, and announcements use the Bollywood names. Powers and rules are unchanged.
+
+| Classic | Bollywood |
+|---|---|
+| Mafia | Gabbar |
+| Godfather | Badde Sahab |
+| Villager | Gao Wallon |
+| Joker | Baburao |
+| Imposter | Babaji |
+| Doctor | Munna MBBS |
+| Detective | ACP Pradyuman |
+| Thief | Bunty |
+| Judge | Pradhan Ji |
+
+The Guide always shows both names.
 
 ## Online or offline (sound)
 The host picks **Where are you playing?** in House rules:
@@ -32,7 +52,7 @@ Deaths and eliminations are announced by **name only**. Eliminated players keep 
 | Role | Side | Default | Configurable |
 |---|---|---|---|
 | **Mafia** | Mafia | Each night the Mafia pick one victim (most picks wins; ties go to the first-seated member). They know each other by name and photo (on the role card and again at night), never the Godfather. At night the live plan is anonymous: “Mafia 1 wants to kill X”, numbers shuffled every night. | decision mode |
-| **Godfather** | Mafia side, **not** a Mafia member | Privately shown **who the Mafia are**, with photos, on the role card and again at night (they don't know him). Silences one player each night for the next Day. Doesn't kill. Defends the Mafia in discussion. | Detective sees him as innocent |
+| **Godfather** | **Evil**: on the Mafia’s side and wins with them, but **not** a Mafia member and **not counted** for their takeover | Privately shown **who the Mafia are**, with photos, on the role card and again at night (they don't know him). Silences one player each night for the next Day. Doesn't kill. Defends the Mafia in discussion. | Detective sees him as innocent |
 | **Detective** | Town | Investigates one player each night; private result: suspicious / not suspicious. | exact alignment instead |
 | **Doctor** | Town | Protects one player each night. **May save themselves, but never two rounds in a row.** | never / always self-save |
 | **Judge** | Town | Day vote counts ×2 (applied by the server). | weight 1–5 |
@@ -73,7 +93,7 @@ Dawn order: Thief steal (85), then Imposter revive (90). A power stolen earlier 
 1. **Joker**: voted out by Day → wins alone (ends the game by default).
 2. Nobody alive → draw.
 3. **Town wins when every Mafia member is dead**, even if the Godfather is still alive.
-4. **Mafia side wins** when the Mafia plus the Godfather equal or outnumber everyone else alive.
+4. **Mafia win** when the Mafia **members** equal or outnumber everyone else alive. The Godfather (Evil) doesn’t count towards this — 1 Mafia + Godfather + 2 others plays on; 2 Mafia + 2 others is a Mafia win — but he wins with them.
 5. Thief and Imposter still alive at the end **co-win** with whoever won.
 
 ## Edge cases

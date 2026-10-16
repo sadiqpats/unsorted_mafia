@@ -59,7 +59,7 @@ export function analyzeDistribution(settings: Settings, actualPlayers?: number):
   const n = actualPlayers ?? settings.playerCount;
   const errors: string[] = [];
   const warnings: string[] = [];
-  const byAlignment: Record<Alignment, number> = { good: 0, mafia: 0, neutral: 0 };
+  const byAlignment: Record<Alignment, number> = { good: 0, mafia: 0, evil: 0, neutral: 0 };
   let total = 0;
   let mafiaTeam = 0;
 

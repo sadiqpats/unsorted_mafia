@@ -74,10 +74,11 @@ export function Shell({ children, right, wide = false }: { children: ReactNode; 
 
 // ------------------------------------------------------------------ alignment
 
-const ALIGN_ICON: Record<Alignment, string> = { good: '🛡️', mafia: '🗡', neutral: '◆' };
+const ALIGN_ICON: Record<Alignment, string> = { good: '🛡️', mafia: '🗡', evil: '😈', neutral: '◆' };
 const ALIGN_CLASS: Record<Alignment, string> = {
   good: 'text-good border-good/40 bg-good/5',
   mafia: 'text-ember border-crimson/50 bg-crimson/10',
+  evil: 'text-[#e07ac8] border-[#8e2f7a]/60 bg-[#8e2f7a]/15',
   neutral: 'text-neutral border-neutral/40 bg-neutral/10',
 };
 
@@ -117,14 +118,23 @@ export function fmt(ms: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export function Timer({ endsAt, serverNow, pausedMs, large = false }: { endsAt: number | null; serverNow: () => number; pausedMs: number | null; large?: boolean }) {
+export function Timer({ endsAt, opensAt = null, serverNow, pausedMs, large = false }: { endsAt: number | null; opensAt?: number | null; serverNow: () => number; pausedMs: number | null; large?: boolean }) {
   const left = useCountdown(endsAt, serverNow, pausedMs);
+  const toOpen = useCountdown(opensAt, serverNow, pausedMs);
   const { play } = useFx();
   const secs = left === null ? null : Math.ceil(left / 1000);
   useEffect(() => {
     // Soft tick for the last 5 seconds — the clock is public, so every phone ticks together.
     if (secs !== null && secs > 0 && secs <= 5 && pausedMs === null) play('tick');
   }, [secs]);
+  // The short break at the start of Dawn/Night: show when actions open instead of the full clock.
+  if (toOpen !== null && toOpen > 0 && pausedMs === null) {
+    return (
+      <span role="timer" aria-label={`Starts in ${Math.ceil(toOpen / 1000)} seconds`} className={`inline-flex items-baseline gap-2 font-[family-name:var(--font-display)] tabular-nums text-gold ${large ? 'text-4xl md:text-5xl' : 'text-base'}`}>
+        <span className={large ? 'text-2xl' : 'text-xs'}>Starts in</span> {Math.ceil(toOpen / 1000)}
+      </span>
+    );
+  }
   if (left === null) return pausedMs !== null ? <span className="chip text-gold">⏸ Paused</span> : null;
   const urgent = left < 10_000 && pausedMs === null;
   return (
@@ -445,8 +455,8 @@ export const PHASE_LABEL: Record<string, string> = {
   prenight: 'Dawn',
   night: 'Night',
   morning: 'Morning',
-  discussion: 'Discussion',
-  voting: 'Day',
+  discussion: 'Day',
+  voting: 'Vote',
   verdict: 'Verdict',
   game_over: 'Game Over',
 };

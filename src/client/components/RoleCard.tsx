@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
-import { ABILITIES, ROLES } from '../../shared/roles';
+import { ABILITIES, BOLLYWOOD, ROLES, roleArt, themeText } from '../../shared/roles';
 import type { Settings } from '../../shared/settings';
 import type { Alignment, StolenAbility } from '../../shared/types';
 import { AlignmentBadge } from './ui';
@@ -22,32 +22,35 @@ export function RoleDetails({
 }) {
   const role = ROLES[roleId];
   if (!role) return null;
+  const bw = settings?.bollywood ? BOLLYWOOD[roleId] : undefined;
+  const t = (x: string) => themeText(x, settings);
   return (
     <div className="flex flex-col items-center text-center">
-      <RoleArt art={role.art} alignment={alignment} size={compact ? 84 : 120} />
-      <h3 className="brand-title mt-3 text-3xl font-bold">{role.name}</h3>
+      <RoleArt art={roleArt(roleId, settings)} alignment={alignment} size={compact ? 84 : 120} />
+      <h3 className="brand-title mt-3 text-3xl font-bold">{bw ? bw.name : role.name}</h3>
+      {bw && <p className="text-sm text-mute">({role.name})</p>}
       <div className="mt-2">
         <AlignmentBadge alignment={alignment} />
       </div>
-      <p className="mt-2 font-[family-name:var(--font-serif)] text-lg italic text-mute">“{role.tagline}”</p>
-      {!compact && <p className="mt-3 text-sm text-bone/90">{role.description}</p>}
+      <p className="mt-2 font-[family-name:var(--font-serif)] text-lg italic text-mute">“{t(role.tagline)}”</p>
+      {!compact && <p className="mt-3 text-sm text-bone/90">{t(role.description)}</p>}
       <dl className="mt-4 w-full space-y-3 text-left text-sm">
         <div className="rounded-xl border border-line/70 bg-black/30 p-3">
           <dt className="eyebrow mb-1 !text-[0.62rem]">Ability</dt>
           <dd>
-            {role.abilityText}
+            {t(role.abilityText)}
             {roleId === 'judge' && settings && <span className="text-gold"> (×{settings.judgeWeight} this game)</span>}
           </dd>
         </div>
         {!compact && (
           <div className="rounded-xl border border-line/70 bg-black/30 p-3">
             <dt className="eyebrow mb-1 !text-[0.62rem]">How to use it</dt>
-            <dd>{role.howTo}</dd>
+            <dd>{t(role.howTo)}</dd>
           </div>
         )}
         <div className="rounded-xl border border-line/70 bg-black/30 p-3">
           <dt className="eyebrow mb-1 !text-[0.62rem]">Win condition</dt>
-          <dd>{role.winCondition}</dd>
+          <dd>{t(role.winCondition)}</dd>
         </div>
         {abilities && abilities.some((a) => a.charges !== null || a.source === 'stolen') && (
           <div className="rounded-xl border border-gold/30 bg-gold/5 p-3">

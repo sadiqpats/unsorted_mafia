@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { suggestDistribution } from '../../shared/distribution';
-import { ABILITIES, ROLES, ROLE_ORDER, roleAlignment } from '../../shared/roles';
+import { ABILITIES, ROLES, ROLE_ORDER, roleAlignment, roleArt, roleTitle } from '../../shared/roles';
 import type { Settings, SettingsPatch } from '../../shared/settings';
 import type { ClientView } from '../../shared/view-types';
 import { PlayerCountInput } from '../components/PlayerCountInput';
@@ -163,6 +163,7 @@ function RoleEditor({ view, onChange }: { view: ClientView; onChange: (r: Record
       <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
         <span className="chip text-good">🛡️ Town {d.byAlignment.good}</span>
         <span className="chip text-ember">🗡 Mafia {d.byAlignment.mafia}</span>
+        {d.byAlignment.evil > 0 && <span className="chip text-[#e07ac8]">😈 Evil {d.byAlignment.evil}</span>}
         <span className="chip text-neutral">◆ Neutral {d.byAlignment.neutral}</span>
         <span className={`chip ${d.total === s.playerCount ? 'text-ok' : 'text-ember'}`}>
           {d.total}/{s.playerCount} roles
@@ -178,10 +179,10 @@ function RoleEditor({ view, onChange }: { view: ClientView; onChange: (r: Record
           const a = roleAlignment(id, s);
           return (
             <li key={id} className={`flex items-center gap-3 rounded-xl border p-2 ${c > 0 ? 'border-line' : 'border-line/40 opacity-70'}`}>
-              <RoleArt art={r.art} alignment={a} size={40} />
+              <RoleArt art={roleArt(id, s)} alignment={a} size={40} />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-medium">
-                  {r.name} {r.unique && <span className="text-[0.65rem] text-mute">(max 1)</span>}
+                  {roleTitle(id, s)} {r.unique && <span className="text-[0.65rem] text-mute">(max 1)</span>}
                 </div>
                 <div className="text-xs text-mute">
                   <AlignmentBadge alignment={a} />
@@ -284,22 +285,20 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           ))}
         </div>
       </div>
+      <label className="mb-4 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gradient-to-r from-[#3a0f2a]/60 to-[#2a1606]/60 p-3">
+        <span>
+          <span className="block font-semibold">🎬 Bollywood Mafia Night</span>
+          <span className="mt-0.5 block text-xs text-mute">Every character becomes a Bollywood legend — Gabbar (Mafia), Badde Sahab (Godfather), Munna MBBS (Doctor)… with their own illustrations. Same rules and powers.</span>
+        </span>
+        <input type="checkbox" className="h-6 w-6 shrink-0 accent-[#e0473f]" aria-label="Bollywood Mafia Night" checked={!!s.bollywood} onChange={(e) => patch({ bollywood: e.target.checked })} />
+      </label>
       <div className="space-y-2">
         <Group title="Timers" open>
-          <Toggle
-            label="Use timers"
-            hint="Off (default): each phase ends as soon as everyone has acted. On: phases also end when the clock runs out."
-            checked={s.timers}
-            onChange={(v) => patch({ timers: v })}
-          />
-          {s.timers && (
-            <>
-              <NumberSetting label="Role reveal" value={s.revealSeconds} min={5} max={300} onChange={(v) => patch({ revealSeconds: v })} />
-              <NumberSetting label="Dawn" value={s.preNightSeconds} min={10} max={300} onChange={(v) => patch({ preNightSeconds: v })} />
-              <NumberSetting label="Night" value={s.nightSeconds} min={15} max={600} onChange={(v) => patch({ nightSeconds: v })} />
-              <NumberSetting label="Day (discussion + vote)" value={s.daySeconds} min={30} max={3600} onChange={(v) => patch({ daySeconds: v })} />
-            </>
-          )}
+          <p className="text-xs text-mute">The clock is always on. Dawn and Night start with a short break so the news can land. The Day’s discussion has no clock: you press “Start voting” when the table is ready. Anything not chosen in time simply doesn’t count.</p>
+          <NumberSetting label="Dawn (seconds)" value={s.preNightSeconds} min={10} max={300} onChange={(v) => patch({ preNightSeconds: v })} />
+          <NumberSetting label="Night (seconds)" value={s.nightSeconds} min={15} max={600} onChange={(v) => patch({ nightSeconds: v })} />
+          <NumberSetting label="Vote (seconds)" value={s.voteSeconds ?? 60} min={15} max={600} onChange={(v) => patch({ voteSeconds: v })} />
+          <NumberSetting label="Break before Dawn & Night (seconds)" value={s.bufferSeconds ?? 8} min={0} max={15} onChange={(v) => patch({ bufferSeconds: v })} />
         </Group>
         <Group title="Flow">
           <Toggle
@@ -312,7 +311,7 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           <Toggle label="Allow late joining" hint="Late joiners always become Villagers." checked={s.allowLateJoin} onChange={(v) => patch({ allowLateJoin: v })} />
         </Group>
         <Group title="Voting">
-          <Toggle label="Players may change their vote" hint="Without timers, you close the vote with Next phase once everyone is happy." checked={s.allowVoteChange} onChange={(v) => patch({ allowVoteChange: v })} />
+          <Toggle label="Players may change their vote" hint="The vote then runs until its clock ends (or you press Next phase)." checked={s.allowVoteChange} onChange={(v) => patch({ allowVoteChange: v })} />
           <Toggle label="Allow voting for yourself" checked={s.allowSelfVote} onChange={(v) => patch({ allowSelfVote: v })} />
           <Toggle label="Allow abstaining" checked={s.allowAbstain} onChange={(v) => patch({ allowAbstain: v })} />
           <Toggle label="Silenced players can still vote" hint="They must stay quiet in discussion either way." checked={s.silencedCanVote} onChange={(v) => patch({ silencedCanVote: v })} />
@@ -329,7 +328,7 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
         </Group>
         <Group title="Mafia & Godfather">
           <Select label="Mafia kill decision" value={s.mafiaDecision} options={[['plurality', 'Most picks'], ['leader', 'First-seated Mafia decides']]} onChange={(v) => patch({ mafiaDecision: v })} />
-          <Select label="Mafia side wins when" value={s.mafiaWin} options={[['parity', 'They equal the rest'], ['majority', 'They outnumber the rest']]} onChange={(v) => patch({ mafiaWin: v })} />
+          <Select label="Mafia win when Mafia members" value={s.mafiaWin} options={[['parity', 'equal the rest (Godfather not counted)'], ['majority', 'outnumber the rest']]} onChange={(v) => patch({ mafiaWin: v })} />
           <Toggle label="Godfather appears innocent to the Detective" checked={s.godfatherAppearsInnocent} onChange={(v) => patch({ godfatherAppearsInnocent: v })} />
         </Group>
         <Group title="Doctor">
@@ -403,7 +402,7 @@ function HostGame({ view, send, serverNow }: GameProps) {
   const [rejoin, setRejoin] = useState<{ name: string; code: string } | null>(null);
   const [msg, setMsg] = useState('');
   const over = g.phase === 'game_over';
-  const roleName = (id: string) => (h.roles ? ROLES[h.roles[id]]?.name : null);
+  const roleName = (id: string) => (h.roles ? roleTitle(h.roles[id], view.settings) : null);
   const nameOf = (id: string | null) => (id ? (view.players.find((p) => p.id === id)?.name ?? '?') : 'skip');
 
   const playAgain = (
@@ -427,10 +426,10 @@ function HostGame({ view, send, serverNow }: GameProps) {
             {PHASE_LABEL[g.phase]}
           </div>
         </div>
-        <Timer endsAt={g.phaseEndsAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
+        <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
         {!over && (
           <div className="flex flex-wrap gap-2">
-            {view.settings.timers && (
+            {g.phaseEndsAt !== null && (
               <>
                 <button className="btn btn-ghost !min-h-10 text-sm" disabled={busy} onClick={() => act({ type: 'extend', seconds: -30 })} aria-label="Remove 30 seconds">
                   −30s
@@ -444,7 +443,7 @@ function HostGame({ view, send, serverNow }: GameProps) {
               {g.paused ? '▶ Resume' : '⏸ Pause'}
             </button>
             <button className="btn btn-gold !min-h-10 text-sm" disabled={busy || !!g.pendingTie} onClick={() => act({ type: 'advance', phaseSeq: g.phaseSeq })}>
-              Next phase ⏭
+              {g.phase === 'discussion' ? '🗳️ Start voting' : 'Next phase ⏭'}
             </button>
           </div>
         )}
@@ -603,6 +602,7 @@ function HostGame({ view, send, serverNow }: GameProps) {
               <div className="flex flex-wrap gap-2 text-sm">
                 <span className="chip text-good">🛡️ Town alive {h.alignmentAlive.good}</span>
                 <span className="chip text-ember">🗡 Mafia alive {h.alignmentAlive.mafia}</span>
+                {h.alignmentAlive.evil > 0 && <span className="chip text-[#e07ac8]">😈 Evil alive {h.alignmentAlive.evil}</span>}
                 <span className="chip text-neutral">◆ Neutral alive {h.alignmentAlive.neutral}</span>
               </div>
               <p className="mt-2 text-xs text-mute">{h.winPreview ? `Win condition met: ${h.winPreview.faction}` : 'No faction has met its win condition yet.'}</p>

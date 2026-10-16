@@ -155,7 +155,7 @@ describe('secret role privacy', () => {
         expectOk(await p.client.send({ type: 'night_action', abilityId: opt.abilityId, targetId: null, phaseSeq: v.game!.phaseSeq }));
       }
     }
-    await g.host.waitFor((v) => v.game?.phase === 'voting');
+    await g.host.waitFor((v) => v.game?.phase === 'discussion');
     await toPhase(g.host, g.host, 'voting');
 
     for (const p of g.players) {
@@ -218,7 +218,7 @@ describe('gameplay over the network', () => {
       expectOk(await p.client.send({ type: 'night_action', abilityId: v.me!.night!.options[0].abilityId, targetId: null, phaseSeq: seq }));
     }
     // last action resolves the night immediately (nightAutoResolve)
-    const morning = await others[1].client.waitFor((v) => v.game?.phase === 'voting');
+    const morning = await others[1].client.waitFor((v) => v.game?.phase === 'discussion');
     expect(morning.players.find((p) => p.id === others[0].id)!.alive).toBe(false);
     expect(morning.feed.map((f) => f.text).join()).toContain(`${others[0].name} was killed during the night`);
     // dead player cannot vote

@@ -38,6 +38,11 @@ export async function createRoom(browser: Browser, count: number): Promise<{ hos
   await host.waitForURL(/\/r\/[A-Z0-9]{5}$/);
   const code = host.url().split('/').pop()!;
   await expect(host.getByText('Invite players')).toBeVisible();
+  // No opening break before Dawn/Night in tests (its own test covers it) — keeps every phase instant.
+  const brk = host.getByLabel('Break before Dawn & Night (seconds)');
+  await brk.fill('0');
+  await brk.press('Enter');
+  await expect(brk).toHaveValue('0');
   return { host, code };
 }
 
@@ -79,7 +84,10 @@ export async function setupTable(browser: Browser, count: number, roles?: Record
   await expect(host.getByText('Role Reveal').first()).toBeVisible();
   // Host (Game Master) reveals roles on their own dashboard.
   await host.getByRole('button', { name: /Show roles/ }).click();
-  for (const s of seats) s.role = (await host.locator(`li[data-player="${s.name}"] [data-testid="role"]`).innerText()).trim();
+  for (const s of seats) {
+    const shown = (await host.locator(`li[data-player="${s.name}"] [data-testid="role"]`).innerText()).trim();
+    s.role = shown.match(/\(([^)]+)\)$/)?.[1] ?? shown; // Bollywood games show "Gabbar (Mafia)"
+  }
   const table: Table = {
     code,
     host,
@@ -143,25 +151,18 @@ export async function skipRest(t: Table, done: Set<string>) {
   for (const s of await t.alive()) {
     if (done.has(s.name)) continue;
     const p = s.page;
-    // The phase can end the moment the last person acts, taking these buttons away mid-click: that's fine.
-    const tap = async (l: ReturnType<Page['locator']>) => {
-      for (let attempt = 0; attempt < 4; attempt++) {
-        try {
-          await l.click({ timeout: 8000 });
-          return;
-        } catch (e) {
-          if (!(await l.isVisible())) return; // gone because the phase moved on — fine
-          if (attempt === 3) throw e;
-        }
-      }
-    };
-    const open = p.getByRole('button', { name: /Open your (dawn|night) panel|Review your choice/ });
-    if (await open.isVisible()) await tap(open);
-    const cards = p.locator('[data-option]');
-    const n = await cards.count();
-    for (let i = 0; i < n; i++) {
-      const skip = cards.nth(i).getByRole('button', { name: 'Skip' });
-      if (await skip.isVisible()) await tap(skip);
+    // The phase can end the moment the last person acts (buttons vanish mid-click: fine), and the
+    // secret panel closes itself after 15 s (reopen it). Loop until this player is locked in.
+    const tap = (l: ReturnType<Page['locator']>) => l.click({ timeout: 8000 }).then(() => true, () => false);
+    for (let round = 0; round < 5; round++) {
+      if (await p.getByText(/Locked in\. Put your phone face down/).isVisible()) break;
+      if (!(await p.locator('h1', { hasText: /^(Dawn|Night)$/ }).isVisible())) break; // phase moved on
+      const open = p.getByRole('button', { name: /Open your (dawn|night) panel|Review your choice/ });
+      if (await open.isVisible()) await tap(open);
+      const skips = p.locator('[data-option]').getByRole('button', { name: 'Skip' });
+      const n = await skips.count();
+      for (let i = 0; i < n; i++) await tap(skips.first());
+      await p.waitForTimeout(150);
     }
   }
 }
@@ -200,7 +201,7 @@ export async function advanceTo(t: Table, phase: string) {
   for (let i = 0; i < 8; i++) {
     const now = await hostPhase(t);
     if (now === phase) return;
-    await t.host.getByRole('button', { name: /Next phase/ }).click();
+    await t.host.getByRole('button', { name: /Next phase|Start voting/ }).click();
     await expect(t.host.getByTestId('host-phase')).not.toHaveText(now);
   }
   await expect(t.host.getByTestId('host-phase')).toHaveText(phase);
@@ -211,7 +212,7 @@ export { nameRole };
 /** Host presses "Next phase" only if the phase is still the given one (it may have ended by itself). */
 export async function nextIfStill(t: Table, phase: string) {
   if ((await hostPhase(t)) === phase) {
-    await t.host.getByRole('button', { name: /Next phase/ }).click();
+    await t.host.getByRole('button', { name: /Next phase|Start voting/ }).click();
     await expect(t.host.getByTestId('host-phase')).not.toHaveText(phase);
   }
 }

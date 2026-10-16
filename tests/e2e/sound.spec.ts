@@ -24,7 +24,7 @@ test('online game: suspense music at Night on every phone, a kill sound for ever
   await advanceTo(t, 'Night');
   await expect(victim.page.getByTestId('phase-news')).toContainText('could not agree');
   await expect(victim.page.getByText('The living are making their moves…')).toBeVisible();
-  await expect(victim.page.locator('section', { hasText: 'Announcements' })).toContainText(`${victim.name} was killed`);
+  await expect(victim.page.locator('section', { hasText: 'Announcements' })).toContainText(`${victim.name} was killed`); // earlier news stays in the list
   await expect.poll(() => musicOn(victim.page), { timeout: 15_000 }).toBe(true);
 });
 

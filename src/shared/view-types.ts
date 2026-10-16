@@ -26,6 +26,8 @@ export interface PublicGame {
   round: number;
   phaseSeq: number;
   phaseEndsAt: number | null;
+  /** Dawn/Night start with a short break: actions open at this time. */
+  phaseOpensAt: number | null;
   paused: boolean;
   pausedRemainingMs: number | null;
   nightProgress: { done: number; total: number } | null;
