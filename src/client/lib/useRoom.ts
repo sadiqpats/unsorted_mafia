@@ -31,7 +31,8 @@ export function useRoom(code: string, auth: { token?: string; display?: boolean 
       transports: ['websocket', 'polling'],
       reconnectionDelay: 300,
       reconnectionDelayMax: 2000,
-      timeout: 15000,
+      // A sleeping free-plan server can take 20–60s to wake; don't give up on the first connect too early.
+      timeout: 45000,
     });
     socketRef.current = s;
     let stopped = false;

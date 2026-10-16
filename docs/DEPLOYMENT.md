@@ -10,6 +10,9 @@ The app is **one Node process** serving the website, the JSON API and the WebSoc
 > Vercel/Netlify alone won't work, because they don't keep a WebSocket server running. Use a container/VM host such as the ones below. (You *can* put the static client on Vercel and point it at this server with `CLIENT_ORIGIN`, but one service is simpler.)
 
 ## Option 0 — Vercel (website) + Render FREE plan (game server)  ← your chosen setup
+
+Live: website `https://unsortedmafia.vercel.app` → game server `https://mafia-night-1c5h.onrender.com`. Both are also built into the code as defaults (`src/client/lib/server.ts`, `src/server/config.ts`), so the steps below still work if an environment variable is missing.
+
 Vercel serves the website. Render runs the live game server (WebSockets, rooms, photos). Both are free.
 
 1. **Push the code** to `https://github.com/sadiqpats/unsorted_mafia` (`git push -u origin main`).

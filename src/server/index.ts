@@ -1,6 +1,7 @@
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app';
+import { resolveClientOrigins } from './config';
 
 /**
  * Production / dev entry point. Configuration comes only from environment
@@ -13,7 +14,7 @@ const root = resolve(here, '../..');
 const port = Number(process.env.PORT ?? 3001);
 const dbPath = process.env.DATABASE_PATH ?? join(root, 'data', 'mafia.db');
 const staticDir = process.env.STATIC_DIR ?? join(root, 'dist', 'client');
-const corsOrigin = process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.split(',') : undefined;
+const corsOrigin = resolveClientOrigins(process.env.CLIENT_ORIGIN);
 
 const server = createApp({
   dbPath,
