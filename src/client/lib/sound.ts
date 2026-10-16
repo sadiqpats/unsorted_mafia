@@ -10,17 +10,31 @@ let master: GainNode | null = null;
 let reverb: ConvolverNode | null = null;
 let volume = 0.8;
 
-function impulse(a: AudioContext, seconds: number, decay: number) {
+/**
+ * The reverb's impulse response is built in small slices across idle moments
+ * (instead of one ~100k-sample loop) so creating the audio engine never stalls an
+ * animation. Tones play dry until it's ready (a fraction of a second).
+ */
+function buildReverb(a: AudioContext, into: ConvolverNode, seconds: number, decay: number) {
   const len = Math.floor(a.sampleRate * seconds);
   const buf = a.createBuffer(2, len, a.sampleRate);
-  for (let ch = 0; ch < 2; ch++) {
-    const d = buf.getChannelData(ch);
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
-  }
-  return buf;
+  const chans = [buf.getChannelData(0), buf.getChannelData(1)];
+  const SLICE = 12_000;
+  let i = 0;
+  const step = () => {
+    const end = Math.min(len, i + SLICE);
+    for (; i < end; i++) {
+      const env = Math.pow(1 - i / len, decay);
+      chans[0][i] = (Math.random() * 2 - 1) * env;
+      chans[1][i] = (Math.random() * 2 - 1) * env;
+    }
+    if (i < len) setTimeout(step, 0);
+    else into.buffer = buf;
+  };
+  setTimeout(step, 0);
 }
 
-function ac(): AudioContext | null {
+function ac(resume = true): AudioContext | null {
   if (typeof window === 'undefined') return null;
   try {
     if (!ctx) {
@@ -32,12 +46,12 @@ function ac(): AudioContext | null {
       master.gain.value = volume;
       master.connect(comp).connect(ctx.destination);
       reverb = ctx.createConvolver();
-      reverb.buffer = impulse(ctx, 2.4, 2.6);
+      buildReverb(ctx, reverb, 1.8, 2.6);
       const wet = ctx.createGain();
-      wet.gain.value = 0.32;
+      wet.gain.value = 0.34;
       reverb.connect(wet).connect(master);
     }
-    if (ctx.state === 'suspended') void ctx.resume();
+    if (resume && ctx.state === 'suspended') void ctx.resume();
     return ctx;
   } catch {
     return null;
@@ -303,5 +317,12 @@ export const sounds = {
   /** Browsers only allow audio after a tap; call on the first interaction. */
   unlock() {
     ac();
+  },
+  /**
+   * Build the audio graph (reverb impulse etc.) ahead of time without starting it —
+   * browsers only let it start on a tap. Doing this early keeps that first tap instant.
+   */
+  prime() {
+    ac(false);
   },
 };

@@ -8,7 +8,7 @@ test('welcome intro: shows on first open, tap to enter opens the site, not shown
   await expect(intro).toBeVisible();
   // Act one: the Unsorted Plans logo, then the Mafia Night gate.
   // (On a slow machine the 4-second logo act may already be over by the time we look.)
-  await expect(intro.getByRole('img', { name: /Unsorted/ }).or(intro.getByText('Mafia Night'))).toBeVisible();
+  await expect(intro.getByRole('img', { name: /Unsorted/ }).or(intro.getByText('Mafia Night')).first()).toBeVisible();
   await expect(intro.getByText('Mafia Night')).toBeVisible({ timeout: 8000 });
   await intro.getByRole('button', { name: 'Tap to enter' }).click();
   await expect(intro).toHaveCount(0, { timeout: 15000 });

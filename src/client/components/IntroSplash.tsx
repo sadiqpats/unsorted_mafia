@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFx, usePrefs } from '../lib/prefs';
 import { sounds } from '../lib/sound';
 import { LOGO } from './ui';
@@ -17,12 +17,6 @@ function shouldShow() {
   }
 }
 
-/**
- * The welcome, in two acts. First the Unsorted Plans logo: the yellow ring spins
- * in, the wordmark opens out of it, "presents". Then the haunted Mafia Night gate.
- * Browsers only allow sound after a tap, so the gate asks the guest to "enter" —
- * that tap starts the sound and swings the doors open.
- */
 /** Act two names the game the guest is walking into. */
 function gateFor(path: string) {
   if (path.startsWith('/charades')) return { title: 'Dumb Charades', whisper: 'Lights. Camera. Action!', label: 'Welcome to Bollywood Dumb Charades' };
@@ -30,12 +24,27 @@ function gateFor(path: string) {
   return { title: 'Mafia Night', whisper: 'The night is waiting for you…', label: 'Welcome to Mafia Night' };
 }
 
+type Stage = 'brand' | 'gate' | 'open' | 'gone';
+
+/**
+ * The welcome, in three beats:
+ *  1. Unsorted: the yellow ring spins in on a warm glow and the wordmark opens out of it.
+ *  2. A cross-fade to the gate ("Game Night" / "Mafia Night" / "Dumb Charades") — candle, title, "Tap to enter".
+ *  3. Enter: the doors slide apart on a burst of light and the site is revealed.
+ *
+ * Smoothness rules: every layer is mounted from the start (no pop-in), and only
+ * transform + opacity are animated (GPU-composited — no blur filters, 3D swings or
+ * letter-spacing animations, which stutter on phones). Browsers only allow sound
+ * after a tap, so the sound starts on "Tap to enter".
+ */
 export function IntroSplash() {
-  const [stage, setStage] = useState<'brand' | 'gate' | 'open' | 'gone'>(() => (shouldShow() ? 'brand' : 'gone'));
-  const [brandOut, setBrandOut] = useState(false);
+  const [stage, setStage] = useState<Stage>(() => (shouldShow() ? 'brand' : 'gone'));
   const [gate] = useState(() => gateFor(typeof window === 'undefined' ? '/' : window.location.pathname));
   const { prefs } = usePrefs();
   const { play } = useFx();
+  const stageRef = useRef(stage);
+  stageRef.current = stage;
+  const fast = prefs.reduceMotion;
 
   const finish = () => {
     try {
@@ -46,31 +55,36 @@ export function IntroSplash() {
     setStage('gone');
   };
 
-  const toGate = () => {
-    setBrandOut(true);
-    setStage((st) => (st === 'brand' ? 'gate' : st));
-  };
-
   const enter = () => {
-    if (stage === 'brand') return toGate();
-    if (stage !== 'gate') return;
-    sounds.unlock();
-    play('welcome');
+    const st = stageRef.current;
+    if (st === 'brand') return setStage('gate'); // tap during the logo skips to the gate
+    if (st !== 'gate') return;
+    sounds.unlock(); // must happen inside the tap
     setStage('open');
-    setTimeout(finish, prefs.reduceMotion ? 400 : 3000);
+    // Let the doors start moving first; the sound follows a beat later so it never stalls the animation.
+    requestAnimationFrame(() => setTimeout(() => play('welcome'), 60));
   };
 
-  // Act one plays on its own, then hands over to the gate.
+  // Warm up the audio engine once the gate has settled (nothing else is moving), so "Tap to enter" doesn't hitch.
+  useEffect(() => {
+    if (stage !== 'gate') return;
+    const id = setTimeout(() => sounds.prime(), fast ? 0 : 1500);
+    return () => clearTimeout(id);
+  }, [stage, fast]);
+
+  // Beat 1 → beat 2 on its own.
   useEffect(() => {
     if (stage !== 'brand') return;
-    const fast = prefs.reduceMotion;
-    const t1 = setTimeout(() => setBrandOut(true), fast ? 900 : 3500);
-    const t2 = setTimeout(() => setStage((st) => (st === 'brand' ? 'gate' : st)), fast ? 1200 : 3900);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, [stage === 'brand']);
+    const t = setTimeout(() => setStage((s) => (s === 'brand' ? 'gate' : s)), fast ? 700 : 3350); // the logo starts after the page has settled
+    return () => clearTimeout(t);
+  }, [stage, fast]);
+
+  // Beat 3 ends by unmounting once everything has faded (nothing left to pop).
+  useEffect(() => {
+    if (stage !== 'open') return;
+    const t = setTimeout(finish, fast ? 350 : 1250);
+    return () => clearTimeout(t);
+  }, [stage, fast]);
 
   useEffect(() => {
     if (stage === 'gone') return;
@@ -78,52 +92,58 @@ export function IntroSplash() {
     document.body.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') finish();
-      if (e.key === 'Enter' || e.key === ' ') enter();
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        enter();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener('keydown', onKey);
     };
-  }, [stage]);
+  }, [stage === 'gone']);
 
   if (stage === 'gone') return null;
   return (
-    <div className={`intro ${stage === 'open' ? 'intro-open' : ''}`} role="dialog" aria-modal="true" aria-label={gate.label}>
-      <div className="intro-door intro-door-left" aria-hidden="true" />
-      <div className="intro-door intro-door-right" aria-hidden="true" />
-      <div className="intro-fog" aria-hidden="true" />
-      <div className="intro-dust" aria-hidden="true">
-        {Array.from({ length: 22 }, (_, i) => (
-          <span key={i} style={{ left: `${(i * 41) % 100}%`, animationDelay: `${(i * 0.37) % 3}s`, animationDuration: `${4 + ((i * 1.3) % 4)}s` }} />
+    <div className={`in-root is-${stage}`} role="dialog" aria-modal="true" aria-label={gate.label} onClick={stage === 'brand' ? enter : undefined}>
+      <div className="in-backdrop" aria-hidden="true" />
+      <div className="in-door in-door-l" aria-hidden="true" />
+      <div className="in-door in-door-r" aria-hidden="true" />
+      <div className="in-haze" aria-hidden="true" />
+      <div className="in-motes" aria-hidden="true">
+        {Array.from({ length: 14 }, (_, i) => (
+          <span key={i} style={{ left: `${(i * 37 + 7) % 100}%`, animationDelay: `${(i * 0.53) % 4}s`, animationDuration: `${6 + ((i * 1.7) % 5)}s` }} />
         ))}
       </div>
-      {stage !== 'brand' && (
-        <div className="intro-content">
-          <div className="intro-candle" aria-hidden="true">
-            <div className="intro-flame" />
-            <div className="intro-wax" />
-          </div>
-          <p className="intro-presents">Unsorted Plans presents</p>
-          <h1 className="intro-title">{gate.title}</h1>
-          <p className="intro-whisper">{gate.whisper}</p>
-          <button className="intro-enter" onClick={enter} autoFocus>
-            <span className="intro-ring" aria-hidden="true" />
-            Tap to enter
-          </button>
+      <div className="in-bloom" aria-hidden="true" />
+
+      {/* Beat 1: Unsorted */}
+      <div className="in-layer in-brand" aria-hidden={stage !== 'brand'}>
+        <div className="in-halo" />
+        <div className="in-logo-box">
+          <img src={LOGO.mark} alt="" className="in-ring" draggable={false} decoding="async" />
+          <img src={LOGO.full} alt="Unsorted — Plans worth showing up for." className="in-logo" draggable={false} decoding="async" />
         </div>
-      )}
-      {(stage === 'brand' || stage === 'gate') && (
-        <div className={`intro-brand ${brandOut ? 'intro-brand-out' : ''}`} onClick={toGate} aria-hidden={brandOut}>
-          <div className="intro-brand-burst" aria-hidden="true" />
-          <div className="intro-brand-stage">
-            <img src={LOGO.mark} alt="" className="intro-brand-ring" draggable={false} />
-            <img src={LOGO.full} alt="Unsorted — Plans worth showing up for." className="intro-brand-logo" draggable={false} />
-          </div>
-          <p className="intro-brand-presents">presents</p>
+        <p className="in-presents">presents</p>
+      </div>
+
+      {/* Beat 2: the gate */}
+      <div className="in-layer in-gate" aria-hidden={stage === 'brand'}>
+        <div className="in-candle" aria-hidden="true">
+          <div className="in-flame" />
+          <div className="in-wax" />
         </div>
-      )}
-      <button className="intro-skip" onClick={finish}>
+        <p className="in-kicker">Unsorted Plans presents</p>
+        <h1 className="in-title">{gate.title}</h1>
+        <p className="in-whisper">{gate.whisper}</p>
+        <button className="in-enter" onClick={enter} tabIndex={stage === 'gate' ? 0 : -1}>
+          <span className="in-enter-ring" aria-hidden="true" />
+          Tap to enter
+        </button>
+      </div>
+
+      <button className="in-skip" onClick={finish}>
         Skip
       </button>
     </div>
