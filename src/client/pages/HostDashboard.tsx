@@ -262,6 +262,28 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
   return (
     <Section title="House rules">
       <p className="mb-3 text-xs text-mute">Rules lock when the game starts, so they can never change mid-match.</p>
+      <div className="mb-4" role="radiogroup" aria-label="Where are you playing?">
+        <p className="mb-2 text-sm font-medium">Where are you playing?</p>
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              ['offline', '🏠 Together (offline)', 'Same room. No music on phones; sound effects play on your device and the TV.'],
+              ['online', '🌐 Online', 'Players apart. Suspense music at Dawn & Night, and every sound on every phone.'],
+            ] as const
+          ).map(([mode, label, hint]) => (
+            <button
+              key={mode}
+              role="radio"
+              aria-checked={s.playMode === mode}
+              onClick={() => patch({ playMode: mode })}
+              className={`rounded-xl border p-3 text-left text-sm transition ${s.playMode === mode ? 'border-gold bg-gold/10' : 'border-line bg-black/20 hover:border-gold/50'}`}
+            >
+              <span className="block font-semibold">{label}</span>
+              <span className="mt-1 block text-xs text-mute">{hint}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="space-y-2">
         <Group title="Timers" open>
           <Toggle

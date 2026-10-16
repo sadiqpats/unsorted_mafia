@@ -89,7 +89,28 @@ export interface LogEntry {
   /** public: everyone; host: host dashboard / audit only. */
   visibility: 'public' | 'host';
   text: string;
+  /** What happened, for sound design (the text itself is host-editable, so it can't be matched). */
+  tag?: EventTag;
 }
+
+export type EventTag =
+  | 'kill'
+  | 'quiet'
+  | 'saved'
+  | 'revive'
+  | 'silence'
+  | 'theft'
+  | 'dawn-quiet'
+  | 'voteout'
+  | 'spared'
+  | 'tie'
+  | 'runoff'
+  | 'joker'
+  | 'win-town'
+  | 'win-mafia'
+  | 'win-other'
+  | 'removed'
+  | 'restored'
 
 export interface PrivateResult {
   id: string;

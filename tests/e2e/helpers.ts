@@ -68,9 +68,10 @@ export async function setRoles(host: Page, counts: Record<string, number>) {
   }
 }
 
-export async function setupTable(browser: Browser, count: number, roles?: Record<string, number>): Promise<Table> {
+export async function setupTable(browser: Browser, count: number, roles?: Record<string, number>, before?: (host: Page) => Promise<void>): Promise<Table> {
   const { host, code } = await createRoom(browser, count);
   if (roles) await setRoles(host, roles);
+  if (before) await before(host);
   const seats: Seat[] = [];
   for (let i = 1; i <= count; i++) seats.push({ name: `P${i}`, page: await joinRoom(browser, code, `P${i}`) });
   await expect(host.getByText(`${count} ready`)).toBeVisible();
@@ -142,13 +143,25 @@ export async function skipRest(t: Table, done: Set<string>) {
   for (const s of await t.alive()) {
     if (done.has(s.name)) continue;
     const p = s.page;
+    // The phase can end the moment the last person acts, taking these buttons away mid-click: that's fine.
+    const tap = async (l: ReturnType<Page['locator']>) => {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          await l.click({ timeout: 8000 });
+          return;
+        } catch (e) {
+          if (!(await l.isVisible())) return; // gone because the phase moved on — fine
+          if (attempt === 3) throw e;
+        }
+      }
+    };
     const open = p.getByRole('button', { name: /Open your (dawn|night) panel|Review your choice/ });
-    if (await open.isVisible()) await open.click();
+    if (await open.isVisible()) await tap(open);
     const cards = p.locator('[data-option]');
     const n = await cards.count();
     for (let i = 0; i < n; i++) {
       const skip = cards.nth(i).getByRole('button', { name: 'Skip' });
-      if (await skip.isVisible()) await skip.click();
+      if (await skip.isVisible()) await tap(skip);
     }
   }
 }

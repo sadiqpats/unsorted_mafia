@@ -171,6 +171,9 @@ test('Dawn: the Thief steals the Mafia Hit and votes with the Mafia as an anonym
   await expect(t.host.getByTestId('host-phase')).toHaveText('Night');
   // The Thief votes in tonight's hit as "Mafia N" — and sees no Mafia names.
   await nightAct(thief, 'mafia_kill', target.name);
+  // (The secret panel closes itself after 15 s; reopen it like a player would.)
+  const review = thief.page.getByRole('button', { name: /Review your choice/ });
+  if (await review.isVisible()) await review.click();
   await expect(thief.page.getByTestId('family-plan')).toContainText(/you are Mafia \d/);
   for (const m of [m1, m2]) await expect(thief.page.getByTestId('family-plan')).not.toContainText(m.name);
   await expect(thief.page.getByTestId('mafia-family')).toHaveCount(0);

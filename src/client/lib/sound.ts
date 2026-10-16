@@ -65,6 +65,8 @@ interface ToneOpts {
   wet?: boolean;
   slideTo?: number;
   filter?: number;
+  /** Route somewhere other than the master bus (e.g. the music bus, so it can fade as one). */
+  out?: AudioNode;
 }
 
 function tone(freq: number, start: number, dur: number, o: ToneOpts = {}) {
@@ -87,11 +89,139 @@ function tone(freq: number, start: number, dur: number, o: ToneOpts = {}) {
     f.frequency.value = o.filter;
     node = node.connect(f);
   }
-  node.connect(master);
+  node.connect(o.out ?? master);
   if (o.wet !== false && reverb) node.connect(reverb);
   osc.start(t0);
   osc.stop(t0 + dur + 0.05);
 }
+
+/** Filtered noise whose band sweeps from one frequency to another (whooshes, risers, "shhh", knife swishes). */
+function sweep(start: number, dur: number, gain: number, from: number, to: number, o: { type?: BiquadFilterType; q?: number; attack?: number; out?: AudioNode; wet?: boolean } = {}) {
+  const a = ac();
+  if (!a || !master) return;
+  const t0 = a.currentTime + start;
+  const buf = a.createBuffer(1, Math.max(1, Math.floor(a.sampleRate * dur)), a.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource();
+  src.buffer = buf;
+  const f = a.createBiquadFilter();
+  f.type = o.type ?? 'bandpass';
+  f.Q.value = o.q ?? 4;
+  f.frequency.setValueAtTime(from, t0);
+  f.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + (o.attack ?? dur * 0.6));
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.connect(f).connect(g).connect(o.out ?? master);
+  if (o.wet !== false && reverb) g.connect(reverb);
+  src.start(t0);
+}
+
+/** A gunshot: a hard crack, a body thump and a short tail. */
+function gunshot(start: number, gain = 0.5) {
+  noiseBurst(start, 0.09, gain, 7000);
+  noiseBurst(start + 0.005, 0.5, gain * 0.5, 900);
+  tone(70, start, 0.6, { type: 'sine', gain: gain * 0.45, attack: 0.003, slideTo: 35, wet: false });
+}
+
+// ------------------------------------------------------------------ suspense score (online games, Dawn + Night)
+
+/**
+ * A generative thriller cue, scheduled a little ahead on the audio clock: a heartbeat
+ * pulse, a pulsing low ostinato, a soft clock tick, dark swelling string chords and the
+ * odd eerie bell. It never repeats exactly. Everything runs through one bus so it can
+ * fade in and out as a whole.
+ */
+const music = (() => {
+  let bus: GainNode | null = null;
+  let timer: ReturnType<typeof setInterval> | null = null;
+  let nextAt = 0;
+  let step = 0;
+  const BPM = 74;
+  const EIGHTH = 60 / BPM / 2;
+  // D minor / Phrygian colour: roots for each 4-bar block.
+  const ROOTS = [73.42, 73.42, 65.41, 77.78, 73.42, 61.74, 65.41, 69.3];
+  const BELLS = [587.33, 622.25, 698.46, 880, 932.33, 1046.5, 1174.66];
+
+  function playStep(i: number, t: number) {
+    const a = ac();
+    if (!a || !bus) return;
+    const rel = (x: number) => Math.max(0, x - a.currentTime);
+    const bar = Math.floor(i / 8);
+    const pos = i % 8;
+    const root = ROOTS[Math.floor(bar / 2) % ROOTS.length];
+    // Heartbeat: lub-dub on beats 1 and 3.
+    if (pos === 0 || pos === 4) {
+      tone(55, rel(t), 0.28, { type: 'sine', gain: 0.16, attack: 0.004, slideTo: 40, wet: false, out: bus });
+      tone(52, rel(t + 0.2), 0.24, { type: 'sine', gain: 0.1, attack: 0.004, slideTo: 38, wet: false, out: bus });
+    }
+    // Ostinato: low plucks on every eighth, a semitone push on the last one.
+    const f = pos === 7 ? root * 1.0595 : pos === 3 && bar % 2 ? root * 1.189 : root;
+    tone(f, rel(t), EIGHTH * 0.9, { type: 'sawtooth', gain: pos % 2 ? 0.035 : 0.05, attack: 0.008, filter: 520, wet: false, out: bus });
+    // Clock tick.
+    sweep(rel(t), 0.03, pos % 2 ? 0.012 : 0.02, 6000, 5000, { type: 'highpass', q: 1, attack: 0.002, out: bus, wet: false });
+    // Swelling string chord every 4 bars: root, minor third, fifth and a nasty flat second on top.
+    if (pos === 0 && bar % 4 === 0) {
+      const len = EIGHTH * 32;
+      for (const m of [2, 2.378, 3, 4.238]) tone(root * m, rel(t), len, { type: 'sawtooth', gain: 0.012, attack: len * 0.45, filter: 1100, out: bus });
+      tone(root / 2, rel(t), len, { type: 'triangle', gain: 0.05, attack: len * 0.3, out: bus });
+    }
+    // An eerie bell now and then.
+    if (pos === 6 && bar % 2 === 1 && Math.random() < 0.6) {
+      const n = BELLS[Math.floor(Math.random() * BELLS.length)];
+      tone(n, rel(t), 2.6, { type: 'sine', gain: 0.03, attack: 0.005, out: bus });
+      tone(n * 2.76, rel(t), 1.2, { type: 'sine', gain: 0.008, attack: 0.005, out: bus });
+    }
+    // A slow riser every 8 bars.
+    if (pos === 0 && bar % 8 === 7) sweep(rel(t), EIGHTH * 8, 0.03, 300, 3500, { q: 2, out: bus });
+  }
+
+  function schedule() {
+    const a = ac(false);
+    if (!a || !bus) return;
+    // Look 1.2 s ahead so timer throttling never leaves a gap.
+    while (nextAt < a.currentTime + 1.2) {
+      playStep(step, nextAt);
+      nextAt += EIGHTH;
+      step++;
+    }
+  }
+
+  return {
+    get playing() {
+      return !!timer;
+    },
+    start(fadeIn = 2.5) {
+      const a = ac();
+      if (!a || !master || timer) return;
+      bus = a.createGain();
+      bus.gain.setValueAtTime(0.0001, a.currentTime);
+      bus.gain.exponentialRampToValueAtTime(0.9, a.currentTime + fadeIn);
+      bus.connect(master);
+      nextAt = a.currentTime + 0.1;
+      step = 0;
+      schedule();
+      timer = setInterval(schedule, 200);
+    },
+    stop(fadeOut = 1.2) {
+      if (timer) clearInterval(timer);
+      timer = null;
+      const a = ac(false);
+      const b = bus;
+      bus = null;
+      if (!a || !b) return;
+      b.gain.cancelScheduledValues(a.currentTime);
+      b.gain.setValueAtTime(Math.max(0.0001, b.gain.value), a.currentTime);
+      b.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + fadeOut);
+      setTimeout(() => b.disconnect(), (fadeOut + 0.2) * 1000);
+    },
+  };
+})();
+
+export { music };
+if (typeof window !== 'undefined') (window as unknown as { __unsortedMusic: unknown }).__unsortedMusic = music;
 
 /** Bell-like strike: fundamental plus inharmonic partials. */
 function bell(freq: number, start: number, gain = 0.06, dur = 2.4) {
@@ -300,6 +430,89 @@ export const sounds = {
       tone(f, t, d + 0.3, { type: 'triangle', gain: 0.03, attack: 0.02 });
     }
     [1568, 2093, 2637, 3136, 3520].forEach((f, i) => bell(f, 1.5 + i * 0.08, 0.025, 1.6));
+  },
+  // ---------------------------------------------------------------- Mafia Night: dramatic reveals
+  /** Tension before the news: a rising sweep and a held low note. */
+  riser() {
+    sweep(0, 1.3, 0.09, 200, 4200, { q: 3, attack: 1.2 });
+    tone(73.42, 0, 1.4, { type: 'sawtooth', gain: 0.04, attack: 1.1, filter: 600 });
+    tone(77.78, 0.2, 1.2, { type: 'sawtooth', gain: 0.03, attack: 1, filter: 700 });
+  },
+  /** Someone was killed: two last heartbeats, a knife swish, a gunshot and a low boom of dread. */
+  kill() {
+    tone(55, 0, 0.3, { type: 'sine', gain: 0.18, attack: 0.004, slideTo: 40, wet: false });
+    tone(52, 0.24, 0.28, { type: 'sine', gain: 0.12, attack: 0.004, slideTo: 38, wet: false });
+    sweep(0.75, 0.22, 0.22, 1800, 9000, { q: 6, attack: 0.05 });
+    gunshot(1.05);
+    tone(41, 1.1, 2.8, { type: 'sine', gain: 0.22, attack: 0.02, slideTo: 30 });
+    [146.83, 155.56, 220].forEach((f) => tone(f, 1.15, 2.4, { type: 'sawtooth', gain: 0.025, attack: 0.05, filter: 800 }));
+  },
+  /** Back from the dead: a reversed swell into an eerie choir that turns bright, and rising shimmer. */
+  revive() {
+    sweep(0, 1.6, 0.07, 150, 2500, { q: 2, attack: 1.5 });
+    [110, 130.81, 164.81].forEach((f) => tone(f, 0.1, 1.8, { type: 'triangle', gain: 0.05, attack: 1.4 }));
+    [220, 277.18, 329.63, 440].forEach((f) => tone(f, 1.6, 2.6, { type: 'triangle', gain: 0.045, attack: 0.25 }));
+    [880, 1108.73, 1318.51, 1760, 2217.46].forEach((f, i) => bell(f, 1.7 + i * 0.12, 0.03, 1.6));
+  },
+  /** Silenced: a hushing "shhh" and a muffled thud. */
+  silence() {
+    sweep(0, 1.1, 0.12, 4500, 3200, { q: 1.5, attack: 0.25 });
+    tone(90, 1.05, 0.4, { type: 'sine', gain: 0.12, attack: 0.005, slideTo: 60, filter: 300 });
+  },
+  /** A theft: a quick whoosh, coin clinks and a sly falling pluck. */
+  theft() {
+    sweep(0, 0.45, 0.12, 600, 5000, { q: 3, attack: 0.15 });
+    [2637, 3136, 2349].forEach((f, i) => bell(f, 0.35 + i * 0.09, 0.025, 0.5));
+    [392, 349.23, 311.13].forEach((f, i) => tone(f, 0.75 + i * 0.12, 0.25, { type: 'triangle', gain: 0.05, attack: 0.005 }));
+  },
+  /** Someone was saved: a soft angelic chord and a bell. */
+  saved() {
+    [261.63, 329.63, 392, 523.25].forEach((f) => tone(f, 0, 2, { type: 'sine', gain: 0.04, attack: 0.3 }));
+    bell(1046.5, 0.2, 0.04, 2);
+  },
+  /** Nobody died: a relieved exhale and a warm chord. */
+  relief() {
+    sweep(0, 0.9, 0.05, 1200, 500, { q: 1, attack: 0.3 });
+    [196, 246.94, 293.66, 392].forEach((f) => tone(f, 0.4, 2.2, { type: 'triangle', gain: 0.04, attack: 0.4 }));
+  },
+  /** Voted out: a gavel, a deep impact and a dissonant brass stab. */
+  voteOut() {
+    noiseBurst(0, 0.12, 0.4, 2200);
+    noiseBurst(0.28, 0.12, 0.3, 2000);
+    tone(49, 0.6, 2.2, { type: 'sine', gain: 0.25, attack: 0.005, slideTo: 32 });
+    [98, 103.83, 146.83].forEach((f) => tone(f, 0.6, 1.6, { type: 'sawtooth', gain: 0.05, attack: 0.02, filter: 900 }));
+  },
+  /** A tie: a nervous string tremolo. */
+  tension() {
+    for (let i = 0; i < 12; i++) tone(i % 2 ? 233.08 : 220, i * 0.08, 0.1, { type: 'sawtooth', gain: 0.03, attack: 0.005, filter: 1500 });
+    tone(110, 0, 1.2, { type: 'sawtooth', gain: 0.03, attack: 0.3, filter: 500 });
+  },
+  /** The Joker gets their wish: a manic, wobbling laugh and a circus slide whistle. */
+  joker() {
+    [520, 470, 430, 390, 350, 320].forEach((f, i) => tone(f, i * 0.16, 0.14, { type: 'square', gain: 0.025, attack: 0.01, slideTo: f * 0.8, filter: 2200 }));
+    tone(400, 1.05, 0.6, { type: 'sine', gain: 0.06, attack: 0.02, slideTo: 1600 });
+    tone(1600, 1.65, 0.5, { type: 'sine', gain: 0.05, attack: 0.02, slideTo: 300 });
+  },
+  /** The Town wins: bright brass and bells. */
+  winTown() {
+    const seq: [number, number][] = [
+      [392, 0],
+      [523.25, 0.2],
+      [659.25, 0.4],
+      [783.99, 0.6],
+      [1046.5, 0.85],
+    ];
+    for (const [f, t] of seq) {
+      tone(f, t, 1.2, { type: 'sawtooth', gain: 0.035, attack: 0.03, filter: 2400 });
+      tone(f / 2, t, 1.2, { type: 'triangle', gain: 0.03, attack: 0.03 });
+    }
+    [1568, 2093, 2637].forEach((f, i) => bell(f, 1.1 + i * 0.1, 0.03, 2));
+  },
+  /** The Mafia win: a gong and a dark low brass chord. */
+  winMafia() {
+    bell(98, 0, 0.15, 4);
+    [73.42, 87.31, 110, 146.83].forEach((f) => tone(f, 0.3, 3, { type: 'sawtooth', gain: 0.04, attack: 0.4, filter: 700 }));
+    tone(36.71, 0.3, 3.4, { type: 'sine', gain: 0.18, attack: 0.3 });
   },
   /** Locking in / casting a vote — every player does this, so it is safe. */
   seal() {

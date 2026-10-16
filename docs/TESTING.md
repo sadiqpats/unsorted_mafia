@@ -5,9 +5,9 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 | Suite | Command | Result |
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ no errors |
-| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 159 / 159 |
+| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 161 / 161 |
 | Integration (real server + socket/HTTP clients) | `npm test` | ✅ 33 / 33 |
-| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 23 / 23 |
+| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 25 / 25 |
 | Production build | `npm run build` | ✅ |
 
 ## Dumb Charades
@@ -62,6 +62,10 @@ Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright
 ## Thief & anonymous Mafia plan
 - **Unit (`roles.test.ts`):** a Thief with the stolen Mafia Hit joins the vote (team, changeable); the plan never contains a voter's id or name; 2 Mafia + Thief = 3 anonymous votes and **one** kill; the anonymous order changes between nights; Resurrect can be stolen from round 2, cancelling the Imposter's Dawn revive, and the Thief revives at night.
 - **End-to-end (`gameplay.spec.ts`):** the Thief steals the Mafia Hit, sees “you are Mafia N” and no Mafia names; each Mafia sees “Mafia N wants to kill X” and never the Thief's name; the shared target dies. The Godfather test checks the anonymous plan and the named family reminder.
+
+## Sound modes & the dead's updates
+- **Unit (`announcements.test.ts`):** kills, quiet nights, vote-outs and the final result are tagged for sound design.
+- **End-to-end (`sound.spec.ts`):** online — music starts on players' phones at Night, fades for the reveal, the tension build and kill sound play on every phone, and music returns the next night; the dead player sees the news and the announcements at Night. Offline — player phones play nothing and no music; the host's device plays the night and kill sounds.
 
 ## Connection & privacy on awake phones
 - **`tests/e2e/connection.spec.ts` (2):** a phone that loses its network mid-game shows "Connection lost", reconnects on its own when the network returns, keeps its seat and role and can act; Screen Wake Lock is requested in a game room and released when leaving.

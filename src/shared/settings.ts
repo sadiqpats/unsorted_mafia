@@ -29,6 +29,12 @@ export const SettingsSchema = z.object({
   roles: z.record(z.string(), z.number().int().min(0).max(MAX_PLAYERS)),
   /** If true, the host also gets a secret role and the host dashboard hides all secrets. */
   hostPlays: z.boolean(),
+  /**
+   * offline (default): everyone is in the same room — no music on phones, and event sounds play
+   * only on the host's device (and the TV). online: players are apart — suspense music during
+   * Dawn and Night and every event sound on every phone.
+   */
+  playMode: z.enum(['offline', 'online']),
 
   // ---- Timers ----
   /** Off (default): every phase ends as soon as everyone has acted — no clock. On: phases also end when their timer runs out. */
@@ -121,6 +127,7 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
   return {
     playerCount,
     hostPlays: false,
+    playMode: 'offline',
     timers: false,
     revealSeconds: 30,
     preNightSeconds: 30,

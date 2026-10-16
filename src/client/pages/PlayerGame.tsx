@@ -8,6 +8,7 @@ import type { ClientView, PublicPlayer } from '../../shared/view-types';
 import { Avatar } from '../components/Avatar';
 import { HoldToReveal, PrivacyShield, RoleDetails } from '../components/RoleCard';
 import { useFx, usePrefs } from '../lib/prefs';
+import { revealPlan } from '../lib/reveal';
 import { PhotoPicker } from '../components/PhotoPicker';
 import { RoleArt } from '../components/RoleArt';
 import { uploadPhoto } from '../lib/photo';
@@ -34,6 +35,7 @@ export function useAct(send: Send) {
     else {
       // Every player locks in / votes, so this identical cue reveals nothing.
       if (cmd.type === 'night_action' || cmd.type === 'vote') {
+        // In offline games player phones are silenced globally (see useGameAudio); the buzz is private.
         play('seal');
         buzz(25);
       }
@@ -80,6 +82,12 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
       {phase === 'game_over' && <GameOverPanel view={view} />}
       {/* Action phases show ONLY the action — no lists, feeds or extra buttons. */}
       {phase === 'voting' && <MyRoleButton view={view} />}
+      {/* The dead have no action, so they always get the full running commentary. */}
+      {!me.alive && ACTION_PHASES.includes(phase) && (
+        <Section title="Announcements">
+          <Feed entries={view.feed} limit={20} inGame />
+        </Section>
+      )}
       {!ACTION_PHASES.includes(phase) && (
         <>
           {phase !== 'reveal' && phase !== 'game_over' && <MyRoleButton view={view} />}
@@ -392,10 +400,14 @@ function NightPanel({ view, send }: { view: ClientView; send: Send }) {
   const me = view.me!;
   const night = me.night;
   if (!night || night.options.length === 0) {
+    // Nothing to do (e.g. eliminated): still see what just happened.
     return (
-      <div className="card p-6 text-center">
-        <p className="font-[family-name:var(--font-display)] text-xl text-bone">The town sleeps.</p>
-        <p className="mt-2 text-sm text-mute">Eyes closed, phone down. Wait for dawn.</p>
+      <div className="space-y-3">
+        <PhaseNews view={view} />
+        <div className="card p-6 text-center">
+          <p className="font-[family-name:var(--font-display)] text-xl text-bone">{me.alive ? 'The town sleeps.' : 'The living are making their moves…'}</p>
+          <p className="mt-2 text-sm text-mute">{me.alive ? 'Eyes closed, phone down. Wait for dawn.' : 'Watch quietly — every update appears here as it happens.'}</p>
+        </div>
       </div>
     );
   }
@@ -440,6 +452,9 @@ const NEWS_TITLE: Record<string, string> = {
 function PhaseNews({ view }: { view: ClientView }) {
   const news = view.game!.news ?? [];
   if (!news.length) return null;
+  // Lines appear one by one, in step with their sounds (see useGameAudio).
+  const plan = revealPlan(news);
+  const order = new Map(news.map((n, i) => [n.seq, i]));
   const groups: { kind: string; lines: typeof news }[] = [];
   for (const n of news) {
     const title = NEWS_TITLE[n.kind] ?? 'News';
@@ -453,7 +468,7 @@ function PhaseNews({ view }: { view: ClientView }) {
         <div key={grp.lines[0].seq}>
           <p className="eyebrow">{NEWS_TITLE[grp.kind] ?? 'News'}</p>
           {grp.lines.map((l) => (
-            <p key={l.seq} className="news-line mt-1.5 font-[family-name:var(--font-serif)] text-xl leading-snug">
+            <p key={l.seq} className="news-line mt-1.5 font-[family-name:var(--font-serif)] text-xl leading-snug" style={{ animationDelay: `${plan.at(order.get(l.seq) ?? 0) - 0.9}s` }}>
               {l.text.replace(/^📣\s*/, '')}
             </p>
           ))}

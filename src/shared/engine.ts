@@ -10,7 +10,7 @@
 import { ABILITIES, ROLES, ROLE_ORDER, isMafiaTeam, roleAlignment, type AbilityDef } from './roles';
 import { analyzeDistribution, suggestDistribution } from './distribution';
 import { MAX_PLAYERS, defaultSettings, fillTemplate, mergeSettings, type Settings, type SettingsPatch } from './settings';
-import type { Game, LogEntry, MorningReport, NightAction, Phase, Player, Room, Verdict, WinResult } from './types';
+import type { EventTag, Game, LogEntry, MorningReport, NightAction, Phase, Player, Room, Verdict, WinResult } from './types';
 
 export interface Rng {
   /** Uniform integer in [0, maxExclusive). Must be cryptographically secure in production. */
@@ -51,7 +51,7 @@ function bySeat(a: Player, b: Player) {
   return a.seat - b.seat;
 }
 
-export function addLog(room: Room, now: number, kind: string, text: string, visibility: LogEntry['visibility'] = 'public') {
+export function addLog(room: Room, now: number, kind: string, text: string, visibility: LogEntry['visibility'] = 'public', tag?: EventTag) {
   room.logSeq += 1;
   room.log.push({
     seq: room.logSeq,
@@ -61,6 +61,7 @@ export function addLog(room: Room, now: number, kind: string, text: string, visi
     kind,
     visibility,
     text,
+    ...(tag ? { tag } : {}),
   });
   if (room.log.length > 2000) room.log.splice(0, room.log.length - 2000);
 }
@@ -933,21 +934,21 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
 
   // ---- Public morning announcement (only permitted information)
   const A = s.announcements;
-  const lines: string[] = [];
+  const lines: [string, EventTag][] = [];
   for (const id of ctx.deaths) {
     const p = getPlayer(room, id);
-    lines.push(fillTemplate(A.nightDeath, { name: p.name }) + (s.revealRoleOnDeath ? ` They were the ${ROLES[p.roleId!].name}.` : ''));
+    lines.push([fillTemplate(A.nightDeath, { name: p.name }) + (s.revealRoleOnDeath ? ` They were the ${ROLES[p.roleId!].name}.` : ''), 'kill']);
   }
-  if (!ctx.deaths.length) lines.push(A.noDeath);
-  if (ctx.saved.length && s.announceSaves) lines.push('Someone was attacked in the night — but survived.');
-  for (const id of ctx.revived) lines.push(fillTemplate(A.revived, { name: getPlayer(room, id).name }));
+  if (!ctx.deaths.length) lines.push([A.noDeath, 'quiet']);
+  if (ctx.saved.length && s.announceSaves) lines.push(['Someone was attacked in the night — but survived.', 'saved']);
+  for (const id of ctx.revived) lines.push([fillTemplate(A.revived, { name: getPlayer(room, id).name }), 'revive']);
   if (s.announceSilenced) {
     for (const id of ctx.silenced) {
       const p = getPlayer(room, id);
-      if (p.alive) lines.push(fillTemplate(A.silenced, { name: p.name }));
+      if (p.alive) lines.push([fillTemplate(A.silenced, { name: p.name }), 'silence']);
     }
   }
-  for (const l of lines) addLog(room, now, 'morning', l);
+  for (const [l, tag] of lines) addLog(room, now, 'morning', l, 'public', tag);
   const report: MorningReport = { round: g.round, deaths: ctx.deaths, revived: ctx.revived, silenced: ctx.silenced.filter((id) => getPlayer(room, id).alive), saved: ctx.saved.length > 0 };
   g.lastMorning = report;
 
@@ -977,11 +978,11 @@ export function resolvePreNight(room: Room, now: number, rng: Rng) {
     if (a.abilityId !== 'steal' && getPlayer(room, a.actorId).lostAbilities.includes(a.abilityId)) continue;
     NIGHT_RESOLVERS[a.abilityId](room, ctx, a, now, rng);
   }
-  const lines: string[] = [];
-  for (const id of ctx.revived) lines.push(fillTemplate(A.revived, { name: getPlayer(room, id).name }));
-  if (ctx.stolen.length) lines.push(A.theft);
-  if (!lines.length) lines.push(A.quietPreNight);
-  for (const l of lines) addLog(room, now, 'prenight', l);
+  const lines: [string, EventTag][] = [];
+  for (const id of ctx.revived) lines.push([fillTemplate(A.revived, { name: getPlayer(room, id).name }), 'revive']);
+  if (ctx.stolen.length) lines.push([A.theft, 'theft']);
+  if (!lines.length) lines.push([A.quietPreNight, 'dawn-quiet']);
+  for (const [l, tag] of lines) addLog(room, now, 'prenight', l, 'public', tag);
   const win = checkWin(room);
   if (win) return endGame(room, win, now);
   startNight(room, now);
@@ -1085,7 +1086,7 @@ export function resolveVotes(room: Room, now: number) {
 
   if (top === 0 || abstain >= top) {
     g.lastVerdict = verdict;
-    addLog(room, now, 'verdict', s.announcements.noElimination);
+    addLog(room, now, 'verdict', s.announcements.noElimination, 'public', 'spared');
     beginNightCycle(room, now);
     return;
   }
@@ -1095,20 +1096,20 @@ export function resolveVotes(room: Room, now: number) {
     if (s.tieRule === 'runoff' && !g.day.runoffUsed) {
       g.day.runoffUsed = true;
       g.lastVerdict = verdict;
-      addLog(room, now, 'verdict', `It's a tie between ${names}. A runoff vote begins.`);
+      addLog(room, now, 'verdict', `It's a tie between ${names}. A runoff vote begins.`, 'public', 'runoff');
       startDay(room, now, leaders);
       return;
     }
     if (s.tieRule === 'host') {
       g.pendingTie = leaders;
       g.lastVerdict = verdict;
-      addLog(room, now, 'verdict', `It's a tie between ${names}. The Game Master will decide.`);
+      addLog(room, now, 'verdict', `It's a tie between ${names}. The Game Master will decide.`, 'public', 'tie');
       enterPhase(room, 'verdict', now);
       room.game!.phaseEndsAt = null;
       return;
     }
     g.lastVerdict = verdict;
-    addLog(room, now, 'verdict', `It's a tie between ${names}. ${s.announcements.noElimination}`);
+    addLog(room, now, 'verdict', `It's a tie between ${names}. ${s.announcements.noElimination}`, 'public', 'spared');
     beginNightCycle(room, now);
     return;
   }
@@ -1123,13 +1124,13 @@ function eliminateByVote(room: Room, targetId: string, verdict: Verdict, now: nu
   g.stats.voteEliminations++;
   verdict.eliminatedId = t.id;
   g.lastVerdict = verdict;
-  addLog(room, now, 'verdict', fillTemplate(s.announcements.voteOut, { name: t.name }) + (s.revealRoleOnDeath && t.roleId !== 'jester' ? ` They were the ${ROLES[t.roleId!].name}.` : ''));
+  addLog(room, now, 'verdict', fillTemplate(s.announcements.voteOut, { name: t.name }) + (s.revealRoleOnDeath && t.roleId !== 'jester' ? ` They were the ${ROLES[t.roleId!].name}.` : ''), 'public', 'voteout');
   if (t.roleId === 'jester') {
     verdict.jesterWin = true;
     g.jesterWinners.push(t.id);
     // Saying "they were the Jester" reveals a role, so mid-game it is only public if roles are revealed on death.
     const announceNow = s.jesterEndsGame || s.revealRoleOnDeath;
-    addLog(room, now, 'verdict', fillTemplate(s.announcements.jesterWin, { name: t.name }), announceNow ? 'public' : 'host');
+    addLog(room, now, 'verdict', fillTemplate(s.announcements.jesterWin, { name: t.name }), announceNow ? 'public' : 'host', 'joker');
     if (s.jesterEndsGame) {
       return endGame(room, { faction: 'jester', winnerIds: [t.id], reason: `${t.name} the Joker tricked the town into voting them out.` }, now);
     }
@@ -1148,7 +1149,7 @@ export function resolveTie(room: Room, targetId: string | null, now: number) {
   verdict.decidedByHost = true;
   addLog(room, now, 'host', `Game Master broke the tie: ${targetId ? getPlayer(room, targetId).name : 'nobody'}.`, 'host');
   if (targetId === null) {
-    addLog(room, now, 'verdict', `The Game Master spared everyone. ${g.settings.announcements.noElimination}`);
+    addLog(room, now, 'verdict', `The Game Master spared everyone. ${g.settings.announcements.noElimination}`, 'public', 'spared');
     beginNightCycle(room, now);
     return;
   }
@@ -1201,11 +1202,11 @@ function endGame(room: Room, win: WinResult, now: number) {
   enterPhase(room, 'game_over', now);
   room.status = 'over';
   if (!g.settings.jesterEndsGame && !g.settings.revealRoleOnDeath) {
-    for (const id of g.jesterWinners) addLog(room, now, 'verdict', fillTemplate(g.settings.announcements.jesterWin, { name: getPlayer(room, id).name }));
+    for (const id of g.jesterWinners) addLog(room, now, 'verdict', fillTemplate(g.settings.announcements.jesterWin, { name: getPlayer(room, id).name }), 'public', 'joker');
   }
   room.gamesPlayed++;
   const label = { good: 'The Town wins!', mafia: 'The Mafia wins!', jester: 'The Joker wins!', draw: 'It’s a draw.', none: 'Game ended.' }[win.faction];
-  addLog(room, now, 'gameover', `${label} ${win.reason}`);
+  addLog(room, now, 'gameover', `${label} ${win.reason}`, 'public', win.faction === 'good' ? 'win-town' : win.faction === 'mafia' ? 'win-mafia' : 'win-other');
 }
 
 // ---------------------------------------------------------------- host controls
@@ -1241,7 +1242,7 @@ export function hostEliminate(room: Room, playerId: string, now: number) {
   if (!p.alive) fail('invalid_target', `${p.name} is already out.`);
   killPlayer(room, p, 'host');
   delete g.day.votes[p.id];
-  addLog(room, now, 'correction', `Game Master correction: ${p.name} has been removed from play.` + (g.settings.revealRoleOnDeath ? ` They were the ${ROLES[p.roleId!].name}.` : ''));
+  addLog(room, now, 'correction', `Game Master correction: ${p.name} has been removed from play.` + (g.settings.revealRoleOnDeath ? ` They were the ${ROLES[p.roleId!].name}.` : ''), 'public', 'removed');
   const win = checkWin(room);
   if (win) endGame(room, win, now);
 }
@@ -1253,7 +1254,7 @@ export function hostRestore(room: Room, playerId: string, now: number) {
   p.alive = true;
   p.deathRound = null;
   p.deathCause = null;
-  addLog(room, now, 'correction', `Game Master correction: ${p.name} has been restored to the game.`);
+  addLog(room, now, 'correction', `Game Master correction: ${p.name} has been restored to the game.`, 'public', 'restored');
   const win = checkWin(room);
   if (win) endGame(room, win, now);
 }

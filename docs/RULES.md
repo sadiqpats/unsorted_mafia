@@ -17,8 +17,15 @@ lobby → role reveal → [Dawn] → Night → Day → [Dawn] → Night → Day 
 - Each phase change increments `phaseSeq`. Actions must quote the current value, so late, replayed and double-clicked actions are rejected.
 - Phones show **only the action** during Dawn, Night and Day. Each phase opens with a short news card: Dawn shows yesterday's vote result, Night shows what happened at Dawn, and Day shows what happened in the night.
 
+## Online or offline (sound)
+The host picks **Where are you playing?** in House rules:
+- **🏠 Together (offline, default):** everyone is in one room. Player phones stay silent (no music, no sound effects, only a private buzz). The host's device and the TV play the sound effects, so the room hears one speaker. No music: bring your own.
+- **🌐 Online:** players are apart. Every phone (and the TV) plays suspense music during **Dawn and Night**; it fades out before every reveal and stops for the **Day**. Every event has its own sound on every phone: a knife swish and gunshot for a kill, a rising choir for a revive, a hushing “shhh” for a silence, a whoosh and coins for a theft, a gavel and impact for a vote-out, a manic laugh for the Joker, and a win theme for each side. Big reveals get a tension build first, and each news line appears in time with its sound. Players can turn music off for themselves (🔊 Settings → Suspense music).
+
+Sounds only ever follow public events, so they never reveal a role.
+
 ## Roles stay secret until the game is over
-Deaths and eliminations are announced by **name only**. Every role is revealed on the game-over screen. (House rule `revealRoleOnDeath` can turn reveal-on-death back on.)
+Deaths and eliminations are announced by **name only**. Eliminated players keep seeing every update (the news and the announcements) in every phase. Every role is revealed on the game-over screen. (House rule `revealRoleOnDeath` can turn reveal-on-death back on.)
 
 ## Characters (9)
 
