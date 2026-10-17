@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* A TV / projector / laptop in landscape: the TV page fits exactly one screen. */
+@custom-variant tv (@media (min-width: 768px) and (min-height: 420px) and (orientation: landscape));
+
 @theme {
   --color-ink: #0a0909;
   --color-coal: #121011;

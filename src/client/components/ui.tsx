@@ -379,13 +379,13 @@ export const useToast = () => useContext(ToastCtx);
 
 // ------------------------------------------------------------------ QR
 
-export function QR({ text, size = 200 }: { text: string; size?: number }) {
+export function QR({ text, size = 200, className = '' }: { text: string; size?: number; className?: string }) {
   const [src, setSrc] = useState('');
   useEffect(() => {
     QRCode.toDataURL(text, { margin: 1, width: size * 2, color: { dark: '#0a0909', light: '#eee6d8' } }).then(setSrc, () => setSrc(''));
   }, [text, size]);
-  if (!src) return <div style={{ width: size, height: size }} className="rounded-xl bg-smoke" />;
-  return <img src={src} width={size} height={size} alt={`QR code to join: ${text}`} className="rounded-xl" />;
+  if (!src) return <div style={{ width: size, height: size }} className={`rounded-xl bg-smoke ${className}`} />;
+  return <img src={src} width={size} height={size} alt={`QR code to join: ${text}`} className={`rounded-xl ${className}`} />;
 }
 
 // ------------------------------------------------------------------ players & feed
