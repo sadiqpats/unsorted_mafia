@@ -464,6 +464,6 @@ export const PHASE_LABEL: Record<string, string> = {
 /** The big game-over headline (phones and TV), with a Bollywood flavour when that house rule is on. */
 export function winHeadline(faction: 'good' | 'mafia' | 'jester' | 'draw' | 'none', bollywood: boolean) {
   return bollywood
-    ? { good: 'Gaon Bach Gaya!', mafia: 'Gabbar Ka Raaj', jester: 'Baburao Hasta Hai!', draw: 'Koi Nahi Bacha', none: 'Game Khatam' }[faction]
+    ? { good: 'Gaon Wale Jeet Gaye!', mafia: 'Gabbar Jeet Gaya!', jester: 'Baburao Jeet Gaya!', draw: 'Koi Nahi Jeeta', none: 'Game Khatam' }[faction]
     : { good: 'The Town Prevails', mafia: 'The Mafia Rules', jester: 'The Joker Laughs Last', draw: 'Nobody Survives', none: 'Game Ended' }[faction];
 }

@@ -61,7 +61,11 @@ test('full Bollywood game on the real clock (Night and Vote time out), with the 
   for (const s of await t.alive()) await vote(s, s === vills[3] ? null : vills[3].name);
   await expect(t.host.getByTestId('host-phase')).toHaveText('Game Over', { timeout: 90_000 });
   await shot('07-game-over');
-  await expect(t.seats[0].page.getByText(/Gabbar Ka Raaj/)).toBeVisible();
-  await expect(tv.getByRole('heading', { name: 'Gabbar Ka Raaj' })).toBeVisible();
+  await expect(t.seats[0].page.getByText('Gabbar Jeet Gaya!')).toBeVisible();
+  await expect(tv.getByRole('heading', { name: 'Gabbar Jeet Gaya!' })).toBeVisible();
+  // Every face turns over to show the character; the winners keep a gold glow.
+  await expect(tv.getByTestId('tv-reveal').locator('.tv-flip')).toHaveCount(6);
+  await expect(tv.getByTestId('tv-reveal').locator('.tv-flip.is-winner')).toHaveCount(2);
+  await expect(tv.locator(`li[data-player="${gf.name}"]`)).toContainText('Badde Sahab (Godfather)');
   await expect(tv.getByRole('heading', { name: 'Bollywood Mafia Night' })).toBeVisible();
 });

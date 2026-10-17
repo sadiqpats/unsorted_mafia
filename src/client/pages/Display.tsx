@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { PhaseCurtain, usePhaseFx } from '../components/PhaseCurtain';
 import { sounds } from '../lib/sound';
 import { useParams } from 'react-router-dom';
-import { ROLES, roleAlignment, roleTitle } from '../../shared/roles';
+import { ROLES, roleAlignment, roleArt, roleTitle } from '../../shared/roles';
+import { RoleArt } from '../components/RoleArt';
 import { Avatar } from '../components/Avatar';
 import type { PublicPlayer } from '../../shared/view-types';
 import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, QR, Timer, useTitle, winHeadline } from '../components/ui';
@@ -125,6 +126,7 @@ function PhotoWall({ players, lobby = false, settings, winners = null }: { playe
   // Sized so a full table fits one TV screen (16:9) without scrolling.
   const size = n <= 8 ? 140 : n <= 12 ? 118 : n <= 16 ? 104 : n <= 20 ? 92 : 80;
   if (!n) return <p className="mt-6 text-xl text-mute">Waiting for the first guest…</p>;
+  if (winners) return <RevealWall players={players} settings={settings} winners={winners} size={size} />;
   return (
     <ul className="mt-4 grid gap-x-4 gap-y-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${size + 12}px, 1fr))` }} aria-label="Players">
       {players.map((p) => {
@@ -132,22 +134,57 @@ function PhotoWall({ players, lobby = false, settings, winners = null }: { playe
         const a = p.revealedRoleId ? roleAlignment(p.revealedRoleId, settings) : null;
         return (
           <li key={p.id} className="flex min-w-0 flex-col items-center text-center" data-player={p.name} data-dead={!p.alive}>
-            <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={size} className={`${lobby && !p.ready ? 'opacity-50' : ''} ${winners?.includes(p.id) ? 'rounded-[18%] ring-4 ring-gold shadow-[0_0_40px_rgba(226,194,125,0.55)]' : ''}`} />
+            <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={size} className={`${lobby && !p.ready ? 'opacity-50' : ''}`} />
             <div className={`mt-2 w-full truncate text-lg font-semibold ${p.alive ? 'text-bone' : 'text-mute line-through decoration-ember/80'}`}>{p.name}</div>
             <div className="min-h-5 text-xs text-mute">
-              {lobby ? (p.ready ? '✓ Ready' : 'Joining…') : winners ? (
-                <span className={a === 'mafia' ? 'text-ember' : a === 'evil' ? 'text-[#e07ac8]' : a === 'neutral' ? 'text-neutral' : 'text-good'}>
-                  {winners.includes(p.id) && '🏆 '}
-                  {roleTitle(p.revealedRoleId, settings)}
-                  {!p.alive && ' · ☠'}
-                </span>
-              ) : !p.alive ? (
-                <span className={a === 'mafia' ? 'text-ember' : a === 'evil' ? 'text-[#e07ac8]' : a === 'neutral' ? 'text-neutral' : 'text-good'}>☠ {r ? roleTitle(p.revealedRoleId, settings) : 'Eliminated'}</span>
+              {lobby ? (p.ready ? '✓ Ready' : 'Joining…') : !p.alive ? (
+                <span className={ALIGN_TEXT[a ?? ''] ?? 'text-good'}>☠ {r ? roleTitle(p.revealedRoleId, settings) : 'Eliminated'}</span>
               ) : p.silenced ? (
                 '🤐 Silenced'
               ) : (
                 ''
               )}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+const ALIGN_TEXT: Record<string, string> = { mafia: 'text-ember', evil: 'text-[#e07ac8]', neutral: 'text-neutral', good: 'text-good' };
+
+/**
+ * Game over on the TV: every face turns over, one after another, to show who they really were.
+ * The first card waits for the "Game Over" curtain to lift; winners keep a gold glow.
+ */
+function RevealWall({ players, settings, winners, size }: { players: PublicPlayer[]; settings: Parameters<typeof roleAlignment>[1]; winners: string[]; size: number }) {
+  const step = players.length > 16 ? 0.22 : players.length > 8 ? 0.32 : 0.45; // big tables flip faster
+  return (
+    <ul className="mt-4 grid gap-x-4 gap-y-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${size + 12}px, 1fr))` }} aria-label="Players" data-testid="tv-reveal">
+      {players.map((p, i) => {
+        const a = p.revealedRoleId ? roleAlignment(p.revealedRoleId, settings) : null;
+        const won = winners.includes(p.id);
+        const delay = `${2.6 + i * step}s`;
+        return (
+          <li key={p.id} className="flex min-w-0 flex-col items-center text-center" data-player={p.name} data-dead={!p.alive}>
+            <div className={`tv-flip ${won ? 'is-winner' : ''}`} style={{ width: size, height: size, ['--d' as string]: delay }}>
+              <div className="tv-flip-inner">
+                <div className="tv-flip-face">
+                  <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={size} />
+                </div>
+                <div className={`tv-flip-face tv-flip-back is-${a ?? 'none'}`}>
+                  <RoleArt art={roleArt(p.revealedRoleId, settings)} alignment={a} size={Math.round(size * 0.86)} />
+                </div>
+              </div>
+            </div>
+            <div className={`mt-2 w-full truncate text-lg font-semibold ${p.alive ? 'text-bone' : 'text-mute line-through decoration-ember/80'}`}>{p.name}</div>
+            <div className="tv-flip-label min-h-5 text-xs" style={{ ['--d' as string]: delay }}>
+              <span className={ALIGN_TEXT[a ?? ''] ?? 'text-mute'}>
+                {won && '🏆 '}
+                {roleTitle(p.revealedRoleId, settings)}
+                {!p.alive && ' · ☠'}
+              </span>
             </div>
           </li>
         );
