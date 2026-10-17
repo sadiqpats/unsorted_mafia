@@ -150,7 +150,7 @@ function DeadRoles({ view }: { view: ClientView }) {
   const roles = view.me!.allRoles!;
   return (
     <PrivacyShield label="Who is who (only the dead can open this)">
-      <ul className="space-y-1.5 pt-6 text-sm">
+      <ul className="space-y-1.5 pt-11 text-sm">
         {view.players.map((p) => (
           <li key={p.id} className="flex justify-between gap-2 rounded-lg bg-black/30 px-3 py-2">
             <span>{p.name}</span>
@@ -436,7 +436,7 @@ function NightPanel({ view, send, serverNow }: { view: ClientView; send: Send; s
         <div className="card p-6 text-center" data-testid="get-ready">
           <p className="eyebrow">{pre ? 'Dawn' : 'Night'} begins in</p>
           <p className="mt-1 font-[family-name:var(--font-display)] text-6xl tabular-nums text-gold">{Math.ceil(toOpen / 1000)}</p>
-          <p className="mt-2 text-sm text-mute">Then you have {pre ? view.settings.preNightSeconds : view.settings.nightSeconds} seconds to choose. Anything not chosen in time doesn’t count.</p>
+          <p className="mt-2 text-sm text-mute">Then you have {fmtDuration(pre ? view.settings.preNightSeconds : view.settings.nightSeconds)} to choose. Anything not chosen in time doesn’t count.</p>
         </div>
       </div>
     );
@@ -643,7 +643,7 @@ function DiscussionPanel({ view }: { view: ClientView }) {
       <PhaseNews view={view} />
       {view.me!.alive && freshNotes(view).length > 0 && (
         <PrivacyShield label="You have a private message">
-          <div className="space-y-2 pt-6">
+          <div className="space-y-2 pt-11">
             <PrivateNotes view={view} />
           </div>
         </PrivacyShield>
@@ -653,7 +653,7 @@ function DiscussionPanel({ view }: { view: ClientView }) {
           🗣️
         </div>
         <p className="mt-1 font-[family-name:var(--font-display)] text-xl text-bone">Discuss. Accuse. Defend.</p>
-        <p className="mt-1 text-sm text-mute">Take your time. The host opens the vote when the table is ready — then you have {view.settings.voteSeconds ?? 60} seconds.</p>
+        <p className="mt-1 text-sm text-mute">Take your time. The host opens the vote when the table is ready — then you have {fmtDuration(view.settings.voteSeconds ?? 60)}.</p>
       </div>
     </div>
   );
@@ -686,7 +686,7 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
         <div className="card p-5 text-center text-sm text-mute">{v?.reason ?? 'You cannot vote right now.'}</div>
         {me.alive && freshNotes(view).length > 0 && (
           <PrivacyShield label="You have a private message">
-            <div className="space-y-2 pt-6">
+            <div className="space-y-2 pt-11">
               <PrivateNotes view={view} />
             </div>
           </PrivacyShield>
@@ -698,7 +698,7 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
     <div className="space-y-3">
       {header}
       <PrivacyShield label={voted ? 'Review your vote' : 'Open your ballot'}>
-        <div className="space-y-4 pt-6">
+        <div className="space-y-4 pt-11">
           <PrivateNotes view={view} />
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Vote to eliminate">
             {v.targets.map((t) => (
@@ -892,3 +892,8 @@ export function GameOverPanel({ view, hostControls }: { view: ClientView; hostCo
   );
 }
 
+/** 60 → "1 minute", 90 → "90 seconds", 600 → "10 minutes". */
+function fmtDuration(sec: number): string {
+  if (sec % 60 === 0) return sec === 60 ? '1 minute' : `${sec / 60} minutes`;
+  return `${sec} seconds`;
+}

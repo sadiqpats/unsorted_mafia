@@ -1,14 +1,17 @@
 # Testing: what was run, and the results
 
-Latest full run: 2026-10-16 (macOS, Node 22.23, Chromium headless via Playwright 1.64), after adding **Bollywood Dumb Charades** and the **Unsorted** front page. Nothing below is reported as passing without having been run.
+Latest full run: 2026-10-17 (macOS, Node 22.23, Chromium headless via Playwright 1.64), after the pre-party audit (fuzz test of 1,500 random Mafia games, visual walkthrough of every screen). Nothing below is reported as passing without having been run.
 
 | Suite | Command | Result |
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ no errors |
-| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 164 / 164 |
+| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 165 / 165 |
 | Integration (real server + socket/HTTP clients) | `npm test` | ✅ 33 / 33 |
 | End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 30 / 30 |
 | Production build | `npm run build` | ✅ |
+
+## Mafia fuzz test
+- **`tests/unit/fuzz.test.ts`:** plays 1,500 random games (5–22 players, random role mixes and house rules, random picks, skips, missed actions, clock timeouts, opening breaks, pauses, ±30 s, host eliminate/restore, ties). After every step it checks: no crash, no legal move refused, nobody acts during the break, the dead never act or vote, no dead player offered as a target (except to revive), nobody comes back without a revival, Dawn/Night/Vote always have a clock and the discussion never does, a paused game never moves on, a decided game always ends, the Godfather wins exactly when the Mafia do, roles never leak in the public view, and every game finishes.
 
 ## Dumb Charades
 - **Unit — `tests/unit/charades.test.ts` (20):** 10 new cards per turn, flipping back to an earlier card (that one is acted and recorded), captain's ✅, the host's screen hides the movie by default; "one more round" after an early end finishes the cut-short round; the host can flip the card for a captain whose phone died; a captain's swap never bounces the host's ✅; the deck (≥ 950 films, all 2000+, ≤ 4 words, no duplicates, every card has genre and leads; difficulty counts in sync); word counting; turn order, rounds, scoring, timeout, tie → one more round; only the acting captain can flip/swap/pass; limited swaps with the clock still running; no movie dealt twice; pause/resume; host fixes a wrong call; stale taps refused; **who sees the movie** (deck mode: host + acting captain only; rival mode: the picker too; TV only after the turn); rival picks (deck title accepted, > 4 words refused, found online, too old / not Hindi refused, not found → host approves, acting team can't pick its own).
