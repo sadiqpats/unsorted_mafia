@@ -1,5 +1,6 @@
 import QRCode from 'qrcode';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { ALIGNMENT_LABEL } from '../../shared/roles';
 import type { Alignment, LogEntry } from '../../shared/types';
@@ -466,4 +467,57 @@ export function winHeadline(faction: 'good' | 'mafia' | 'jester' | 'draw' | 'non
   return bollywood
     ? { good: 'Gaon Wale Jeet Gaye!', mafia: 'Gabbar Jeet Gaya!', jester: 'Baburao Jeet Gaya!', draw: 'Koi Nahi Jeeta', none: 'Game Khatam' }[faction]
     : { good: 'The Town Prevails', mafia: 'The Mafia Rules', jester: 'The Joker Laughs Last', draw: 'Nobody Survives', none: 'Game Ended' }[faction];
+}
+
+const CONFETTI_COLORS: Record<string, string[]> = {
+  good: ['#e2c27d', '#7fd69b', '#f6e7bf', '#4fb3a0', '#ffffff'],
+  mafia: ['#e0473f', '#8e1b1f', '#e2c27d', '#1a1206', '#ff8f86'],
+  jester: ['#ff7a9c', '#ffd36b', '#6fe0b0', '#8ea6ff', '#c58cff'],
+  party: ['#ff3d7f', '#ffb300', '#ff7a00', '#ffe066', '#c58cff', '#3ee0b0'],
+};
+
+/** A one-shot confetti burst from the top-centre of the screen. Purely decorative. */
+export function Confetti({ palette = 'good', count = 70, delay = 0 }: { palette?: keyof typeof CONFETTI_COLORS | string; count?: number; delay?: number }) {
+  const { prefs } = usePrefs();
+  const colors = CONFETTI_COLORS[palette] ?? CONFETTI_COLORS.good;
+  const bits = useRef(
+    Array.from({ length: count }, (_, i) => {
+      const a = (i * 137.5 * Math.PI) / 180; // golden-angle spread
+      const dist = 22 + ((i * 29) % 34); // vw
+      return {
+        x: Math.cos(a) * dist,
+        y: -Math.abs(Math.sin(a)) * (18 + ((i * 13) % 22)) - 6, // vh, upwards first
+        r: ((i * 71) % 720) - 360,
+        w: 8 + (i % 4) * 2,
+        h: i % 3 === 0 ? 8 + (i % 4) * 2 : 12 + (i % 5) * 3,
+        round: i % 5 === 0,
+        c: colors[i % colors.length],
+        d: delay + ((i * 0.017) % 0.35),
+        dur: 2.4 + ((i * 0.37) % 1.6),
+      };
+    }),
+  ).current;
+  if (prefs.reduceMotion || typeof document === 'undefined') return null;
+  // Portalled to <body>: inside an animated panel, "fixed" would be trapped in that panel's box.
+  return createPortal(
+    <div className="confetti" aria-hidden="true">
+      {bits.map((b, i) => (
+        <span
+          key={i}
+          style={{
+            width: b.w,
+            height: b.h,
+            background: b.c,
+            borderRadius: b.round ? '50%' : 2,
+            animationDelay: `${b.d}s`,
+            animationDuration: `${b.dur}s`,
+            ['--x' as string]: `${b.x}vw`,
+            ['--y' as string]: `${b.y}vh`,
+            ['--r' as string]: `${b.r}deg`,
+          }}
+        />
+      ))}
+    </div>,
+    document.body,
+  );
 }

@@ -6,8 +6,9 @@ import { ROLES, roleAlignment, roleArt, roleTitle } from '../../shared/roles';
 import { RoleArt } from '../components/RoleArt';
 import { Avatar } from '../components/Avatar';
 import type { PublicPlayer } from '../../shared/view-types';
-import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, QR, Timer, useTitle, winHeadline } from '../components/ui';
+import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, QR, Timer, useTitle, winHeadline, Confetti } from '../components/ui';
 import { useRoom } from '../lib/useRoom';
+import { revealPlan } from '../lib/reveal';
 
 /** TV / projector view. Connects as a read-only "display" and receives only public data. */
 export default function Display() {
@@ -97,8 +98,8 @@ export default function Display() {
             </p>
             {g.news.length > 0 && (
               <div className="mt-[2vh] shrink-0 space-y-1 rounded-2xl border border-gold/30 bg-black/30 px-4 py-[1.5vh]" data-testid="tv-news">
-                {g.news.map((n) => (
-                  <p key={n.seq} className="font-[family-name:var(--font-serif)] text-[clamp(1rem,3.2vh,1.5rem)] leading-snug text-bone">
+                {g.news.map((n, i) => (
+                  <p key={n.seq} className={`news-line ${n.tag ? `news-${n.tag}` : ''} font-[family-name:var(--font-serif)] text-[clamp(1rem,3.2vh,1.5rem)] leading-snug text-bone`} style={{ animationDelay: `${revealPlan(g.news).at(i) - 0.9}s` }}>
                     {n.text.replace(/^📣\s*/, '')}
                   </p>
                 ))}
@@ -107,6 +108,9 @@ export default function Display() {
             {g.nightProgress && <p className="mt-2 shrink-0 text-[clamp(1rem,2.8vh,1.25rem)] text-mute">{g.nightProgress.done} / {g.nightProgress.total} locked in</p>}
             {g.votingProgress && <p className="mt-2 shrink-0 text-[clamp(1rem,2.8vh,1.25rem)] text-mute">{g.votingProgress.done} / {g.votingProgress.total} votes in</p>}
             <FitBox>{(box) => <PhotoWall players={view.players} settings={view.settings} box={box} winners={g.phase === 'game_over' ? (g.winner?.winnerIds ?? []) : null} />}</FitBox>
+            {g.phase === 'game_over' && g.winner && g.winner.faction !== 'none' && g.winner.faction !== 'draw' && (
+              <Confetti palette={view.settings.bollywood ? 'party' : g.winner.faction} count={110} delay={2.6 + view.players.length * (view.players.length > 16 ? 0.22 : view.players.length > 8 ? 0.32 : 0.45)} />
+            )}
           </div>
           <div className="card max-h-full min-h-0 self-start overflow-hidden p-5">
             <h3 className="eyebrow mb-3">Announcements</h3>

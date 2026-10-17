@@ -13,7 +13,7 @@ import { PhotoPicker } from '../components/PhotoPicker';
 import { RoleArt } from '../components/RoleArt';
 import { uploadPhoto } from '../lib/photo';
 import { loadSession } from '../lib/session';
-import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, PlayerRow, Section, Timer, useCountdown, useToast, winHeadline } from '../components/ui';
+import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, PlayerRow, Section, Timer, useCountdown, useToast, winHeadline, Confetti } from '../components/ui';
 
 type Send = (c: CommandInput) => Promise<Ack>;
 
@@ -122,7 +122,7 @@ function PhaseHeader({ view, serverNow }: { view: ClientView; serverNow: () => n
     <div className="card flex items-center justify-between gap-3 p-4">
       <div>
         <div className="eyebrow">{roundLabel || (view.settings.bollywood ? 'Bollywood Mafia Night' : 'Mafia Night')}</div>
-        <h1 className="font-[family-name:var(--font-display)] text-2xl text-bone">{PHASE_LABEL[g.phase]}</h1>
+        <h1 key={g.phase} className="phase-title-in font-[family-name:var(--font-display)] text-2xl text-bone">{PHASE_LABEL[g.phase]}</h1>
       </div>
       <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
     </div>
@@ -133,8 +133,8 @@ function DeadBanner({ view }: { view: ClientView }) {
   const me = view.me!;
   return (
     <>
-      <div className="rounded-xl border border-line bg-black/60 p-4 text-center" role="status">
-        <div className="text-3xl" aria-hidden="true">
+      <div className="death-card rounded-xl border border-line bg-black/60 p-4 text-center" role="status">
+        <div className="death-skull text-3xl" aria-hidden="true">
           ☠
         </div>
         <p className="mt-1 font-[family-name:var(--font-display)] text-lg">You have been eliminated</p>
@@ -456,7 +456,7 @@ function NightPanel({ view, send, serverNow }: { view: ClientView; send: Send; s
         </div>
       </PrivacyShield>
       {allDone && (
-        <div className="anim-pop flex items-center justify-center gap-2 rounded-xl border border-ok/40 bg-ok/10 p-3 text-center text-sm" role="status">
+        <div className="stamp-in flex items-center justify-center gap-2 rounded-xl border border-ok/40 bg-ok/10 p-3 text-center text-sm" role="status">
           <CheckMark /> Locked in. Put your phone face down.
         </div>
       )}
@@ -496,7 +496,7 @@ function PhaseNews({ view }: { view: ClientView }) {
         <div key={grp.lines[0].seq}>
           <p className="eyebrow">{NEWS_TITLE[grp.kind] ?? 'News'}</p>
           {grp.lines.map((l) => (
-            <p key={l.seq} className="news-line mt-1.5 font-[family-name:var(--font-serif)] text-xl leading-snug" style={{ animationDelay: `${plan.at(order.get(l.seq) ?? 0) - 0.9}s` }}>
+            <p key={l.seq} className={`news-line ${l.tag ? `news-${l.tag}` : ''} mt-1.5 font-[family-name:var(--font-serif)] text-xl leading-snug`} style={{ animationDelay: `${plan.at(order.get(l.seq) ?? 0) - 0.9}s` }}>
               {l.text.replace(/^📣\s*/, '')}
             </p>
           ))}
@@ -741,7 +741,7 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
         </div>
       </PrivacyShield>
       {voted && (
-        <div className="anim-pop flex items-center justify-center gap-2 rounded-xl border border-ok/40 bg-ok/10 p-3 text-center text-sm" role="status">
+        <div className="stamp-in flex items-center justify-center gap-2 rounded-xl border border-ok/40 bg-ok/10 p-3 text-center text-sm" role="status">
           <CheckMark /> Your vote is in.
         </div>
       )}
@@ -831,11 +831,12 @@ export function GameOverPanel({ view, hostControls }: { view: ClientView; hostCo
   return (
     <div className="space-y-4 anim-fade-up">
       <GoldDust />
+      {(iWon || !me) && (w.faction === 'good' || w.faction === 'mafia' || w.faction === 'jester') && <Confetti palette={view.settings.bollywood ? 'party' : w.faction} delay={2.1} />}
       <div className="card relative z-10 p-6 text-center">
         <p className="eyebrow">Game over</p>
-        <h2 className="brand-title mt-2 text-4xl font-black">{headline}</h2>
+        <h2 className="brand-title headline-drop mt-2 text-4xl font-black">{headline}</h2>
         <p className="mt-2 text-mute">{w.reason}</p>
-        {me && <p className={`mt-4 text-lg font-semibold ${iWon ? 'text-gold' : 'text-mute'}`}>{iWon ? '🏆 You won!' : 'You did not win this time.'}</p>}
+        {me && <p className={`mt-4 text-lg font-semibold anim-fade-up ${iWon ? 'win-glow text-gold' : 'text-mute'}`}>{iWon ? '🏆 You won!' : 'You did not win this time.'}</p>}
         {hostControls}
       </div>
       <Section title="Every role, revealed">

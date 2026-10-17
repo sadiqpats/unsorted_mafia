@@ -76,7 +76,7 @@ export function RoleDetails({
 
 function CardBack({ hint }: { hint: string }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 rounded-[1.4rem] border border-gold/40 bg-[radial-gradient(circle_at_50%_30%,#3a1012,#0b0909_70%)] p-6 text-center shadow-2xl">
+    <div className="card-back-shine relative flex h-full flex-col items-center justify-center gap-4 overflow-hidden rounded-[1.4rem] border border-gold/40 bg-[radial-gradient(circle_at_50%_30%,#3a1012,#0b0909_70%)] p-6 text-center shadow-2xl">
       <img src="/brand/unsorted-wordmark-light.png" alt="Unsorted" className="h-auto w-32" draggable={false} />
       <svg viewBox="0 0 64 64" width="96" height="96" aria-hidden="true" className="anim-drift">
         <circle cx="32" cy="32" r="30" fill="none" stroke="#c9a45c" strokeOpacity="0.6" />

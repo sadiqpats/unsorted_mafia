@@ -79,6 +79,37 @@ const TITLE: Record<Scene, string> = {
   reveal: 'Your Role Awaits',
 };
 
+/** Bollywood Mafia Night: the same moments, filmi style. */
+const TITLE_BW: Record<Scene, string> = {
+  dawn: 'Subah Ho Gayi',
+  night: 'Raat Ho Gayi',
+  day: 'Din Nikal Aaya',
+  vote: 'Faisla Karo!',
+  runoff: 'Phir Se Vote',
+  tie: 'Barabar Ki Takkar',
+  over: 'Picture Khatam',
+  reveal: 'Aapka Kirdaar',
+};
+
+/** A full-screen flash that lands with each big news line (public events only — never a secret). */
+type Flash = 'blood' | 'heal' | 'gold' | 'hush' | 'shadow' | 'joker';
+const FLASH: Partial<Record<EventTag, Flash>> = {
+  kill: 'blood',
+  voteout: 'blood',
+  removed: 'blood',
+  saved: 'heal',
+  restored: 'heal',
+  revive: 'gold',
+  'win-town': 'gold',
+  'win-mafia': 'blood',
+  'win-other': 'gold',
+  silence: 'hush',
+  theft: 'shadow',
+  joker: 'joker',
+};
+const FX_EVENT = 'unsorted-fx';
+const fxFlash = (kind: Flash) => window.dispatchEvent(new CustomEvent(FX_EVENT, { detail: kind }));
+
 const CUE: Partial<Record<EventTag, Parameters<ReturnType<typeof useFx>['play']>[0]>> = {
   kill: 'kill',
   quiet: 'relief',
@@ -114,7 +145,7 @@ const CUE: Partial<Record<EventTag, Parameters<ReturnType<typeof useFx>['play']>
 export function usePhaseFx(view: ClientView | null) {
   const { play, buzz } = useFx();
   const { prefs } = usePrefs();
-  const [scene, setScene] = useState<{ scene: Scene; sub: string; key: number } | null>(null);
+  const [scene, setScene] = useState<CurtainScene | null>(null);
   const last = useRef<number | null>(null);
   const lastSeq = useRef<number | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -202,7 +233,7 @@ export function usePhaseFx(view: ClientView | null) {
         if (s === 'day') play('day');
         if (s === 'runoff' || s === 'vote') play('tension');
         buzz(s === 'over' ? [80, 60, 80, 60, 160] : [60]);
-        setScene({ scene: s, sub: s === 'over' || s === 'reveal' ? '' : `Round ${g.round}`, key });
+        setScene({ scene: s, sub: s === 'over' || s === 'reveal' ? '' : `Round ${g.round}`, key, bw: !!view.settings.bollywood });
         later(2.2, () => setScene(null));
       }
     }
@@ -213,9 +244,11 @@ export function usePhaseFx(view: ClientView | null) {
     if (phaseChanged && plan.dramatic) later(Math.max(0, plan.at(0) - 1.35), () => play('riser'));
     news.forEach((n, i) => {
       const cue = n.tag && CUE[n.tag];
-      if (!cue) return;
+      const flash = n.tag && FLASH[n.tag];
+      if (!cue && !flash) return;
       later(phaseChanged ? plan.at(i) : i * 1.4, () => {
-        play(cue);
+        if (cue) play(cue);
+        if (flash && !prefs.reduceMotion) fxFlash(flash);
         if (n.tag === 'kill' || n.tag === 'voteout') buzz([40, 30, 120]);
       });
     });
@@ -230,18 +263,69 @@ export function usePhaseFx(view: ClientView | null) {
   return scene;
 }
 
-export function PhaseCurtain({ scene }: { scene: { scene: Scene; sub: string; key: number } | null }) {
+type CurtainScene = { scene: Scene; sub: string; key: number; bw?: boolean };
+
+/** Per-scene sparkle: stars at night, sun motes at dawn/day, embers for a vote, gold at the end. */
+const PARTICLES: Record<Scene, number> = { dawn: 14, night: 22, day: 14, vote: 16, runoff: 16, tie: 12, over: 26, reveal: 10 };
+
+export function PhaseCurtain({ scene }: { scene: CurtainScene | null }) {
   const { prefs } = usePrefs();
-  if (!scene || prefs.reduceMotion) return null;
   return (
-    <div key={scene.key} className={`phase-curtain curtain-${scene.scene}`} aria-hidden="true">
-      <div className="curtain-inner">
-        <svg viewBox="0 0 64 64" width="96" height="96" className="curtain-emblem" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          {EMBLEM[scene.scene]}
-        </svg>
-        <p className="curtain-title">{TITLE[scene.scene]}</p>
-        {scene.sub && <p className="curtain-sub">{scene.sub}</p>}
-      </div>
-    </div>
+    <>
+      <FxLayer />
+      {scene && !prefs.reduceMotion && (
+        <div key={scene.key} className={`phase-curtain curtain-${scene.scene}`} aria-hidden="true">
+          <div className="curtain-bar curtain-bar-top" />
+          <div className="curtain-bar curtain-bar-bottom" />
+          <div className="curtain-burst" />
+          <div className="curtain-particles">
+            {Array.from({ length: PARTICLES[scene.scene] }, (_, i) => (
+              <span key={i} style={{ left: `${(i * 41 + 13) % 100}%`, top: `${(i * 67 + 29) % 100}%`, animationDelay: `${((i * 0.37) % 1.2).toFixed(2)}s`, ['--dx' as string]: `${((i * 53) % 60) - 30}px` }} />
+            ))}
+          </div>
+          <div className="curtain-inner">
+            <div className="curtain-ring" />
+            <svg viewBox="0 0 64 64" width="96" height="96" className="curtain-emblem" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {EMBLEM[scene.scene]}
+            </svg>
+            <p className="curtain-title" data-text={(scene.bw ? TITLE_BW : TITLE)[scene.scene]}>
+              {(scene.bw ? TITLE_BW : TITLE)[scene.scene]}
+            </p>
+            {scene.sub && <p className="curtain-sub">{scene.bw ? `${scene.sub} · ${TITLE[scene.scene]}` : scene.sub}</p>}
+          </div>
+        </div>
+      )}
+    </>
   );
+}
+
+/** Listens for big public moments and flashes the whole screen (kill = red + shake, save = green, revive = gold…). */
+function FxLayer() {
+  const [flash, setFlash] = useState<{ kind: Flash; n: number } | null>(null);
+  useEffect(() => {
+    let n = 0;
+    let clear: ReturnType<typeof setTimeout> | undefined;
+    const on = (e: Event) => {
+      const kind = (e as CustomEvent<Flash>).detail;
+      setFlash({ kind, n: ++n });
+      if (kind === 'blood') {
+        document.body.classList.remove('fx-shake');
+        void document.body.offsetWidth; // restart the shake
+        document.body.classList.add('fx-shake');
+      }
+      clearTimeout(clear);
+      clear = setTimeout(() => {
+        setFlash(null);
+        document.body.classList.remove('fx-shake');
+      }, 1400);
+    };
+    window.addEventListener(FX_EVENT, on);
+    return () => {
+      window.removeEventListener(FX_EVENT, on);
+      clearTimeout(clear);
+      document.body.classList.remove('fx-shake');
+    };
+  }, []);
+  if (!flash) return null;
+  return <div key={flash.n} className={`fx-flash fx-${flash.kind}`} aria-hidden="true" data-testid="fx-flash" />;
 }

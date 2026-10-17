@@ -1,8 +1,9 @@
 import './charades.css';
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import type { CardView, CView } from '../../shared/charades/types';
-import { HomeMenu, LOGO, PrefsMenu } from '../components/ui';
+import { Confetti, HomeMenu, LOGO, PrefsMenu } from '../components/ui';
 import { useFx } from '../lib/prefs';
 import { Clapper } from './art';
 import { fmtClock } from './lib';
@@ -125,7 +126,7 @@ export function Scoreboard({ view, big = false }: { view: CView; big?: boolean }
             )}
             {t.name}
           </div>
-          <div className="score-num" data-testid={`score-${i}`}>
+          <div key={t.score} className="score-num score-bump" data-testid={`score-${i}`}>
             {t.score}
           </div>
           <div className={`truncate text-white/70 ${big ? 'text-base' : 'text-xs'}`}>
@@ -185,16 +186,21 @@ export function WordBlanks({ n }: { n: number }) {
 
 /** Marigold petals and gold confetti raining down on a correct guess or a win. */
 export function Petals({ count = 36 }: { count?: number }) {
-  return (
-    <div className="petals" aria-hidden="true">
-      {Array.from({ length: count }, (_, i) => (
-        <span
-          key={i}
-          className={i % 3 === 0 ? 'petal petal-pink' : i % 3 === 1 ? 'petal' : 'petal petal-gold'}
-          style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.13) % 1.6}s`, animationDuration: `${2.6 + ((i * 0.7) % 2)}s` }}
-        />
-      ))}
-    </div>
+  // Portalled to <body>: inside the animated result card, "fixed" would be trapped in the card's box.
+  return createPortal(
+    <>
+      <Confetti palette="party" count={Math.round(count * 1.4)} />
+      <div className="petals" aria-hidden="true">
+        {Array.from({ length: count }, (_, i) => (
+          <span
+            key={i}
+            className={i % 3 === 0 ? 'petal petal-pink' : i % 3 === 1 ? 'petal' : 'petal petal-gold'}
+            style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.13) % 1.6}s`, animationDuration: `${2.6 + ((i * 0.7) % 2)}s` }}
+          />
+        ))}
+      </div>
+    </>,
+    document.body,
   );
 }
 
