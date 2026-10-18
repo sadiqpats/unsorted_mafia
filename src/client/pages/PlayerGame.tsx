@@ -50,6 +50,39 @@ const nameOf = (view: ClientView, id: string | null | undefined) => (id ? (view.
 
 const ACTION_PHASES = ['prenight', 'night', 'voting'];
 
+/**
+ * One player to pick (night action, Dawn or the vote): their photo, big, with the name under it —
+ * two to a row, so everyone can find the face they mean. The accessible name stays the player's
+ * name (plus "(you)" / the family's picks), exactly as before.
+ */
+function PlayerChoice({ view, id, selected, tone = 'gold', disabled, onPick, children }: { view: ClientView; id: string; selected: boolean; tone?: 'gold' | 'crimson'; disabled: boolean; onPick: () => void; children?: ReactNode }) {
+  const p = view.players.find((x) => x.id === id);
+  const on = tone === 'crimson' ? 'border-crimson bg-crimson/20 ring-2 ring-crimson/60' : 'border-gold bg-gold/15 ring-2 ring-gold/60';
+  return (
+    <button
+      role="radio"
+      aria-checked={selected}
+      disabled={disabled}
+      onClick={onPick}
+      className={`choice-tile relative flex min-h-[9.5rem] flex-col items-center justify-start gap-2 rounded-2xl border px-2 pb-3 pt-3 text-center ${selected ? on : 'border-line bg-black/30 hover:border-gold/50'}`}
+    >
+      <span aria-hidden="true" className={`block rounded-[18%] transition-transform ${selected ? 'scale-105' : ''}`}>
+        <Avatar name={p?.name ?? '?'} photo={p?.photo ?? null} size={84} />
+      </span>
+      {selected && (
+        <span aria-hidden="true" className={`absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full text-sm font-bold ${tone === 'crimson' ? 'bg-crimson text-white' : 'bg-gold text-ink'}`}>
+          ✓
+        </span>
+      )}
+      <span className="block w-full break-words text-base font-semibold leading-tight text-bone">
+        {p?.name ?? '—'}
+        {id === view.me?.id && ' (you)'}
+      </span>
+      {children}
+    </button>
+  );
+}
+
 /** The announcements list without the lines already shown in this phase's news card (no repeats). */
 function withoutNews(view: ClientView) {
   const g = view.game;
@@ -436,7 +469,7 @@ function NightPanel({ view, send, serverNow }: { view: ClientView; send: Send; s
         <div className="card p-6 text-center" data-testid="get-ready">
           <p className="eyebrow">{pre ? 'Dawn' : 'Night'} begins in</p>
           <p className="mt-1 font-[family-name:var(--font-display)] text-6xl tabular-nums text-gold">{Math.ceil(toOpen / 1000)}</p>
-          <p className="mt-2 text-sm text-mute">Then you have {fmtDuration(pre ? view.settings.preNightSeconds : view.settings.nightSeconds)} to choose. Anything not chosen in time doesn’t count.</p>
+          <p className="mt-2 text-sm text-mute">{view.settings.timers === false ? 'Then take your time to choose.' : `Then you have ${fmtDuration(pre ? view.settings.preNightSeconds : view.settings.nightSeconds)} to choose. Anything not chosen in time doesn’t count.`}</p>
         </div>
       </div>
     );
@@ -548,9 +581,16 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
       )}
       <p className="text-base text-bone">{option.prompt}</p>
       {option.charges !== null && option.source !== 'decoy' && <p className="text-xs text-mute">{option.charges} use(s) left</p>}
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={option.prompt}>
+      <div className={`mt-3 grid grid-cols-2 ${option.targetKind === 'player' ? 'gap-3' : 'gap-2 sm:grid-cols-3'}`} role="radiogroup" aria-label={option.prompt}>
         {option.targets.map((t) => {
           const selected = pick === t;
+          if (option.targetKind === 'player') {
+            return (
+              <PlayerChoice key={t} view={view} id={t} selected={selected} disabled={locked || busy} onPick={() => setPick(t)}>
+                {familyOn[t]?.length ? <span className="block text-[0.75rem] font-semibold text-ember">🗡 {familyOn[t].join(', ')}</span> : null}
+              </PlayerChoice>
+            );
+          }
           return (
             <button
               key={t}
@@ -560,9 +600,7 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
               onClick={() => setPick(t)}
               className={`choice-tile min-h-12 rounded-xl border px-3 py-2 text-sm font-medium ${selected ? 'border-gold bg-gold/15 text-bone' : 'border-line bg-black/30 text-bone/90 hover:border-gold/50'}`}
             >
-              {option.targetKind === 'power' ? (ABILITIES[t]?.name ?? t) : nameOf(view, t)}
-              {option.targetKind === 'player' && t === view.me!.id && ' (you)'}
-              {familyOn[t]?.length ? <span className="mt-0.5 block text-[0.7rem] font-semibold text-ember">🗡 {familyOn[t].join(', ')}</span> : null}
+              {ABILITIES[t]?.name ?? t}
             </button>
           );
         })}
@@ -653,7 +691,7 @@ function DiscussionPanel({ view }: { view: ClientView }) {
           🗣️
         </div>
         <p className="mt-1 font-[family-name:var(--font-display)] text-xl text-bone">Discuss. Accuse. Defend.</p>
-        <p className="mt-1 text-sm text-mute">Take your time. The host opens the vote when the table is ready — then you have {fmtDuration(view.settings.voteSeconds ?? 60)}.</p>
+        <p className="mt-1 text-sm text-mute">{discussionLine(view)}</p>
       </div>
     </div>
   );
@@ -663,7 +701,7 @@ function DayPanel({ view, send }: { view: ClientView; send: Send }) {
   return (
     <div className="space-y-3">
       <PhaseNews view={view} />
-      <p className="text-center text-sm text-mute">Vote before the clock runs out — a missing vote simply doesn’t count.</p>
+      <p className="text-center text-sm text-mute">{view.settings.timers === false ? 'Everyone votes — the result comes when all the votes are in.' : 'Vote before the clock runs out — a missing vote simply doesn’t count.'}</p>
       <VotingPanel view={view} send={send} />
     </div>
   );
@@ -700,18 +738,9 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
       <PrivacyShield label={voted ? 'Review your vote' : 'Open your ballot'}>
         <div className="space-y-4 pt-11">
           <PrivateNotes view={view} />
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Vote to eliminate">
+          <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Vote to eliminate">
             {v.targets.map((t) => (
-              <button
-                key={t}
-                role="radio"
-                aria-checked={pick === t}
-                disabled={busy || (voted && !canChange)}
-                onClick={() => setPick(t)}
-                className={`choice-tile min-h-12 rounded-xl border px-3 py-2 text-sm font-medium ${pick === t ? 'border-crimson bg-crimson/20' : 'border-line bg-black/30 hover:border-crimson/60'}`}
-              >
-                {nameOf(view, t)}
-              </button>
+              <PlayerChoice key={t} view={view} id={t} tone="crimson" selected={pick === t} disabled={busy || (voted && !canChange)} onPick={() => setPick(t)} />
             ))}
             {view.settings.allowAbstain && (
               <button
@@ -719,7 +748,7 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
                 aria-checked={pick === null}
                 disabled={busy || (voted && !canChange)}
                 onClick={() => setPick(null)}
-                className={`choice-tile min-h-12 rounded-xl border px-3 py-2 text-sm ${pick === null ? 'border-gold bg-gold/15' : 'border-dashed border-line text-mute'}`}
+                className={`choice-tile min-h-[9.5rem] rounded-2xl border px-3 py-2 text-base ${pick === null ? 'border-gold bg-gold/15 ring-2 ring-gold/60' : 'border-dashed border-line text-mute'}`}
               >
                 No one (abstain)
               </button>
@@ -893,8 +922,18 @@ export function GameOverPanel({ view, hostControls }: { view: ClientView; hostCo
   );
 }
 
-/** 60 → "1 minute", 90 → "90 seconds", 600 → "10 minutes". */
+/** What the discussion card says, for the timer settings in use. */
+function discussionLine(view: ClientView): string {
+  const s = view.settings;
+  if (s.timers === false) return 'Take your time. The host opens the vote when the table is ready.';
+  const vote = fmtDuration(s.voteSeconds ?? 30);
+  if (s.discussionTimer === false) return `Take your time. The host opens the vote when the table is ready — then you have ${vote}.`;
+  return `You have ${fmtDuration(s.daySeconds ?? 240)} to talk. The vote opens when the clock runs out (or when the host starts it) — then you have ${vote}.`;
+}
+
+/** 60 → "1 minute", 90 → "90 seconds", 600 → "10 minutes", 210 → "3½ minutes". */
 function fmtDuration(sec: number): string {
   if (sec % 60 === 0) return sec === 60 ? '1 minute' : `${sec / 60} minutes`;
+  if (sec % 30 === 0 && sec > 60) return `${Math.floor(sec / 60)}½ minutes`;
   return `${sec} seconds`;
 }

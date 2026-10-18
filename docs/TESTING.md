@@ -5,9 +5,9 @@ Latest full run: 2026-10-17 (macOS, Node 22.23, Chromium headless via Playwright
 | Suite | Command | Result |
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ no errors |
-| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 165 / 165 |
+| Unit (Mafia engine + rules, Charades engine/deck/views) | `npm test` | ✅ 168 / 168 |
 | Integration (real server + socket/HTTP clients) | `npm test` | ✅ 33 / 33 |
-| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 30 / 30 |
+| End-to-end (Playwright, one browser per player) | `npm run test:e2e` | ✅ 32 / 32 |
 | Production build | `npm run build` | ✅ |
 
 ## Mafia fuzz test

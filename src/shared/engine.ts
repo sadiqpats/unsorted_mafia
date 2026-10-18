@@ -311,17 +311,22 @@ export function startGame(room: Room, now: number, rng: Rng, opts: { force?: boo
 // ---------------------------------------------------------------- phases
 
 /**
- * The clock (always on): Dawn and Night are timed, the Day's discussion is open-ended (the
- * host starts the vote) and the vote is timed. Role reveal ends when everyone has looked.
+ * The clock: Dawn, Night, the Day's discussion and the vote are timed (defaults 30 s, 30 s,
+ * 4 min, 30 s). "No timer for discussion" leaves the discussion open-ended (the host starts the
+ * vote); "No timers at all" turns every clock off (a phase ends when everyone has acted, or when
+ * the host moves on). Role reveal always ends when everyone has looked.
  */
 function phaseDuration(s: Settings, phase: Phase): number | null {
+  if (s.timers === false) return null;
   switch (phase) {
     case 'prenight':
       return s.preNightSeconds;
     case 'night':
       return s.nightSeconds;
+    case 'discussion':
+      return s.discussionTimer === false ? null : (s.daySeconds ?? 240);
     case 'voting':
-      return s.voteSeconds ?? 60;
+      return s.voteSeconds ?? 30;
     default:
       return null;
   }
@@ -337,7 +342,7 @@ function enterPhase(room: Room, phase: Phase, now: number) {
   g.phaseSeq += 1;
   g.phaseStartedAt = now;
   // Dawn and Night open with a short break (the news lands, everyone gets ready), then the clock runs.
-  const buffer = phase === 'prenight' || phase === 'night' ? (g.settings.bufferSeconds ?? 8) : 0;
+  const buffer = phase === 'prenight' || phase === 'night' ? (g.settings.bufferSeconds ?? 5) : 0;
   g.phaseOpensAt = buffer > 0 ? now + buffer * 1000 : undefined;
   const d = phaseDuration(g.settings, phase);
   g.phaseEndsAt = d === null ? null : (g.phaseOpensAt ?? now) + d * 1000;

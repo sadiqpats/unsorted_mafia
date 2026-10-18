@@ -113,7 +113,7 @@ const HELP: [string, string][] = [
   ['The vote tied', 'Nobody goes out (default). The host can switch to a runoff vote or decide themselves.'],
   ['The host’s phone died', 'The game keeps going. The host reopens the same link on the same device.'],
   ['Can we see who voted for whom?', 'Only if the host turns that on. By default you see vote totals.'],
-  ['Can we change the timers?', 'Yes: House rules → Timers. The host can also Pause, add 30 s or press Next phase any time.'],
+  ['Can we change the timers?', 'Yes: House rules → Timers — every duration, the discussion length (2–6 min), “No timer for discussion” and “No timers at all”. The host can also Pause, add 30 s or press Next phase any time.'],
 ];
 
 function RoleMix() {
@@ -210,7 +210,7 @@ export default function Guide() {
             <Tile scene="phone" title="A phone each" text="Any browser. No app, no account." />
             <Tile scene="host" title="One host" text="Phone, tablet or laptop. Can also play." />
             <Tile scene="crowd" title="5–26 players" text="8–16 is the sweet spot." />
-            <Tile scene="clock" title="20–45 min" text="Timed nights, open-ended talk." />
+            <Tile scene="clock" title="20–45 min" text="Quick timed nights, 4 minutes of talk." />
             <div className="col-span-2 sm:col-span-1">
               <Tile scene="tv" title="A TV (optional)" text="Shows everyone’s photo. Eliminated? Your photo gets cut." />
             </div>
@@ -286,7 +286,7 @@ export default function Guide() {
             ))}
           </ol>
           <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-            <Medal icon="⏱️" title="The clock" text="Dawn 30 s and Night 60 s (after a short break), Day talk has no clock, then a 60 s vote. Miss it and it doesn’t count." />
+            <Medal icon="⏱️" title="The clock" text="Dawn 30 s and Night 30 s (after a 5 s break), 4 minutes of Day talk, then a 30 s vote. Miss it and it doesn’t count." />
             <Medal icon="👆" title="Everyone taps, every time" text="People without a power press the dummy button, so nobody gives themselves away." />
             <Medal icon="🤫" title="Silenced?" text="Don’t speak today, but you can still vote." />
             <Medal icon="🎭" title="Roles stay secret" text="Deaths are announced by name only. All roles are revealed at game over." />

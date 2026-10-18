@@ -52,6 +52,9 @@ export async function createRoom(browser: Browser, count: number, { realClock = 
       await box.press('Enter');
       await expect(box).toHaveValue('600');
     }
+    // No discussion clock either: the host opens every vote, so a slow test never gets a surprise vote.
+    await host.getByText('No timer for discussion', { exact: true }).click();
+    await expect(host.getByLabel(/No timer for discussion/)).toBeChecked();
   }
   return { host, code };
 }

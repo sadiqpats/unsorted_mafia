@@ -37,8 +37,14 @@ test('full Bollywood game on the real clock (Night and Vote time out), with the 
   console.log(`night ended by clock after ${Math.round((Date.now() - t0) / 1000)} s`);
   await shot('03-day-discussion');
   await expect(t.seats[1].page.getByTestId('discussion')).toBeVisible();
-  // No clock in discussion.
-  await expect(t.host.getByRole('timer')).toHaveCount(0);
+  // The TV spotlights the victim (photo, name, what happened) for 30 s, with the discussion clock still showing.
+  const spot = tv.getByTestId('tv-spotlight');
+  await expect(spot).toContainText(vills[0].name);
+  await expect(spot).toContainText('Killed in the night');
+  await expect(tv.getByTestId('tv-timer').first()).toBeVisible();
+  await tv.screenshot({ path: `${SHOTS ?? 'test-results'}/spotlight.png` }).catch(() => undefined);
+  // The discussion runs on a 4-minute clock; the host opens the vote early.
+  await expect(t.host.getByRole('timer')).toContainText(/^[34]:\d\d$/);
   await t.host.getByRole('button', { name: 'Start voting' }).click();
   await expect(t.host.getByTestId('host-phase')).toHaveText('Vote');
   await shot('04-vote');

@@ -136,8 +136,20 @@ export function Timer({ endsAt, opensAt = null, serverNow, pausedMs, large = fal
       </span>
     );
   }
-  if (left === null) return pausedMs !== null ? <span className="chip text-gold">⏸ Paused</span> : null;
+  if (left === null) return pausedMs !== null ? <span className={`chip text-gold ${large ? '!text-2xl' : ''}`}>⏸ Paused</span> : null;
   const urgent = left < 10_000 && pausedMs === null;
+  if (large) {
+    // The TV clock: big enough to read across the room; in the last 10 seconds it swells, turns red
+    // and beats once a second.
+    return (
+      <span role="timer" aria-label={`${Math.ceil(left / 1000)} seconds left`} className={`tv-timer ${urgent ? 'is-urgent' : ''}`} data-testid="tv-timer">
+        <span key={urgent ? secs ?? 0 : 'calm'} className={`tv-timer-num font-[family-name:var(--font-display)] tabular-nums ${urgent ? 'tv-timer-beat' : ''}`}>
+          {pausedMs !== null && '⏸ '}
+          {fmt(left)}
+        </span>
+      </span>
+    );
+  }
   return (
     <span
       role="timer"

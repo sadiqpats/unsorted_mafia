@@ -60,6 +60,9 @@ function randomGame(seed: number) {
   updateSettings(room, {
     roles: counts,
     bufferSeconds: pick([0, 0, 5, 8]),
+    timers: !chance(0.15),
+    discussionTimer: !chance(0.3),
+    daySeconds: pick([180, 210, 240, 270]),
     bollywood: chance(0.5),
     playMode: pick(['offline', 'online'] as const),
     tieRule: pick(['none', 'runoff', 'host'] as const),
@@ -117,10 +120,11 @@ function checkInvariants(room: Room, now: number, where: string) {
   }
   buildView(room, { kind: 'host' }, connected, now);
   if (room.status === 'active' && !over) {
-    // Clocked phases always have a clock (unless paused); discussion has none.
+    // Dawn/Night/Vote have a clock exactly when timers are on; the discussion when its own timer is on too.
     const paused = g.pausedRemainingMs !== null;
-    if (!paused && ['prenight', 'night', 'voting'].includes(g.phase)) expect(g.phaseEndsAt, `${where}: ${g.phase} has no clock`).not.toBeNull();
-    if (!paused && g.phase === 'discussion') expect(g.phaseEndsAt, `${where}: discussion has a clock`).toBeNull();
+    const timed = g.settings.timers !== false;
+    if (!paused && ['prenight', 'night', 'voting'].includes(g.phase)) expect(g.phaseEndsAt !== null, `${where}: ${g.phase} clock should be ${timed}`).toBe(timed);
+    if (!paused && g.phase === 'discussion') expect(g.phaseEndsAt !== null, `${where}: discussion clock`).toBe(timed && g.settings.discussionTimer !== false);
     // After any resolution, a decided game must have ended.
     if (['discussion', 'prenight', 'night'].includes(g.phase) && !paused) {
       const win = checkWin(room);
@@ -207,8 +211,12 @@ function playOne(seed: number) {
       }
     } else if (phase === 'discussion' || phase === 'morning') {
       now += 60000;
-      expect(tick(room, now, rng), `${where}: discussion ended on its own`).toBe(false);
-      step('advance', () => advancePhase(room, now, rng, 'host'));
+      expect(tick(room, now, rng), `${where}: discussion ended before its clock`).toBe(false);
+      // Half the time the discussion clock runs out (the vote opens by itself), else the host opens it.
+      if (g().phaseEndsAt !== null && chance(0.5)) {
+        now = g().phaseEndsAt! + 1;
+        expect(tick(room, now, rng), `${where}: discussion clock ran out but nothing happened`).toBe(true);
+      } else step('advance', () => advancePhase(room, now, rng, 'host'));
     } else if (phase === 'voting') {
       for (const p of eligibleVoters(room)) {
         if (chance(0.2)) continue;

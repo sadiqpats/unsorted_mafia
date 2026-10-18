@@ -70,7 +70,7 @@ describe('role assignment', () => {
     for (let i = 0; i < 5; i++) addPlayer(room, { id: `p${i}`, name: `P${i}`, tokenHash: `t${i}`, now: T0 });
     startGame(room, T0, testRng(), { force: true });
     expect(() => updateSettings(room, { nightSeconds: 99 })).toThrow(/locked/);
-    expect(room.game!.settings.nightSeconds).toBe(60);
+    expect(room.game!.settings.nightSeconds).toBe(30);
   });
 });
 

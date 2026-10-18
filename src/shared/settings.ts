@@ -39,12 +39,15 @@ export const SettingsSchema = z.object({
   bollywood: z.boolean(),
 
   // ---- Timers ----
-  /** Off (default): every phase ends as soon as everyone has acted — no clock. On: phases also end when their timer runs out. */
+  /** On (default): Dawn, Night, the discussion and the vote run on a clock. Off ("No timers at all"): no clocks — a phase ends when everyone has acted, or when the host moves on. */
   timers: z.boolean(),
   revealSeconds: seconds(5, 300),
   preNightSeconds: seconds(10, 300),
   nightSeconds: seconds(15, 600),
+  /** The Day's discussion clock (default 4 minutes); when it runs out the vote opens. */
   daySeconds: seconds(30, 3600),
+  /** Off ("No timer for discussion"): the discussion is open-ended and the host presses "Start voting". */
+  discussionTimer: z.boolean(),
   /** The vote (after the open-ended discussion): how long players have to cast it. */
   voteSeconds: seconds(15, 600),
   /** A short break at the start of Dawn and Night so the news lands before the clock starts. */
@@ -138,10 +141,11 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     timers: true,
     revealSeconds: 30,
     preNightSeconds: 30,
-    nightSeconds: 60,
-    daySeconds: 300,
-    voteSeconds: 60,
-    bufferSeconds: 8,
+    nightSeconds: 30,
+    daySeconds: 240,
+    discussionTimer: true,
+    voteSeconds: 30,
+    bufferSeconds: 5,
     preNightRound: true,
     allowVoteChange: false,
     allowSelfVote: false,

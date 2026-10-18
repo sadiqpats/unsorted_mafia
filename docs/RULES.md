@@ -8,11 +8,12 @@ Every rule below can be changed by the host in the lobby (Host dashboard → Hou
 lobby → role reveal → [Dawn] → Night → Day (discussion) → Vote → [Dawn] → Night → … → game over
 ```
 
-- **The clock is always on:**
+- **The clock (defaults):**
   - **Role reveal** ends when every player has tapped “I’ve seen my role”.
-  - **Dawn: 30 s** and **Night: 60 s**, each after a short **break** (8 s by default, 0–15) so the news lands before the clock starts. Nobody can act during the break.
-  - **Day** is an open discussion with **no clock**. The host presses **🗳️ Start voting** when the table is ready.
-  - **Vote: 60 s.**
+  - **Dawn: 30 s** and **Night: 30 s**, each after a short **break** (5 s by default, 0–15) so the news lands before the clock starts. Nobody can act during the break.
+  - **Day discussion: 4 minutes** (choose 2:00–6:00). When it runs out the vote opens by itself; the host can press **🗳️ Start voting** earlier. **“No timer for discussion”** makes it open-ended (the host starts the vote).
+  - **Vote: 30 s.**
+  - **“No timers at all”** turns every clock off: a phase ends when everyone has acted, or when the host presses Next.
   - A phase also ends early once everyone has acted (Dawn/Night) or voted (the vote, unless vote changes are allowed).
   - **Anything not chosen in time simply doesn’t count**, and the game moves on.
 - The host can change every duration (House rules → Timers), Pause, add or remove 30 s, or press **Next phase** at any time.

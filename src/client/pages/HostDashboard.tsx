@@ -294,11 +294,19 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
       </label>
       <div className="space-y-2">
         <Group title="Timers" open>
-          <p className="text-xs text-mute">The clock is always on. Dawn and Night start with a short break so the news can land. The Day’s discussion has no clock: you press “Start voting” when the table is ready. Anything not chosen in time simply doesn’t count.</p>
+          <p className="text-xs text-mute">Dawn and Night start with a short break so the news can land. When the discussion’s clock runs out the vote opens by itself (you can also press “Start voting” early). Anything not chosen in time simply doesn’t count.</p>
+          <Toggle label="No timers at all" hint="No clocks anywhere: a phase ends when everyone has acted, or when you press Next." checked={s.timers === false} onChange={(v) => patch({ timers: !v })} />
           <NumberSetting label="Dawn (seconds)" value={s.preNightSeconds} min={10} max={300} onChange={(v) => patch({ preNightSeconds: v })} />
           <NumberSetting label="Night (seconds)" value={s.nightSeconds} min={15} max={600} onChange={(v) => patch({ nightSeconds: v })} />
-          <NumberSetting label="Vote (seconds)" value={s.voteSeconds ?? 60} min={15} max={600} onChange={(v) => patch({ voteSeconds: v })} />
-          <NumberSetting label="Break before Dawn & Night (seconds)" value={s.bufferSeconds ?? 8} min={0} max={15} onChange={(v) => patch({ bufferSeconds: v })} />
+          <Select
+            label="Discussion"
+            value={String(s.daySeconds ?? 240)}
+            options={[...new Set([120, 150, 180, 210, 240, 270, 300, 360, s.daySeconds ?? 240])].sort((a, b) => a - b).map((n) => [String(n), `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')} min`] as [string, string])}
+            onChange={(v) => patch({ daySeconds: Number(v) })}
+          />
+          <Toggle label="No timer for discussion" hint="The discussion is open-ended: you press “Start voting” when the table is ready." checked={s.discussionTimer === false} onChange={(v) => patch({ discussionTimer: !v })} />
+          <NumberSetting label="Vote (seconds)" value={s.voteSeconds ?? 30} min={15} max={600} onChange={(v) => patch({ voteSeconds: v })} />
+          <NumberSetting label="Break before Dawn & Night (seconds)" value={s.bufferSeconds ?? 5} min={0} max={15} onChange={(v) => patch({ bufferSeconds: v })} />
         </Group>
         <Group title="Flow">
           <Toggle

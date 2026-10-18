@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { serverUrl as serverUrlOf } from '../lib/server';
 import { PhaseCurtain, usePhaseFx } from '../components/PhaseCurtain';
 import { sounds } from '../lib/sound';
 import { useParams } from 'react-router-dom';
@@ -19,6 +20,7 @@ export default function Display() {
   const { view, status, serverNow, endedReason } = useRoom(upper, auth);
   const joinUrl = `${window.location.origin}/join/${upper}`;
   const scene = usePhaseFx(view);
+  const spotlight = useSpotlight(view);
   const [soundOn, setSoundOn] = useState(false);
 
   if (status === 'denied' || status === 'ended') return <div className="grid min-h-dvh place-items-center text-2xl text-mute">{endedReason ?? 'Room unavailable'}</div>;
@@ -29,6 +31,9 @@ export default function Display() {
     <div className="grain relative flex min-h-dvh flex-col p-5 tv:h-dvh tv:overflow-hidden tv:p-8">
       <div className="ambient" aria-hidden="true" />
       <PhaseCurtain scene={scene} />
+      {spotlight && g && (
+        <Spotlight key={spotlight.key} spot={spotlight} view={view} clock={<Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />} />
+      )}
       {!soundOn && (
         <button
           className="btn btn-ghost fixed bottom-5 right-5 z-50 !min-h-10 text-sm"
@@ -88,7 +93,7 @@ export default function Display() {
                   prenight: 'Dawn — everyone makes a choice on their phone.',
                   night: 'Everyone, eyes on your own screen. Make your choice.',
                   morning: 'The town wakes…',
-                  discussion: 'Discuss. Accuse. Defend. The host opens the vote.',
+                  discussion: g.phaseEndsAt !== null || (g.pausedRemainingMs ?? -1) >= 0 ? 'Discuss. Accuse. Defend. The vote opens when the clock runs out.' : 'Discuss. Accuse. Defend. The host opens the vote.',
                   voting: 'Vote now — secretly, on your phone.',
                   verdict: 'The town has spoken.',
                   game_over: g.winner?.reason ?? '',
@@ -96,6 +101,18 @@ export default function Display() {
                 }[g.phase]
               }
             </p>
+            {g.phase !== 'game_over' && g.phase !== 'reveal' && (
+              <p className="mt-1 flex shrink-0 gap-3 text-[clamp(0.95rem,2.6vh,1.25rem)]" data-testid="tv-counts">
+                <span className="chip border-ok/40 text-bone">
+                  <span className="h-2 w-2 rounded-full bg-ok" aria-hidden="true" />
+                  {view.players.filter((p) => p.alive).length} alive
+                </span>
+                <span className="chip border-ember/40 text-bone">
+                  <span className="h-2 w-2 rounded-full bg-ember" aria-hidden="true" />
+                  {view.players.filter((p) => !p.alive).length} out
+                </span>
+              </p>
+            )}
             {g.news.length > 0 && (
               <div className="mt-[2vh] shrink-0 space-y-1 rounded-2xl border border-gold/30 bg-black/30 px-4 py-[1.5vh]" data-testid="tv-news">
                 {g.news.map((n, i) => (
@@ -264,3 +281,103 @@ function fitFaces(n: number, box: Box | null): { size: number; cols: number | nu
 function wallGrid(size: number, cols: number | null): React.CSSProperties {
   return cols ? { gridTemplateColumns: `repeat(${cols}, ${size + PAD}px)`, justifyContent: 'center' } : { gridTemplateColumns: `repeat(auto-fill, minmax(${size + PAD}px, 1fr))` };
 }
+
+// ------------------------------------------------------------------ spotlight
+
+type SpotCard = { id: string; kind: 'killed' | 'silenced' | 'revived' | 'voted' };
+type Spot = { key: number; title: string; cards: SpotCard[]; note: string | null; seconds: number };
+
+/**
+ * The big moment on the TV: when the Day begins, everyone hit in the night gets a big card —
+ * photo, name, and what happened (killed, silenced, brought back) — for 30 seconds; when night
+ * falls after a vote, the player voted out gets one for 10 seconds. Public information only:
+ * exactly what the announcements say. Starts as the phase curtain lifts.
+ */
+function useSpotlight(view: ReturnType<typeof useRoom>['view']): Spot | null {
+  const [spot, setSpot] = useState<Spot | null>(null);
+  const prev = useRef<{ phase: string; key: number } | null>(null);
+  const g = view?.game ?? null;
+  const key = g?.phaseSeq ?? -1;
+  useEffect(() => {
+    if (!g) return;
+    const before = prev.current;
+    prev.current = { phase: g.phase, key };
+    if (!before || before.key === key) return; // first sight (or a reload): no replay
+    let next: Omit<Spot, 'key'> | null = null;
+    const m = g.lastMorning;
+    if (g.phase === 'discussion' && before.phase === 'night' && m && m.round === g.round) {
+      const cards: SpotCard[] = [
+        ...m.deaths.map((id) => ({ id, kind: 'killed' as const })),
+        ...m.revived.map((id) => ({ id, kind: 'revived' as const })),
+        ...m.silenced.map((id) => ({ id, kind: 'silenced' as const })),
+      ];
+      const saved = m.saved ? `${roleTitle('doctor', view!.settings)} saved a life tonight.` : null;
+      next = { title: 'Last night…', cards, note: cards.some((c) => c.kind === 'killed') ? saved : saved ?? 'A quiet night — nobody died.', seconds: 30 };
+    } else if ((g.phase === 'prenight' || g.phase === 'night') && (before.phase === 'voting' || before.phase === 'verdict') && g.lastVerdict) {
+      const v = g.lastVerdict;
+      next = v.eliminatedId ? { title: 'The town has spoken', cards: [{ id: v.eliminatedId, kind: 'voted' }], note: null, seconds: 10 } : { title: 'The town has spoken', cards: [], note: 'Nobody was voted out.', seconds: 8 };
+    }
+    if (!next) return;
+    const s = next;
+    const show = setTimeout(() => setSpot({ ...s, key }), 1900);
+    const hide = setTimeout(() => setSpot((cur) => (cur?.key === key ? null : cur)), 1900 + s.seconds * 1000);
+    return () => {
+      clearTimeout(show);
+      clearTimeout(hide);
+    };
+  }, [key]);
+  // A new phase (or the end of the game) clears it at once.
+  useEffect(() => {
+    if (spot && spot.key !== key) setSpot(null);
+  }, [key]);
+  return spot;
+}
+
+const SPOT_LABEL: Record<SpotCard['kind'], { label: string; cls: string }> = {
+  killed: { label: 'Killed in the night', cls: 'spot-killed' },
+  voted: { label: 'Voted out', cls: 'spot-killed' },
+  silenced: { label: 'Silenced — can’t speak today', cls: 'spot-silenced' },
+  revived: { label: 'Back from the dead', cls: 'spot-revived' },
+};
+
+function Spotlight({ spot, view, clock }: { spot: Spot; view: NonNullable<ReturnType<typeof useRoom>['view']>; clock: ReactNode }) {
+  const n = spot.cards.length;
+  const size = n <= 1 ? 'min(34vh, 30vw)' : n === 2 ? 'min(30vh, 26vw)' : n === 3 ? 'min(26vh, 22vw)' : 'min(20vh, 17vw)';
+  return (
+    <div className="spotlight" role="status" aria-live="polite" data-testid="tv-spotlight" style={{ ['--spot-secs' as string]: `${spot.seconds}s` }}>
+      <div className="spot-clock">{clock}</div>
+      <p className="spot-title">{spot.title}</p>
+      {n > 0 && (
+        <ul className="spot-cards">
+          {spot.cards.map((c, i) => {
+            const p = view.players.find((x) => x.id === c.id);
+            if (!p) return null;
+            const meta = SPOT_LABEL[c.kind];
+            const role = p.revealedRoleId && (c.kind === 'killed' || c.kind === 'voted') ? roleTitle(p.revealedRoleId, view.settings) : null;
+            return (
+              <li key={c.id + c.kind} className={`spot-card ${meta.cls}`} style={{ animationDelay: `${0.25 + i * 0.35}s` }} data-player={p.name}>
+                <div className="spot-photo" style={{ width: size, height: size }}>
+                  {p.photo ? <img src={serverUrlOf(p.photo)} alt="" draggable={false} /> : <span className="spot-initials">{initialsOf(p.name)}</span>}
+                  {(c.kind === 'killed' || c.kind === 'voted') && <span className="spot-slash" aria-hidden="true" />}
+                </div>
+                <p className="spot-name">{p.name}</p>
+                <p className="spot-what">{meta.label}</p>
+                {role && <p className="spot-role">They were {role}</p>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {spot.note && <p className="spot-note">{spot.note}</p>}
+      <div className="spot-bar" aria-hidden="true" />
+    </div>
+  );
+}
+
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
