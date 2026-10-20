@@ -188,6 +188,19 @@ export function createApp(opts: AppOptions) {
     return { status: 403, code: 'bad_host_code', message: 'That host code is not correct.' };
   };
 
+  // The lights helper (a small program on a computer at home, on the same Wi-Fi as the lights)
+  // asks which rooms want the home lights. Host code required, like opening a room.
+  app.get('/api/lights/rooms', limit, (req, res) => {
+    const given = req.get('x-host-code') ?? undefined;
+    const denied = checkHostCode(req.ip ?? 'unknown', given);
+    if (denied) return res.status(denied.status).json({ error: { code: denied.code, message: denied.message } });
+    const rooms = [...service.rooms.values()]
+      .filter((r) => r.status !== 'closed' && (r.game?.settings ?? r.settings).homeLights)
+      .sort((a, b) => b.updatedAt - a.updatedAt) // the most recently active game first
+      .map((r) => ({ code: r.code, status: r.status, updatedAt: r.updatedAt }));
+    res.json({ rooms });
+  });
+
   app.post('/api/rooms', limit, (req, res) => {
     const body = CreateSchema.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: { code: 'bad_request', message: 'Enter a display name (1–20 characters).' } });

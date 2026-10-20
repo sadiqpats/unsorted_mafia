@@ -37,6 +37,8 @@ export const SettingsSchema = z.object({
   playMode: z.enum(['offline', 'online']),
   /** Bollywood Mafia Night: every character shows its Bollywood name ("Gabbar (Mafia)") and illustration. */
   bollywood: z.boolean(),
+  /** "Playing at Elita home": the living-room WiZ lights follow the game (driven by the lights helper on a computer at home). */
+  homeLights: z.boolean(),
 
   // ---- Timers ----
   /** On (default): Dawn, Night, the discussion and the vote run on a clock. Off ("No timers at all"): no clocks — a phase ends when everyone has acted, or when the host moves on. */
@@ -138,6 +140,7 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     hostPlays: false,
     playMode: 'offline',
     bollywood: false,
+    homeLights: false,
     timers: true,
     revealSeconds: 30,
     preNightSeconds: 30,

@@ -284,6 +284,15 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
             </button>
           ))}
         </div>
+        {s.playMode !== 'online' && (
+          <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-line bg-black/20 p-3">
+            <span>
+              <span className="block font-semibold">💡 Playing at Elita home?</span>
+              <span className="mt-0.5 block text-xs text-mute">The living-room lights follow the game: sunrise at Dawn, dark blue at Night, bright for the Day, red for the vote. Needs the lights helper running on the Mac at home.</span>
+            </span>
+            <input type="checkbox" className="h-6 w-6 shrink-0 accent-[#c9a45c]" aria-label="Playing at Elita home" checked={!!s.homeLights} onChange={(e) => patch({ homeLights: e.target.checked })} />
+          </label>
+        )}
       </div>
       <label className="mb-4 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gradient-to-r from-[#3a0f2a]/60 to-[#2a1606]/60 p-3">
         <span>
