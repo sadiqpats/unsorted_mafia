@@ -243,6 +243,7 @@ let showId = 0;
 /** The living-room Echo (music + sound effects), when signed in. */
 let alexa = null;
 const MUSIC_FOR = { dawn: 'dawn', night: 'night', day: 'day', vote: 'vote' };
+let phaseToken = ''; // changes every phase, so each new round gets a new song
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function runSteps(steps, id) {
@@ -260,7 +261,7 @@ async function applyScene(name, { force = false } = {}) {
   current = name;
   const id = ++showId;
   console.log(`💡 ${new Date().toLocaleTimeString()}  ${name}`);
-  if (alexa) MUSIC_FOR[name] ? alexa.music(MUSIC_FOR[name]) : name !== 'party' && alexa.pause();
+  if (alexa) MUSIC_FOR[name] ? alexa.music(MUSIC_FOR[name], `${name}:${phaseToken}`) : name !== 'party' && alexa.pause();
   await snapshot();
   const sc = SCENES[name];
   do {
@@ -383,8 +384,7 @@ async function demo(config) {
 async function follow(config) {
   if (config.alexa?.cookieData) {
     alexa = createAlexa(config, saveConfig);
-    if (alexa && (await alexa.start())) alexa.volume(config.alexa.volume ?? 35);
-    else alexa = null;
+    if (!(alexa && (await alexa.start()))) alexa = null;
   }
   const server = (serverArg ?? config.server ?? DEFAULT_SERVER).replace(/\/$/, '');
   await refreshBulbs(config.wizRoomId);
@@ -409,6 +409,8 @@ async function follow(config) {
     const seq = view.status === 'lobby' ? -1 : (g?.phaseSeq ?? -1);
     const scene = sceneFor(view);
     wanted = scene;
+    phaseToken = String(seq);
+    if (alexa) alexa.setVolumes(view.settings?.musicVolume, view.settings?.sfxVolume);
     // The party is over and the lights are back to normal: leave them alone until the next game.
     if (scene === 'party' && room.overAt && Date.now() - room.overAt > 45_000) return;
     if (seq !== room.seq) {

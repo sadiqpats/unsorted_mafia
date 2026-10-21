@@ -252,6 +252,9 @@ export class RoomService {
         case 'announce':
           E.hostAnnounce(room, cmd.text, now);
           break;
+        case 'set_volume':
+          E.setVolume(room, cmd);
+          break;
         case 'close_room':
           E.closeRoom(room, now);
           this.opts.onSessionEnded(room.code, 'all', 'The host closed this room.');

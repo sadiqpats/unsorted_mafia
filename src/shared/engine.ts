@@ -229,6 +229,15 @@ export function updateSettings(room: Room, patch: SettingsPatch) {
   room.settings = next;
 }
 
+/** The home Echo volumes: the host can change them any time, even mid-game. */
+export function setVolume(room: Room, v: { musicVolume?: number; sfxVolume?: number }) {
+  for (const s of [room.settings, room.game?.settings]) {
+    if (!s) continue;
+    if (v.musicVolume !== undefined) s.musicVolume = v.musicVolume;
+    if (v.sfxVolume !== undefined) s.sfxVolume = v.sfxVolume;
+  }
+}
+
 /** Toggle whether the host takes a seat. A playing host gets no secret information on their dashboard. */
 export function setHostPlays(room: Room, hostPlays: boolean, now: number, newPlayerId: string) {
   if (room.status !== 'lobby') fail('wrong_phase', 'Locked once the game starts.');

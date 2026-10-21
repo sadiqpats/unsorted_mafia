@@ -34,6 +34,7 @@ export const HostCommandSchema = z.discriminatedUnion('type', [
   z.object({ ...base, type: z.literal('restart') }),
   z.object({ ...base, type: z.literal('close_room') }),
   z.object({ ...base, type: z.literal('announce'), text: z.string().min(1).max(240) }),
+  z.object({ ...base, type: z.literal('set_volume'), musicVolume: z.number().int().min(0).max(100).optional(), sfxVolume: z.number().int().min(0).max(100).optional() }),
   z.object({ ...base, type: z.literal('issue_rejoin'), playerId: id }),
   z.object({ ...base, type: z.literal('remove_photo'), playerId: id }),
 ]);

@@ -54,8 +54,8 @@ are the ones used. Other rooms and the smart plug are never touched.
 
 ## Music and sound on the living-room Echo (Alexa)
 
-When signed in, the helper also plays suspense music through Spotify on **Living room Echo**
-(Dawn, Night, Day and the vote each have their own mood), pauses it for the big moments and
+When signed in, the helper also plays the **Dramatic Suspense Mix** Spotify playlist (shuffled) on
+**Living room Echo** — every phase starts a different random song part-way through —, pauses it for the big moments and
 plays an Alexa sound effect (a kill, a revival, a silence, the Mafia count, the finale, the
 winner). Everything goes over Wi-Fi through the Amazon account — no Bluetooth.
 
@@ -65,4 +65,6 @@ npm run lights:install            # restart the background helper with it
 ```
 
 The Amazon session (not the password) is saved in `~/.unsorted-lights.json`, readable only by you.
-Spotify must be linked in the Alexa app. The music searches and effects are in `scripts/alexa.mjs`.
+Spotify must be linked in the Alexa app, with the playlist in the library. The host sets the music and
+dramatic-sounds volumes with two sliders (they apply at once, even mid-game). The playlist and the
+effects are in `scripts/alexa.mjs`.

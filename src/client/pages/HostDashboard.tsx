@@ -288,11 +288,12 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-line bg-black/20 p-3">
             <span>
               <span className="block font-semibold">💡 Playing at Elita home?</span>
-              <span className="mt-0.5 block text-xs text-mute">The living-room lights follow the game: sunrise at Dawn, dark blue at Night, bright for the Day, red for the vote. Needs the lights helper running on the Mac at home.</span>
+              <span className="mt-0.5 block text-xs text-mute">The living-room lights and the Living room Echo follow the game: sunrise at Dawn, red at Night, soft gold for the Day, a red heartbeat for the vote, suspense music and dramatic sounds. Needs the home helper running on the Mac.</span>
             </span>
             <input type="checkbox" className="h-6 w-6 shrink-0 accent-[#c9a45c]" aria-label="Playing at Elita home" checked={!!s.homeLights} onChange={(e) => patch({ homeLights: e.target.checked })} />
           </label>
         )}
+        {s.playMode !== 'online' && s.homeLights && <EchoVolumes view={view} send={send} />}
       </div>
       <label className="mb-4 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gradient-to-r from-[#3a0f2a]/60 to-[#2a1606]/60 p-3">
         <span>
@@ -596,6 +597,12 @@ function HostGame({ view, send, serverNow }: GameProps) {
             </Section>
           )}
 
+          {view.settings.homeLights && (
+            <Section title="Living room Echo">
+              <EchoVolumes view={view} send={send} />
+            </Section>
+          )}
+
           {!over && (
             <Section title="Public announcement">
               <form
@@ -669,6 +676,42 @@ function HostGame({ view, send, serverNow }: GameProps) {
           Done
         </button>
       </Modal>
+    </div>
+  );
+}
+
+/** The home Echo's two volumes (music, dramatic sounds) — they apply at once, even mid-game. */
+function EchoVolumes({ view, send }: { view: GameProps['view']; send: GameProps['send'] }) {
+  const { act } = useAct(send);
+  const s = view.settings;
+  const [music, setMusic] = useState(s.musicVolume ?? 35);
+  const [sfx, setSfx] = useState(s.sfxVolume ?? 70);
+  useEffect(() => setMusic(s.musicVolume ?? 35), [s.musicVolume]);
+  useEffect(() => setSfx(s.sfxVolume ?? 70), [s.sfxVolume]);
+  const row = (label: string, value: number, set: (n: number) => void, key: 'musicVolume' | 'sfxVolume', icon: string) => (
+    <label className="flex items-center gap-3 px-1 py-1.5">
+      <span className="w-36 shrink-0 text-sm">
+        {icon} {label}
+      </span>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={value}
+        aria-label={label}
+        className="h-2 flex-1 cursor-pointer accent-[#c9a45c]"
+        onChange={(e) => set(Number(e.target.value))}
+        onPointerUp={(e) => act({ type: 'set_volume', [key]: Number((e.target as HTMLInputElement).value) })}
+        onKeyUp={(e) => act({ type: 'set_volume', [key]: Number((e.target as HTMLInputElement).value) })}
+      />
+      <span className="w-10 text-right text-sm tabular-nums text-mute">{value}</span>
+    </label>
+  );
+  return (
+    <div className="mt-2 rounded-xl border border-line bg-black/20 p-2" data-testid="echo-volumes">
+      {row('Music', music, setMusic, 'musicVolume', '🎵')}
+      {row('Dramatic sounds', sfx, setSfx, 'sfxVolume', '💥')}
     </div>
   );
 }

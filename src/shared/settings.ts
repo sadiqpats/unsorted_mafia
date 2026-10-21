@@ -39,6 +39,9 @@ export const SettingsSchema = z.object({
   bollywood: z.boolean(),
   /** "Playing at Elita home": the living-room WiZ lights follow the game (driven by the lights helper on a computer at home). */
   homeLights: z.boolean(),
+  /** Home Echo volumes (0–100): the suspense music and the dramatic sound effects. Adjustable during the game. */
+  musicVolume: z.number().int().min(0).max(100),
+  sfxVolume: z.number().int().min(0).max(100),
 
   // ---- Timers ----
   /** On (default): Dawn, Night, the discussion and the vote run on a clock. Off ("No timers at all"): no clocks — a phase ends when everyone has acted, or when the host moves on. */
@@ -143,6 +146,8 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     playMode: 'offline',
     bollywood: false,
     homeLights: false,
+    musicVolume: 35,
+    sfxVolume: 70,
     timers: true,
     revealSeconds: 30,
     preNightSeconds: 30,
