@@ -52,6 +52,8 @@ export const SettingsSchema = z.object({
   discussionTimer: z.boolean(),
   /** The vote (after the open-ended discussion): how long players have to cast it. */
   voteSeconds: seconds(15, 600),
+  /** A pause on the vote's result (who was voted out, and after even rounds how many Mafia are left) before Dawn/Night. */
+  verdictSeconds: z.number().int().min(0).max(20),
   /** A short break at the start of Dawn and Night so the news lands before the clock starts. */
   bufferSeconds: z.number().int().min(0).max(15),
 
@@ -149,6 +151,7 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     discussionTimer: true,
     voteSeconds: 30,
     bufferSeconds: 5,
+    verdictSeconds: 8,
     preNightRound: true,
     allowVoteChange: false,
     allowSelfVote: false,

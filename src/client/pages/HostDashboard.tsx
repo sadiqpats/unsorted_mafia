@@ -316,6 +316,7 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           <Toggle label="No timer for discussion" hint="The discussion is open-ended: you press “Start voting” when the table is ready." checked={s.discussionTimer === false} onChange={(v) => patch({ discussionTimer: !v })} />
           <NumberSetting label="Vote (seconds)" value={s.voteSeconds ?? 30} min={15} max={600} onChange={(v) => patch({ voteSeconds: v })} />
           <NumberSetting label="Break before Dawn & Night (seconds)" value={s.bufferSeconds ?? 5} min={0} max={15} onChange={(v) => patch({ bufferSeconds: v })} />
+          <NumberSetting label="Pause after the vote (seconds)" value={s.verdictSeconds ?? 8} min={0} max={20} onChange={(v) => patch({ verdictSeconds: v })} />
         </Group>
         <Group title="Flow">
           <Toggle

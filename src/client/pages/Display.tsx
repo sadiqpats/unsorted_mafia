@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { serverUrl as serverUrlOf } from '../lib/server';
 import { PhaseCurtain, usePhaseFx } from '../components/PhaseCurtain';
 import { sounds } from '../lib/sound';
 import { useParams } from 'react-router-dom';
-import { ROLES, roleAlignment, roleArt, roleTitle } from '../../shared/roles';
+import { ROLES, roleAlignment, roleArt, roleShort, roleTitle } from '../../shared/roles';
 import { RoleArt } from '../components/RoleArt';
+import { MomentsOverlay, useMoments } from '../components/Moments';
+import { finale } from '../lib/finale';
 import { Avatar } from '../components/Avatar';
 import type { PublicPlayer } from '../../shared/view-types';
 import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, QR, Timer, useTitle, winHeadline, Confetti } from '../components/ui';
@@ -20,7 +21,8 @@ export default function Display() {
   const { view, status, serverNow, endedReason } = useRoom(upper, auth);
   const joinUrl = `${window.location.origin}/join/${upper}`;
   const scene = usePhaseFx(view);
-  const spotlight = useSpotlight(view);
+  const spotlight = useMoments(view);
+  const { done: finaleDone, replay: finaleReplay } = useFinale(view);
   const [soundOn, setSoundOn] = useState(false);
 
   if (status === 'denied' || status === 'ended') return <div className="grid min-h-dvh place-items-center text-2xl text-mute">{endedReason ?? 'Room unavailable'}</div>;
@@ -32,7 +34,7 @@ export default function Display() {
       <div className="ambient" aria-hidden="true" />
       <PhaseCurtain scene={scene} />
       {spotlight && g && (
-        <Spotlight key={spotlight.key} spot={spotlight} view={view} clock={<Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />} />
+        <MomentsOverlay key={spotlight.key} moment={spotlight} view={view} variant="tv" clock={<Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />} />
       )}
       {!soundOn && (
         <button
@@ -77,12 +79,14 @@ export default function Display() {
           </div>
         </div>
       ) : (
-        <div className="mx-auto mt-[2.5vh] grid w-full max-w-[1800px] min-h-0 flex-1 gap-8 tv:grid-cols-[minmax(0,1fr)_minmax(15rem,22rem)]">
+        <div className={`mx-auto mt-[2.5vh] grid w-full max-w-[1800px] min-h-0 flex-1 gap-8 ${g.phase === 'game_over' ? '' : 'tv:grid-cols-[minmax(0,1fr)_minmax(15rem,22rem)]'}`}>
           <div className="flex min-h-0 min-w-0 flex-col">
             <div className="flex shrink-0 flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="eyebrow">{g.round ? `Round ${g.round}` : ''}</p>
-                <h2 className="font-[family-name:var(--font-display)] text-[clamp(2.25rem,7vh,3.75rem)] leading-tight">{g.phase === 'game_over' && g.winner ? winHeadline(g.winner.faction, !!view.settings.bollywood) : PHASE_LABEL[g.phase]}</h2>
+                <h2 key={finaleDone ? 'won' : 'wait'} className={`font-[family-name:var(--font-display)] text-[clamp(2.25rem,7vh,3.75rem)] leading-tight ${g.phase === 'game_over' && finaleDone ? 'headline-drop-now' : ''}`}>
+                  {g.phase === 'game_over' && g.winner ? (finaleDone ? winHeadline(g.winner.faction, !!view.settings.bollywood) : 'The truth comes out…') : PHASE_LABEL[g.phase]}
+                </h2>
               </div>
               <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />
             </div>
@@ -96,7 +100,7 @@ export default function Display() {
                   discussion: g.phaseEndsAt !== null || (g.pausedRemainingMs ?? -1) >= 0 ? 'Discuss. Accuse. Defend. The vote opens when the clock runs out.' : 'Discuss. Accuse. Defend. The host opens the vote.',
                   voting: 'Vote now — secretly, on your phone.',
                   verdict: 'The town has spoken.',
-                  game_over: g.winner?.reason ?? '',
+                  game_over: finaleDone ? (g.winner?.reason ?? '') : 'Every card turns over — the Mafia first.',
                   lobby: '',
                 }[g.phase]
               }
@@ -113,7 +117,7 @@ export default function Display() {
                 </span>
               </p>
             )}
-            {g.news.length > 0 && (
+            {g.news.length > 0 && g.phase !== 'game_over' && (
               <div className="mt-[2vh] shrink-0 space-y-1 rounded-2xl border border-gold/30 bg-black/30 px-4 py-[1.5vh]" data-testid="tv-news">
                 {g.news.map((n, i) => (
                   <p key={n.seq} className={`news-line ${n.tag ? `news-${n.tag}` : ''} font-[family-name:var(--font-serif)] text-[clamp(1rem,3.2vh,1.5rem)] leading-snug text-bone`} style={{ animationDelay: `${revealPlan(g.news).at(i) - 0.9}s` }}>
@@ -124,15 +128,17 @@ export default function Display() {
             )}
             {g.nightProgress && <p className="mt-2 shrink-0 text-[clamp(1rem,2.8vh,1.25rem)] text-mute">{g.nightProgress.done} / {g.nightProgress.total} locked in</p>}
             {g.votingProgress && <p className="mt-2 shrink-0 text-[clamp(1rem,2.8vh,1.25rem)] text-mute">{g.votingProgress.done} / {g.votingProgress.total} votes in</p>}
-            <FitBox>{(box) => <PhotoWall players={view.players} settings={view.settings} box={box} winners={g.phase === 'game_over' ? (g.winner?.winnerIds ?? []) : null} />}</FitBox>
+            <FitBox>{(box) => <PhotoWall players={view.players} settings={view.settings} box={box} winners={g.phase === 'game_over' ? (g.winner?.winnerIds ?? []) : null} replayFinale={finaleReplay} />}</FitBox>
             {g.phase === 'game_over' && g.winner && g.winner.faction !== 'none' && g.winner.faction !== 'draw' && (
-              <Confetti palette={view.settings.bollywood ? 'party' : g.winner.faction} count={110} delay={2.6 + view.players.length * (view.players.length > 16 ? 0.22 : view.players.length > 8 ? 0.32 : 0.45)} />
+              <Confetti palette={view.settings.bollywood ? 'party' : g.winner.faction} count={110} delay={finaleReplay ? finale(view.players, view.settings).end : 0} />
             )}
           </div>
-          <div className="card max-h-full min-h-0 self-start overflow-hidden p-5">
-            <h3 className="eyebrow mb-3">Announcements</h3>
-            <Feed entries={view.feed} limit={14} inGame />
-          </div>
+          {g.phase !== 'game_over' && (
+            <div className="card max-h-full min-h-0 self-start overflow-hidden p-5">
+              <h3 className="eyebrow mb-3">Announcements</h3>
+              <Feed entries={view.feed} limit={14} inGame />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -140,11 +146,11 @@ export default function Display() {
 }
 
 /** The big-screen wall of faces. Eliminated players' photos are cut in two. */
-function PhotoWall({ players, lobby = false, settings, winners = null, box }: { players: PublicPlayer[]; lobby?: boolean; settings: Parameters<typeof roleAlignment>[1]; winners?: string[] | null; box: Box | null }) {
+function PhotoWall({ players, lobby = false, settings, winners = null, box, replayFinale = true }: { players: PublicPlayer[]; lobby?: boolean; settings: Parameters<typeof roleAlignment>[1]; winners?: string[] | null; box: Box | null; replayFinale?: boolean }) {
   const n = players.length;
   const { size, cols } = fitFaces(n, box);
   if (!n) return <p className="mt-6 text-xl text-mute">Waiting for the first guest…</p>;
-  if (winners) return <RevealWall players={players} settings={settings} winners={winners} size={size} cols={cols} />;
+  if (winners) return <RevealWall players={players} settings={settings} winners={winners} box={box} replay={replayFinale} />;
   return (
     <ul className="grid gap-x-4 gap-y-3" style={wallGrid(size, cols)} aria-label="Players">
       {players.map((p) => {
@@ -173,42 +179,115 @@ function PhotoWall({ players, lobby = false, settings, winners = null, box }: { 
 const ALIGN_TEXT: Record<string, string> = { mafia: 'text-ember', evil: 'text-[#e07ac8]', neutral: 'text-neutral', good: 'text-good' };
 
 /**
- * Game over on the TV: every face turns over, one after another, to show who they really were.
- * The first card waits for the "Game Over" curtain to lift; winners keep a gold glow.
+ * Game over on the TV, in suspense: "And the Mafia were…", then the Mafia side turns over one by
+ * one, then the special characters, then the villagers (see lib/finale). Every card is the
+ * player's photo and name; the character's name sits under it, big. Winners keep a gold glow.
+ * A TV that joins after the game ended shows everything at once (no replay).
  */
-function RevealWall({ players, settings, winners, size, cols }: { players: PublicPlayer[]; settings: Parameters<typeof roleAlignment>[1]; winners: string[]; size: number; cols: number | null }) {
-  const step = players.length > 16 ? 0.22 : players.length > 8 ? 0.32 : 0.45; // big tables flip faster
+function RevealWall({ players, settings, winners, box, replay }: { players: PublicPlayer[]; settings: Parameters<typeof roleAlignment>[1]; winners: string[]; box: Box | null; replay: boolean }) {
+  const fin = finale(players, settings);
+  const { size, cols } = fitGrouped(fin.groups.map((g) => ({ count: g.players.length, title: g.title })), box, !!settings.bollywood);
+  const colsFor = (n: number) => Math.max(1, Math.min(n, cols ?? n));
+  const at = (t: number) => `${replay ? t : 0}s`;
   return (
-    <ul className="grid gap-x-4 gap-y-3" style={wallGrid(size, cols)} aria-label="Players" data-testid="tv-reveal">
-      {players.map((p, i) => {
-        const a = p.revealedRoleId ? roleAlignment(p.revealedRoleId, settings) : null;
-        const won = winners.includes(p.id);
-        const delay = `${2.6 + i * step}s`;
-        return (
-          <li key={p.id} className="flex min-w-0 flex-col items-center text-center" data-player={p.name} data-dead={!p.alive}>
-            <div className={`tv-flip ${won ? 'is-winner' : ''}`} style={{ width: size, height: size, ['--d' as string]: delay }}>
-              <div className="tv-flip-inner">
-                <div className="tv-flip-face">
-                  <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={size} />
-                </div>
-                <div className={`tv-flip-face tv-flip-back is-${a ?? 'none'}`}>
-                  <RoleArt art={roleArt(p.revealedRoleId, settings)} alignment={a} size={Math.round(size * 0.86)} />
-                </div>
-              </div>
-            </div>
-            <div className={`mt-1 w-full truncate font-semibold leading-snug ${p.alive ? 'text-bone' : 'text-mute line-through decoration-ember/80'}`} style={{ fontSize: nameFont(size) }}>{p.name}</div>
-            <div className="tv-flip-label min-h-4 text-xs leading-4" style={{ ['--d' as string]: delay }}>
-              <span className={ALIGN_TEXT[a ?? ''] ?? 'text-mute'}>
-                {won && '🏆 '}
-                {roleTitle(p.revealedRoleId, settings)}
-                {!p.alive && ' · ☠'}
-              </span>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="rv" data-testid="tv-reveal">
+      {replay && (
+        <p className="rv-suspense" style={{ ['--d' as string]: `${fin.suspenseAt}s` }} aria-hidden="true">
+          And the Mafia were…
+        </p>
+      )}
+      {fin.groups.map((grp) => (
+        <section key={grp.key} className={`rv-group rv-${grp.key}`} aria-label={grp.title}>
+          <h3 className="rv-head" style={{ ['--d' as string]: at(grp.start) }}>
+            {grp.title} <span>{grp.players.length}</span>
+          </h3>
+          <ul className="rv-cards" style={{ gridTemplateColumns: `repeat(${colsFor(grp.players.length)}, ${size + PAD}px)` }}>
+            {grp.players.map((p) => {
+              const a = p.revealedRoleId ? roleAlignment(p.revealedRoleId, settings) : null;
+              const won = winners.includes(p.id);
+              const d = at(fin.cardAt.get(p.id) ?? 0);
+              return (
+                <li key={p.id} className="rv-item" data-player={p.name} data-dead={!p.alive}>
+                  <div className={`tv-flip rv-card ${won ? 'is-winner' : ''}`} style={{ width: size, height: size, ['--d' as string]: d }}>
+                    <div className="tv-flip-inner">
+                      <div className="tv-flip-face rv-face">
+                        <RvPhoto p={p} size={size} />
+                        <span className="rv-q" aria-hidden="true">?</span>
+                      </div>
+                      <div className={`tv-flip-face tv-flip-back rv-face is-${a ?? 'none'}`}>
+                        <RvPhoto p={p} size={size} />
+                        <span className="rv-badge" aria-hidden="true">
+                          <RoleArt art={roleArt(p.revealedRoleId, settings)} alignment={a} size={Math.max(26, Math.round(size * 0.3))} />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="tv-flip-label rv-role" style={{ ['--d' as string]: d, fontSize: roleFont(size) }}>
+                    <span className={ALIGN_TEXT[a ?? ''] ?? 'text-bone'}>
+                      {won && '🏆 '}
+                      {roleShort(p.revealedRoleId, settings)}
+                    </span>
+                    {settings.bollywood && p.revealedRoleId && <small> ({ROLES[p.revealedRoleId].name})</small>}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </div>
   );
+}
+
+/** A reveal card's face: the photo (or initials), the name across the bottom, a slash if they died. */
+function RvPhoto({ p, size }: { p: PublicPlayer; size: number }) {
+  return (
+    <>
+      <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={size} />
+      <span className="rv-name" style={{ fontSize: Math.max(12, Math.round(size * 0.13)) }}>
+        {p.name}
+      </span>
+    </>
+  );
+}
+
+const roleFont = (size: number) => Math.round(Math.max(15, Math.min(34, size * 0.19)));
+const RV_HEAD = 40;
+
+/**
+ * The biggest card that fits every group into the box. Groups sit side by side and wrap to a
+ * new line when they run out of width (Mafia | Special | Villagers on a wide TV).
+ */
+function fitGrouped(groups: { count: number; title: string }[], box: Box | null, bollywood: boolean): { size: number; cols: number | null } {
+  // The character name can take two lines, plus the classic name in brackets in a Bollywood game.
+  const label = (size: number) => Math.ceil(roleFont(size) * 1.15 * 2 + (bollywood ? roleFont(size) * 0.55 * 1.3 : 0)) + 10;
+  const GROUP_GAP = 40;
+  if (!box) return { size: 110, cols: null };
+  const list = groups.filter((g) => g.count > 0);
+  // The heading ("SPECIAL CHARACTERS 2") can be wider than its cards.
+  const headW = (title: string) => title.length * 17 + 60;
+  for (let size = 200; size >= 34; size -= 2) {
+    const cell = size + PAD + GAP_X;
+    const maxCols = Math.max(1, Math.floor((box.w + GAP_X) / cell));
+    let lineW = 0;
+    let lineH = 0;
+    let total = 0;
+    for (const { count: c, title } of list) {
+      const cols = Math.min(c, maxCols);
+      const w = Math.max(cols * cell - GAP_X, headW(title));
+      const h = RV_HEAD + Math.ceil(c / cols) * (size + label(size) + GAP_Y);
+      if (lineW > 0 && lineW + GROUP_GAP + w > box.w - 4) {
+        total += lineH;
+        lineW = 0;
+        lineH = 0;
+      }
+      lineW += (lineW ? GROUP_GAP : 0) + w;
+      lineH = Math.max(lineH, h);
+    }
+    total += lineH;
+    if (total + 56 <= box.h) return { size, cols: maxCols }; // + room for line-height and margins
+  }
+  return { size: 34, cols: Math.max(1, Math.floor((box.w + GAP_X) / (34 + PAD + GAP_X))) };
 }
 
 type Box = { w: number; h: number };
@@ -282,102 +361,27 @@ function wallGrid(size: number, cols: number | null): React.CSSProperties {
   return cols ? { gridTemplateColumns: `repeat(${cols}, ${size + PAD}px)`, justifyContent: 'center' } : { gridTemplateColumns: `repeat(auto-fill, minmax(${size + PAD}px, 1fr))` };
 }
 
-// ------------------------------------------------------------------ spotlight
-
-type SpotCard = { id: string; kind: 'killed' | 'silenced' | 'revived' | 'voted' };
-type Spot = { key: number; title: string; cards: SpotCard[]; note: string | null; seconds: number };
-
 /**
- * The big moment on the TV: when the Day begins, everyone hit in the night gets a big card —
- * photo, name, and what happened (killed, silenced, brought back) — for 30 seconds; when night
- * falls after a vote, the player voted out gets one for 10 seconds. Public information only:
- * exactly what the announcements say. Starts as the phase curtain lifts.
+ * The game-over finale clock: `replay` when this screen saw the game end (so the suspense plays),
+ * `done` once the last card has turned (then the winner is announced).
  */
-function useSpotlight(view: ReturnType<typeof useRoom>['view']): Spot | null {
-  const [spot, setSpot] = useState<Spot | null>(null);
-  const prev = useRef<{ phase: string; key: number } | null>(null);
+function useFinale(view: ReturnType<typeof useRoom>['view']): { done: boolean; replay: boolean } {
   const g = view?.game ?? null;
+  const over = g?.phase === 'game_over';
+  // Decided during render (not in an effect) so the very first frame of the finale already
+  // has the right timings — a CSS animation can't be restarted by changing its delay later.
+  const prevPhase = useRef<string | null>(null);
+  const replayRef = useRef(false);
+  if (over && prevPhase.current !== 'game_over') replayRef.current = prevPhase.current !== null;
+  prevPhase.current = g?.phase ?? null;
+  const replay = over && replayRef.current;
+  const [doneKey, setDoneKey] = useState<number | null>(null);
   const key = g?.phaseSeq ?? -1;
   useEffect(() => {
-    if (!g) return;
-    const before = prev.current;
-    prev.current = { phase: g.phase, key };
-    if (!before || before.key === key) return; // first sight (or a reload): no replay
-    let next: Omit<Spot, 'key'> | null = null;
-    const m = g.lastMorning;
-    if (g.phase === 'discussion' && before.phase === 'night' && m && m.round === g.round) {
-      const cards: SpotCard[] = [
-        ...m.deaths.map((id) => ({ id, kind: 'killed' as const })),
-        ...m.revived.map((id) => ({ id, kind: 'revived' as const })),
-        ...m.silenced.map((id) => ({ id, kind: 'silenced' as const })),
-      ];
-      const saved = m.saved ? `${roleTitle('doctor', view!.settings)} saved a life tonight.` : null;
-      next = { title: 'Last night…', cards, note: cards.some((c) => c.kind === 'killed') ? saved : saved ?? 'A quiet night — nobody died.', seconds: 30 };
-    } else if ((g.phase === 'prenight' || g.phase === 'night') && (before.phase === 'voting' || before.phase === 'verdict') && g.lastVerdict) {
-      const v = g.lastVerdict;
-      next = v.eliminatedId ? { title: 'The town has spoken', cards: [{ id: v.eliminatedId, kind: 'voted' }], note: null, seconds: 10 } : { title: 'The town has spoken', cards: [], note: 'Nobody was voted out.', seconds: 8 };
-    }
-    if (!next) return;
-    const s = next;
-    const show = setTimeout(() => setSpot({ ...s, key }), 1900);
-    const hide = setTimeout(() => setSpot((cur) => (cur?.key === key ? null : cur)), 1900 + s.seconds * 1000);
-    return () => {
-      clearTimeout(show);
-      clearTimeout(hide);
-    };
-  }, [key]);
-  // A new phase (or the end of the game) clears it at once.
-  useEffect(() => {
-    if (spot && spot.key !== key) setSpot(null);
-  }, [key]);
-  return spot;
+    if (!over || !view || !replay) return;
+    const t = setTimeout(() => setDoneKey(key), finale(view.players, view.settings).end * 1000);
+    return () => clearTimeout(t);
+  }, [over, key]);
+  if (!over) return { done: true, replay: false };
+  return { done: !replay || doneKey === key, replay };
 }
-
-const SPOT_LABEL: Record<SpotCard['kind'], { label: string; cls: string }> = {
-  killed: { label: 'Killed in the night', cls: 'spot-killed' },
-  voted: { label: 'Voted out', cls: 'spot-killed' },
-  silenced: { label: 'Silenced — can’t speak today', cls: 'spot-silenced' },
-  revived: { label: 'Back from the dead', cls: 'spot-revived' },
-};
-
-function Spotlight({ spot, view, clock }: { spot: Spot; view: NonNullable<ReturnType<typeof useRoom>['view']>; clock: ReactNode }) {
-  const n = spot.cards.length;
-  const size = n <= 1 ? 'min(34vh, 30vw)' : n === 2 ? 'min(30vh, 26vw)' : n === 3 ? 'min(26vh, 22vw)' : 'min(20vh, 17vw)';
-  return (
-    <div className="spotlight" role="status" aria-live="polite" data-testid="tv-spotlight" style={{ ['--spot-secs' as string]: `${spot.seconds}s` }}>
-      <div className="spot-clock">{clock}</div>
-      <p className="spot-title">{spot.title}</p>
-      {n > 0 && (
-        <ul className="spot-cards">
-          {spot.cards.map((c, i) => {
-            const p = view.players.find((x) => x.id === c.id);
-            if (!p) return null;
-            const meta = SPOT_LABEL[c.kind];
-            const role = p.revealedRoleId && (c.kind === 'killed' || c.kind === 'voted') ? roleTitle(p.revealedRoleId, view.settings) : null;
-            return (
-              <li key={c.id + c.kind} className={`spot-card ${meta.cls}`} style={{ animationDelay: `${0.25 + i * 0.35}s` }} data-player={p.name}>
-                <div className="spot-photo" style={{ width: size, height: size }}>
-                  {p.photo ? <img src={serverUrlOf(p.photo)} alt="" draggable={false} /> : <span className="spot-initials">{initialsOf(p.name)}</span>}
-                  {(c.kind === 'killed' || c.kind === 'voted') && <span className="spot-slash" aria-hidden="true" />}
-                </div>
-                <p className="spot-name">{p.name}</p>
-                <p className="spot-what">{meta.label}</p>
-                {role && <p className="spot-role">They were {role}</p>}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      {spot.note && <p className="spot-note">{spot.note}</p>}
-      <div className="spot-bar" aria-hidden="true" />
-    </div>
-  );
-}
-
-const initialsOf = (name: string) =>
-  name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();

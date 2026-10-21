@@ -294,6 +294,42 @@ describe('timers, pause and host corrections', () => {
     expect(tick(g.room, T0 + 1e12, g.rng)).toBe(false);
   });
 
+  it('after the vote: an 8 s pause on the result (even with no timers), then Dawn/Night', () => {
+    for (const timers of [true, false]) {
+      const g = setup(['mafia', V, V, V, V, V], { verdictSeconds: 8, timers });
+      g.goToVoting();
+      for (const i of [0, 1, 2, 3, 4, 5]) g.vote(i, i === 1 ? 2 : 1);
+      const t = g.clock();
+      expect(tick(g.room, t, g.rng)).toBe(true);
+      const gm = g.room.game!;
+      expect(gm.phase).toBe('verdict');
+      expect(g.P(1).alive).toBe(false);
+      expect(gm.phaseEndsAt).toBe(gm.phaseStartedAt + 8000);
+      expect(tick(g.room, gm.phaseStartedAt + 7000, g.rng)).toBe(false);
+      expect(tick(g.room, gm.phaseStartedAt + 8000, g.rng)).toBe(true);
+      expect(gm.phase).toBe('night');
+      expect(gm.round).toBe(2);
+    }
+  });
+
+  it('after an even round the town learns how many Mafia are left (a number, never who); odd rounds say nothing', () => {
+    const g = setup(['mafia', 'mafia', 'godfather', V, V, V, V, V, V], { verdictSeconds: 8 });
+    const voteOut = (target: number) => {
+      g.goToVoting();
+      for (const p of g.room.players) if (p.alive) g.vote(Number(p.id.slice(1)), Number(p.id.slice(1)) === target ? 3 + ((target + 1) % 6) : target);
+      tick(g.room, g.clock(), g.rng);
+    };
+    voteOut(3); // round 1: a villager goes — no count
+    expect(g.room.game!.mafiaLeft ?? null).toBeNull();
+    expect(g.publicLog().some((l) => /still among you/.test(l))).toBe(false);
+    g.advance(); // the pause ends → round 2
+    expect(g.room.game!.round).toBe(2);
+    voteOut(0); // round 2: a Mafia member goes → 1 Mafia left (the Godfather doesn't count)
+    expect(g.room.game!.mafiaLeft).toEqual({ round: 2, count: 1 });
+    expect(g.publicLog()).toContain('1 member of the Mafia is still among you.');
+    expect(g.room.game!.phase).toBe('verdict');
+  });
+
   it('the day ends as soon as every eligible player has voted', () => {
     const g = setup(['mafia', V, V, V, V]);
     g.goToVoting();

@@ -112,6 +112,7 @@ export type EventTag =
   | 'win-other'
   | 'removed'
   | 'restored'
+  | 'mafiacount'
 
 export interface PrivateResult {
   id: string;
@@ -166,6 +167,8 @@ export interface Game {
   pendingTie: string[] | null;
   lastVerdict: Verdict | null;
   lastMorning: MorningReport | null;
+  /** After an even round's vote: how many Mafia members are still alive (shown as a big card). */
+  mafiaLeft?: { round: number; count: number } | null;
   winner: WinResult | null;
   jesterWinners: string[];
   stats: {

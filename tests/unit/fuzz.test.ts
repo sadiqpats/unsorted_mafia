@@ -60,6 +60,7 @@ function randomGame(seed: number) {
   updateSettings(room, {
     roles: counts,
     bufferSeconds: pick([0, 0, 5, 8]),
+    verdictSeconds: pick([0, 8]),
     timers: !chance(0.15),
     discussionTimer: !chance(0.3),
     daySeconds: pick([180, 210, 240, 270]),

@@ -100,6 +100,7 @@ export function buildPublic(room: Room, connected: Set<string>, now: number): Pu
       pendingTie: g.pendingTie,
       lastMorning: morning,
       lastVerdict: verdict,
+      mafiaLeft: g.mafiaLeft ?? null,
       winner: g.winner,
       stats: over ? g.stats : null,
       aliveCount: room.players.filter((p) => p.alive).length,

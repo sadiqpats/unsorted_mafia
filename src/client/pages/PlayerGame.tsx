@@ -11,6 +11,8 @@ import { useFx, usePrefs } from '../lib/prefs';
 import { revealPlan } from '../lib/reveal';
 import { PhotoPicker } from '../components/PhotoPicker';
 import { RoleArt } from '../components/RoleArt';
+import { PhoneMoments } from '../components/Moments';
+import { finale } from '../lib/finale';
 import { uploadPhoto } from '../lib/photo';
 import { loadSession } from '../lib/session';
 import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, PlayerRow, Section, Timer, useCountdown, useToast, winHeadline, Confetti } from '../components/ui';
@@ -108,6 +110,7 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
   const phase = g.phase;
   return (
     <div className="space-y-4">
+      <PhoneMoments view={view} />
       <PhaseHeader view={view} serverNow={serverNow} />
       {me.alive || phase === 'game_over' ? null : <DeadBanner view={view} />}
       {me.silenced && me.alive && phase !== 'game_over' && (
@@ -310,9 +313,10 @@ function RevealPanel({ view, send }: { view: ClientView; send: Send }) {
   const { act, busy } = useAct(send);
   const prog = view.game!.revealProgress;
   return (
-    <div className="space-y-4 anim-fade-up">
+    <div className="space-y-3 anim-fade-up">
       <p className="text-center text-sm text-mute">Make sure nobody can see your screen.</p>
-      <HoldToReveal>
+      {/* Sized to the screen so "I've seen my role" is visible without scrolling. */}
+      <HoldToReveal minHeight="clamp(330px, calc(100dvh - 380px), 560px)">
         {/* Team info first: a held card can't be scrolled, so it must be visible straight away. */}
         {(me.mafia || me.knownMafia) && <RoleBadge roleId={me.roleId!} alignment={me.alignment!} settings={view.settings} />}
         {me.mafia && <MafiaTeam view={view} />}
@@ -857,38 +861,65 @@ export function GameOverPanel({ view, hostControls }: { view: ClientView; hostCo
   const iWon = me ? winners.has(me.id) : false;
   const stats = g.stats;
   const topSuspect = stats ? Object.entries(stats.suspicion).sort((a, b) => b[1] - a[1])[0] : undefined;
+  // The same suspenseful order as the TV: the Mafia first, then the special characters, then the villagers.
+  const fin = useMemo(() => finale(view.players, view.settings), [view.players, view.settings]);
+  const end = `${fin.end}s`;
   return (
     <div className="space-y-4 anim-fade-up">
       <GoldDust />
-      {(iWon || !me) && (w.faction === 'good' || w.faction === 'mafia' || w.faction === 'jester') && <Confetti palette={view.settings.bollywood ? 'party' : w.faction} delay={2.1} />}
+      {(iWon || !me) && (w.faction === 'good' || w.faction === 'mafia' || w.faction === 'jester') && <Confetti palette={view.settings.bollywood ? 'party' : w.faction} delay={fin.end} />}
       <div className="card relative z-10 p-6 text-center">
         <p className="eyebrow">Game over</p>
-        <h2 className="brand-title headline-drop mt-2 text-4xl font-black">{headline}</h2>
-        <p className="mt-2 text-mute">{w.reason}</p>
-        {me && <p className={`mt-4 text-lg font-semibold anim-fade-up ${iWon ? 'win-glow text-gold' : 'text-mute'}`}>{iWon ? '🏆 You won!' : 'You did not win this time.'}</p>}
+        <div className="relative">
+          <p className="fin-wait font-[family-name:var(--font-serif)] text-2xl italic text-bone" style={{ ['--end' as string]: end }} aria-hidden="true">
+            The truth comes out…
+          </p>
+          <h2 className="brand-title headline-drop mt-2 text-4xl font-black" style={{ animationDelay: end }}>
+            {headline}
+          </h2>
+        </div>
+        <p className="mt-2 text-mute fin-row" style={{ ['--d' as string]: end }}>
+          {w.reason}
+        </p>
+        {me && (
+          <p className={`mt-4 text-lg font-semibold fin-row ${iWon ? 'text-gold' : 'text-mute'}`} style={{ ['--d' as string]: end }}>
+            {iWon ? '🏆 You won!' : 'You did not win this time.'}
+          </p>
+        )}
         {hostControls}
       </div>
       <Section title="Every role, revealed">
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {view.players.map((p: PublicPlayer) => {
-            const r = p.revealedRoleId ? ROLES[p.revealedRoleId] : null;
-            const a = p.revealedRoleId ? roleAlignment(p.revealedRoleId, view.settings) : null;
-            return (
-              <li key={p.id} className={`flex items-center gap-3 rounded-xl border p-2.5 ${winners.has(p.id) ? 'border-gold/60 bg-gold/5' : 'border-line/60'}`}>
-                <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={44} />
-                {r && <RoleArt art={roleArt(p.revealedRoleId, view.settings)} alignment={a} size={36} />}
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">
-                    {p.name} {winners.has(p.id) && <span className="text-gold">🏆</span>}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-mute">
-                    {roleTitle(p.revealedRoleId, view.settings)} {a && <AlignmentBadge alignment={a} />} <span>{p.alive ? 'Survived' : '☠ Eliminated'}</span>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="space-y-4">
+          {fin.groups.map((grp) => (
+            <div key={grp.key} className="fin-group" style={{ ['--d' as string]: `${grp.start}s` }}>
+              <h3 className={`mb-2 font-[family-name:var(--font-display)] text-sm tracking-[0.18em] uppercase ${grp.key === 'mafia' ? 'text-ember' : 'text-gold'}`}>
+                {grp.title} · {grp.players.length}
+              </h3>
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {grp.players.map((p: PublicPlayer) => {
+                  const a = p.revealedRoleId ? roleAlignment(p.revealedRoleId, view.settings) : null;
+                  return (
+                    <li key={p.id} className={`fin-row flex items-center gap-3 rounded-xl border p-2.5 ${winners.has(p.id) ? 'border-gold/60 bg-gold/5' : grp.key === 'mafia' ? 'border-crimson/50 bg-crimson/5' : 'border-line/60'}`} style={{ ['--d' as string]: `${fin.cardAt.get(p.id) ?? 0}s` }}>
+                      <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={60} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-mute">
+                          {p.name} {winners.has(p.id) && <span className="text-gold">🏆</span>}
+                        </div>
+                        <div className={`text-xl font-bold leading-tight ${a === 'mafia' ? 'text-ember' : a === 'evil' ? 'text-[#e07ac8]' : a === 'neutral' ? 'text-neutral' : 'text-bone'}`}>
+                          {roleShort(p.revealedRoleId, view.settings)}
+                          {view.settings.bollywood && p.revealedRoleId && <span className="ml-1.5 text-xs font-medium text-mute">({ROLES[p.revealedRoleId].name})</span>}
+                        </div>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-mute">
+                          {a && <AlignmentBadge alignment={a} />} <span>{p.alive ? 'Survived' : '☠ Eliminated'}</span>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
       </Section>
       {stats && (
         <Section title="The night in numbers">

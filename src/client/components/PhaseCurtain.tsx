@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import type { ClientView } from '../../shared/view-types';
 import { phoneQuiet, useFx, usePrefs } from '../lib/prefs';
 import { revealPlan } from '../lib/reveal';
+import { finale } from '../lib/finale';
 import { music } from '../lib/sound';
 import type { EventTag } from '../../shared/types';
 
@@ -224,7 +225,7 @@ export function usePhaseFx(view: ClientView | null) {
       else if (g.phase === 'night') s = 'night';
       else if (g.phase === 'discussion') s = 'day';
       else if (g.phase === 'voting') s = g.runoff ? 'runoff' : 'vote';
-      else if (g.phase === 'verdict') s = 'tie';
+      else if (g.phase === 'verdict' && g.pendingTie) s = 'tie'; // the plain pause after a vote has no curtain: its cards are the moment
       else if (g.phase === 'game_over') s = 'over';
       else if (g.phase === 'reveal') s = 'reveal';
       if (s) {
@@ -238,8 +239,29 @@ export function usePhaseFx(view: ClientView | null) {
       }
     }
 
+    // Game over: suspense first, the cards turn (a gong for each Mafia member), and the winner's
+    // sound and flash only when the last card has turned — same timeline as the TV and phones.
+    const finaleNow = phaseChanged && g?.phase === 'game_over';
+    if (finaleNow && view) {
+      const fin = finale(view.players, view.settings);
+      later(fin.suspenseAt, () => play('riser'));
+      later(fin.suspenseAt + 1.4, () => play('tension'));
+      for (const grp of fin.groups) {
+        if (grp.key !== 'mafia') later(grp.start, () => play('whoosh'));
+        else for (const p of grp.players) later((fin.cardAt.get(p.id) ?? grp.start) + 0.2, () => play('gong'));
+      }
+      const winTag = g!.news.find((n) => n.tag?.startsWith('win-'))?.tag;
+      later(fin.end, () => {
+        const cue = winTag && CUE[winTag];
+        if (cue) play(cue);
+        const flash = winTag && FLASH[winTag];
+        if (flash && !prefs.reduceMotion) fxFlash(flash);
+        buzz([60, 40, 60, 40, 200]);
+      });
+    }
+
     // One sound per news line, timed with its appearance on screen.
-    const news = phaseChanged && g ? g.news : fresh;
+    const news = (phaseChanged && g ? g.news : fresh).filter((n) => !(finaleNow && n.tag?.startsWith('win-')));
     const plan = revealPlan(news);
     if (phaseChanged && plan.dramatic) later(Math.max(0, plan.at(0) - 1.35), () => play('riser'));
     news.forEach((n, i) => {

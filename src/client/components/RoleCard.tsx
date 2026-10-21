@@ -94,7 +94,7 @@ function CardBack({ hint }: { hint: string }) {
  * Press-and-hold to reveal. Releasing (or switching apps) hides it again, so a
  * glance over the shoulder only ever sees the card back.
  */
-export function HoldToReveal({ children, hint = 'Press and hold to reveal — release to hide', minHeight = 560 }: { children: ReactNode; hint?: string; minHeight?: number }) {
+export function HoldToReveal({ children, hint = 'Press and hold to reveal — release to hide', minHeight = 560 }: { children: ReactNode; hint?: string; minHeight?: number | string }) {
   const [shown, setShown] = useState(false);
   const [tapMode, setTapMode] = useState(false);
   useEffect(() => {

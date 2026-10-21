@@ -1115,7 +1115,7 @@ export function resolveVotes(room: Room, now: number) {
   if (top === 0 || abstain >= top) {
     g.lastVerdict = verdict;
     addLog(room, now, 'verdict', s.announcements.noElimination, 'public', 'spared');
-    beginNightCycle(room, now);
+    afterVote(room, now);
     return;
   }
   if (leaders.length > 1) {
@@ -1138,10 +1138,30 @@ export function resolveVotes(room: Room, now: number) {
     }
     g.lastVerdict = verdict;
     addLog(room, now, 'verdict', `It's a tie between ${names}. ${s.announcements.noElimination}`, 'public', 'spared');
-    beginNightCycle(room, now);
+    afterVote(room, now);
     return;
   }
   eliminateByVote(room, leaders[0], verdict, now);
+}
+
+/**
+ * After the vote: a short pause on the result before Dawn/Night (default 8 s), so the table
+ * takes in who was voted out. After every even round the town also learns how many Mafia
+ * members are still alive (a number, never who).
+ */
+function afterVote(room: Room, now: number) {
+  const g = room.game!;
+  const s = g.settings;
+  if (g.round % 2 === 0) {
+    const count = room.players.filter((p) => p.alive && isMafiaTeam(p.roleId, s)).length;
+    g.mafiaLeft = { round: g.round, count };
+    addLog(room, now, 'verdict', count === 1 ? '1 member of the Mafia is still among you.' : `${count} members of the Mafia are still among you.`, 'public', 'mafiacount');
+  }
+  // Even rounds hold a little longer so the Mafia count can sink in.
+  const pause = (s.verdictSeconds ?? 8) > 0 ? (s.verdictSeconds ?? 8) + (g.round % 2 === 0 ? 4 : 0) : 0;
+  if (pause <= 0) return beginNightCycle(room, now);
+  enterPhase(room, 'verdict', now);
+  g.phaseEndsAt = now + pause * 1000; // a pause, not a clock: it runs even with "No timers at all"
 }
 
 function eliminateByVote(room: Room, targetId: string, verdict: Verdict, now: number) {
@@ -1165,7 +1185,7 @@ function eliminateByVote(room: Room, targetId: string, verdict: Verdict, now: nu
   }
   const win = checkWin(room);
   if (win) return endGame(room, win, now);
-  beginNightCycle(room, now);
+  afterVote(room, now);
 }
 
 export function resolveTie(room: Room, targetId: string | null, now: number) {

@@ -28,27 +28,53 @@ const serverArg = process.argv.find((a) => a.startsWith('--server='))?.slice('--
 
 // ------------------------------------------------------------------ scenes
 
-/** One look per moment of the game (WiZ setPilot params). */
+/**
+ * Cozy and dramatic: medium brightness throughout (never glaring, never pitch dark), a colour
+ * per moment, and gentle movement. Each scene is a list of steps [params, hold ms]; `loop`
+ * repeats the steps for as long as the game stays in that moment.
+ * WiZ dimming runs 10–100 %; colours are r/g/b, temperatures in kelvin, sceneId = a WiZ scene.
+ */
+const RED = { r: 255, g: 0, b: 0 };
 const SCENES = {
-  lobby: { temp: 2700, dimming: 80 }, // warm and welcoming while people join
-  reveal: { r: 120, g: 30, b: 200, dimming: 35 }, // mysterious purple: check your card
-  dawn: { r: 255, g: 105, b: 25, dimming: 55 }, // sunrise orange
-  night: { r: 15, g: 35, b: 255, dimming: 12 }, // deep, dark blue
-  day: { temp: 4200, dimming: 100 }, // bright daylight for the discussion
-  vote: { r: 255, g: 25, b: 15, dimming: 70 }, // red: time to vote
-  verdict: { r: 255, g: 140, b: 0, dimming: 70 }, // amber: a tie to settle
-  party: { sceneId: 4, speed: 140, dimming: 100 }, // game over: WiZ "Party"
+  // Lobby: the WiZ "Cozy" scene, half brightness — people arriving.
+  lobby: { steps: [[{ sceneId: 6, speed: 60, dimming: 45 }, 0]] },
+  // Role reveal: low mysterious violet.
+  reveal: { steps: [[{ r: 110, g: 20, b: 190, dimming: 30 }, 0]] },
+  // Dawn: a sunrise — amber rising from dim.
+  dawn: { steps: [[{ r: 255, g: 95, b: 15, dimming: 12 }, 900], [{ r: 255, g: 110, b: 20, dimming: 30 }, 1800], [{ r: 255, g: 125, b: 30, dimming: 45 }, 0]] },
+  // Night: deep red, slowly breathing.
+  night: { loop: true, steps: [[{ ...RED, dimming: 30 }, 2600], [{ ...RED, dimming: 18 }, 2600]] },
+  // Day: soft golden white — light enough to see faces, still cozy.
+  day: { steps: [[{ sceneId: 30, speed: 50, dimming: 55 }, 0]] },
+  // Vote: a crimson heartbeat.
+  vote: { loop: true, steps: [[{ r: 220, g: 0, b: 50, dimming: 55 }, 160], [{ r: 220, g: 0, b: 50, dimming: 22 }, 220], [{ r: 220, g: 0, b: 50, dimming: 45 }, 160], [{ r: 220, g: 0, b: 50, dimming: 18 }, 900]] },
+  // The pause on the vote's result: dark, still red.
+  verdict: { steps: [[{ ...RED, dimming: 14 }, 0]] },
+  // After the finale: party, then (after 45 s) back to normal.
+  party: { steps: [[{ sceneId: 4, speed: 120, dimming: 60 }, 0]] },
 };
-const FLASH = {
-  kill: { r: 255, g: 0, b: 0 },
-  voteout: { r: 255, g: 0, b: 0 },
-  removed: { r: 255, g: 0, b: 0 },
-  saved: { r: 0, g: 255, b: 80 },
-  restored: { r: 0, g: 255, b: 80 },
-  revive: { r: 255, g: 200, b: 60 },
-  silence: { r: 150, g: 60, b: 255 },
-  joker: { r: 255, g: 0, b: 200 },
+
+/** One-off effects for the big moments, then the room returns to the current scene. */
+const OFF = { r: 0, g: 0, b: 0, dimming: 10 }; // as dark as a bulb goes while staying "on"
+const EFFECTS = {
+  // Killed: a red strobe, a beat of darkness.
+  kill: [[{ ...RED, dimming: 85 }, 120], [OFF, 110], [{ ...RED, dimming: 85 }, 120], [OFF, 110], [{ ...RED, dimming: 85 }, 160], [OFF, 900]],
+  voteout: [[{ ...RED, dimming: 85 }, 260], [OFF, 300], [{ ...RED, dimming: 85 }, 260], [OFF, 300], [{ ...RED, dimming: 60 }, 700]],
+  removed: [[{ ...RED, dimming: 70 }, 300], [OFF, 500]],
+  // Brought back: darkness, then gold rising.
+  revive: [[OFF, 600], [{ r: 255, g: 190, b: 60, dimming: 20 }, 500], [{ r: 255, g: 200, b: 70, dimming: 45 }, 600], [{ r: 255, g: 210, b: 90, dimming: 80 }, 1200]],
+  // Saved: a soft green glow.
+  saved: [[{ r: 30, g: 255, b: 90, dimming: 25 }, 400], [{ r: 30, g: 255, b: 90, dimming: 65 }, 900], [{ r: 30, g: 255, b: 90, dimming: 30 }, 500]],
+  restored: [[{ r: 30, g: 255, b: 90, dimming: 60 }, 900]],
+  // Silenced: a violet hush.
+  silence: [[{ r: 140, g: 60, b: 255, dimming: 60 }, 700], [{ r: 140, g: 60, b: 255, dimming: 15 }, 1200]],
+  // Theft: the lights flicker out and back.
+  theft: [[OFF, 150], [{ r: 255, g: 255, b: 255, dimming: 30 }, 90], [OFF, 300], [{ r: 255, g: 255, b: 255, dimming: 30 }, 90], [OFF, 500]],
+  // The Joker: a burst of party colours.
+  joker: [[{ sceneId: 4, speed: 200, dimming: 70 }, 2800]],
 };
+/** After an even round: the lights pulse red once for every Mafia member still alive. */
+const countPulse = (n) => Array.from({ length: Math.max(0, n) }, () => [[{ ...RED, dimming: 80 }, 280], [OFF, 420]]).flat();
 
 function sceneFor(view) {
   if (!view) return null;
@@ -183,7 +209,6 @@ let bulbs = []; // { ip, mac }
 const original = new Map(); // mac -> getPilot result, taken the first time we take over
 let current = null; // scene name in force
 let wanted = null; // the scene the game is in right now (a flash returns to this)
-let busyUntil = 0;
 let flashTimer = null;
 
 async function refreshBulbs(roomId) {
@@ -212,32 +237,95 @@ async function setAll(params, label) {
   await Promise.all(bulbs.map((b) => send(b.ip, 'setPilot', { state: true, ...params })));
 }
 
-async function applyScene(name) {
-  if (!name || name === current) return;
-  current = name;
-  console.log(`💡 ${new Date().toLocaleTimeString()}  ${name}`);
-  await snapshot();
-  await setAll(SCENES[name], name);
+// Everything the lights do runs as one "show" at a time; starting a new one stops the old.
+let showId = 0;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function runSteps(steps, id) {
+  for (const [params, ms] of steps) {
+    if (id !== showId) return false;
+    await setAll(params, current ?? 'effect');
+    if (ms) await sleep(ms);
+  }
+  return id === showId;
 }
 
-async function flash(tag) {
-  const color = FLASH[tag];
-  if (!color) return;
-  busyUntil = Date.now() + 2200;
-  console.log(`⚡ ${tag}`);
-  for (let i = 0; i < 2; i++) {
-    await setAll({ ...color, dimming: 100 }, `flash ${tag}`);
-    await new Promise((r) => setTimeout(r, 380));
-    await setAll({ ...color, dimming: 10 }, `flash ${tag} dim`);
-    await new Promise((r) => setTimeout(r, 260));
-  }
+/** Hold a scene (looping its steps if it moves) until something else takes over. */
+async function applyScene(name, { force = false } = {}) {
+  if (!name || (!force && name === current)) return;
+  current = name;
+  const id = ++showId;
+  console.log(`💡 ${new Date().toLocaleTimeString()}  ${name}`);
+  await snapshot();
+  const sc = SCENES[name];
+  do {
+    if (!(await runSteps(sc.steps, id))) return;
+  } while (sc.loop && id === showId);
+}
+
+/** A one-off effect, then back to whatever the game is in now. */
+async function effect(name, steps) {
+  if (!steps?.length) return;
+  const id = ++showId;
   current = null;
-  busyUntil = 0;
-  await applyScene(wanted); // wherever the game is now (it may have moved on during the flash)
+  console.log(`⚡ ${name}`);
+  await snapshot();
+  if (await runSteps(steps, id)) applyScene(wanted, { force: true });
+}
+const flash = (tag) => effect(tag, EFFECTS[tag]);
+
+/**
+ * The game-over finale, in step with the TV and phones: the room goes dark and flickers like a
+ * candle ("And the Mafia were…"), a red flash as each Mafia card turns, then the winner's light.
+ */
+const FIN = { suspenseAt: 2.4, suspenseFor: 3.0, mafiaStep: 0.9, specialStep: 0.45, villagerStep: 0.25, groupGap: 0.9, tail: 0.8 };
+function finaleTimes(view) {
+  const s = view.settings ?? {};
+  const isMafiaSide = (id) => id === 'mafia' || id === 'godfather' || (id === 'imposter' && s.imposterAlignment === 'mafia');
+  const players = view.players ?? [];
+  const mafia = players.filter((p) => isMafiaSide(p.revealedRoleId));
+  const villagers = players.filter((p) => !mafia.includes(p) && p.revealedRoleId === 'villager');
+  const special = players.filter((p) => !mafia.includes(p) && !villagers.includes(p));
+  let t = FIN.suspenseAt + FIN.suspenseFor;
+  const mafiaAt = [];
+  for (const [list, step, isMafia] of [[mafia, FIN.mafiaStep, true], [special, FIN.specialStep, false], [villagers, FIN.villagerStep, false]]) {
+    if (!list.length) continue;
+    list.forEach((_, i) => isMafia && mafiaAt.push(t + 0.35 + i * step));
+    t += 0.35 + list.length * step + FIN.groupGap;
+  }
+  return { mafiaAt, end: t + FIN.tail };
+}
+async function finaleShow(view) {
+  const id = ++showId;
+  current = null;
+  console.log('🎬 finale');
+  await snapshot();
+  const { mafiaAt, end } = finaleTimes(view);
+  const t0 = Date.now();
+  const at = (sec) => sleep(Math.max(0, t0 + sec * 1000 - Date.now()));
+  // The curtain: lights sink to a dim red.
+  if (!(await runSteps([[{ ...RED, dimming: 25 }, 600], [{ ...RED, dimming: 12 }, 0]], id))) return;
+  await at(FIN.suspenseAt);
+  // Suspense: a slow candle flicker.
+  if (!(await runSteps([[{ sceneId: 29, speed: 80, dimming: 22 }, 0]], id))) return;
+  for (const sec of mafiaAt) {
+    await at(sec);
+    if (!(await runSteps([[{ ...RED, dimming: 90 }, 220], [{ ...RED, dimming: 15 }, 0]], id))) return;
+  }
+  await at(end);
+  const w = view.game?.winner?.faction;
+  const win =
+    w === 'mafia'
+      ? [[{ ...RED, dimming: 90 }, 200], [OFF, 200], [{ ...RED, dimming: 90 }, 200], [OFF, 200], [{ ...RED, dimming: 60 }, 3500]]
+      : w === 'good'
+        ? [[{ r: 255, g: 200, b: 90, dimming: 30 }, 400], [{ r: 255, g: 210, b: 110, dimming: 70 }, 3500]]
+        : [[{ sceneId: 4, speed: 200, dimming: 70 }, 3500]];
+  if (await runSteps(win, id)) applyScene('party', { force: true });
 }
 
 /** Put every light back exactly as it was before the game took over. */
 async function restore() {
+  showId++; // stop any scene or effect still running
   if (!original.size) return;
   console.log('↩️  Putting the lights back the way they were');
   for (const b of bulbs) {
@@ -263,14 +351,19 @@ async function demo(config) {
   await refreshBulbs(config.wizRoomId);
   console.log(`Demo on ${bulbs.length} light(s): ${bulbs.map((b) => b.ip).join(', ')}`);
   for (const name of ['lobby', 'reveal', 'dawn', 'night', 'day', 'vote']) {
-    await applyScene(name);
-    await new Promise((r) => setTimeout(r, 3000));
+    applyScene(name, { force: true });
+    await sleep(name === 'night' || name === 'vote' ? 6000 : 4000);
   }
-  wanted = 'day';
-  await flash('kill');
-  await new Promise((r) => setTimeout(r, 1500));
-  await applyScene('party');
-  await new Promise((r) => setTimeout(r, 4000));
+  for (const [tag, back] of [['kill', 'day'], ['revive', 'day'], ['silence', 'day'], ['saved', 'day']]) {
+    wanted = back;
+    await effect(tag, EFFECTS[tag]);
+    await sleep(2500);
+  }
+  wanted = 'verdict';
+  await effect('2 Mafia left', countPulse(2));
+  await sleep(1500);
+  await finaleShow({ players: [{ revealedRoleId: 'mafia' }, { revealedRoleId: 'godfather' }, { revealedRoleId: 'doctor' }, { revealedRoleId: 'villager' }], settings: {}, game: { winner: { faction: 'good' } } });
+  await sleep(4000);
   await restore();
   process.exit(0);
 }
@@ -308,12 +401,26 @@ async function follow(config) {
       room.seq = seq;
       room.overAt = g?.phase === 'game_over' && view.status !== 'lobby' ? (first ? Date.now() - 40_000 : Date.now()) : 0;
       // A new phase: the TV's curtain plays for ~2 s, then the big news lands — flash with it.
-      const tags = first ? [] : (g?.news ?? []).map((n) => n.tag).filter((t) => t && FLASH[t]);
+      const tags = first ? [] : (g?.news ?? []).map((n) => n.tag).filter((t) => t && (EFFECTS[t] || t === 'mafiacount'));
       clearTimeout(flashTimer); // a flash for a phase that's already over is skipped
-      await applyScene(scene);
-      if (tags.length) flashTimer = setTimeout(() => flash(tags[0]).catch(() => {}), 2000);
-    } else if (Date.now() > busyUntil) {
-      await applyScene(scene);
+      if (g?.phase === 'game_over' && !first) {
+        finaleShow(view).catch(() => {});
+        return;
+      }
+      applyScene(scene).catch(() => {});
+      if (tags.length) {
+        // The kill/revive/… effect lands with the news (after the ~2 s curtain); after an even
+        // round's vote, the lights also pulse once per Mafia member left.
+        const left = view.game?.mafiaLeft && tags.includes('mafiacount') ? view.game.mafiaLeft.count : null;
+        const main = tags.find((t) => EFFECTS[t]);
+        const delay = g?.phase === 'verdict' ? 1500 : 2000;
+        flashTimer = setTimeout(() => {
+          const steps = [...(main ? EFFECTS[main] : []), ...(left !== null ? [[OFF, 1500], ...countPulse(left)] : [])];
+          effect(main ?? 'mafia count', steps).catch(() => {});
+        }, delay);
+      }
+    } else if (scene !== 'party' && current !== null) {
+      applyScene(scene).catch(() => {});
     }
   };
 

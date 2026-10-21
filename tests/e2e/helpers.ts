@@ -43,6 +43,10 @@ export async function createRoom(browser: Browser, count: number, { realClock = 
   await brk.fill('0');
   await brk.press('Enter');
   await expect(brk).toHaveValue('0');
+  const pause = host.getByLabel('Pause after the vote (seconds)');
+  await pause.fill('0');
+  await pause.press('Enter');
+  await expect(pause).toHaveValue('0');
   // Long Night/Vote clocks so a slow, heavily loaded test machine never runs out the clock mid-test
   // (the real 60 s clock has its own test).
   if (!realClock) {
@@ -194,7 +198,7 @@ export async function skipRest(t: Table, done: Set<string>) {
 export async function vote(seat: Seat, target: string | null) {
   const p = seat.page;
   // The last vote ends the Day at once, so a phase change also proves the vote landed.
-  const done = p.getByText('Your vote is in.').or(p.locator('h1', { hasText: /^(Dawn|Night|Game Over)$/ })).first();
+  const done = p.getByText('Your vote is in.').or(p.locator('h1', { hasText: /^(Dawn|Night|Verdict|Game Over)$/ })).first();
   for (let attempt = 1; ; attempt++) {
     try {
       const open = p.getByRole('button', { name: /Open your ballot|Review your vote/ });

@@ -37,6 +37,7 @@ export interface PublicGame {
   pendingTie: string[] | null;
   lastMorning: MorningReport | null;
   lastVerdict: Verdict | null;
+  mafiaLeft: { round: number; count: number } | null;
   winner: WinResult | null;
   stats: { suspicion: Record<string, number>; nightKills: number; saves: number; revives: number; voteEliminations: number; investigations: number } | null;
   aliveCount: number;
