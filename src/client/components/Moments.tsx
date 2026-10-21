@@ -39,16 +39,17 @@ export function useMoments(view: ClientView | null, { startDelayMs = 1900, maxSe
       next = { title: 'Last night…', cards, note: cards.some((c) => c.kind === 'killed') ? saved : (saved ?? 'A quiet night — nobody died.'), mafiaLeft: null, seconds: 8 };
     } else if (g.phase === 'night' && before.phase === 'prenight' && g.lastDawn && g.lastDawn.round === g.round && g.lastDawn.revived.length) {
       // Someone came back at Dawn: their card rises from the dead, for 5 seconds.
-      next = { title: 'Back from the dead!', cards: g.lastDawn.revived.map((id) => ({ id, kind: 'revived' as const })), note: null, mafiaLeft: null, seconds: 5 };
+      next = { title: 'Back from the dead!', cards: g.lastDawn.revived.map((id) => ({ id, kind: 'revived' as const })), note: null, mafiaLeft: null, seconds: 8 };
     } else if (before.phase === 'voting' && g.lastVerdict && (g.phase === 'verdict' ? !g.pendingTie : g.phase === 'prenight' || g.phase === 'night')) {
       const v = g.lastVerdict;
       const left = g.mafiaLeft && g.mafiaLeft.round === v.round ? g.mafiaLeft.count : null;
-      const secs = g.phase === 'verdict' && g.phaseEndsAt ? 30 : left !== null ? 9 : 7; // a pause phase clears it when it ends
+      // Exactly as long as the pause on the result (8 s by default) — never longer.
+      const secs = Math.max(3, view.settings.verdictSeconds || 8);
       next = { title: 'The town has spoken', cards: v.eliminatedId ? [{ id: v.eliminatedId, kind: 'voted' }] : [], note: v.eliminatedId ? null : 'Nobody was voted out.', mafiaLeft: left, seconds: secs };
     }
     if (!next) return;
-    const s = { ...next, seconds: Math.min(next.seconds, next.mafiaLeft !== null ? Math.max(maxSeconds, 11) : maxSeconds) };
-    const delay = g.phase === 'verdict' ? 300 : startDelayMs; // no curtain before the vote result
+    const s = { ...next, seconds: Math.min(next.seconds, maxSeconds) };
+    const delay = g.phase === 'verdict' ? 0 : startDelayMs; // no curtain before the vote result
     const show = setTimeout(() => setMoment({ ...s, key }), delay);
     const hide = setTimeout(() => setMoment((cur) => (cur?.key === key ? null : cur)), delay + s.seconds * 1000);
     return () => {

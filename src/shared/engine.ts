@@ -351,6 +351,7 @@ export function startGame(room: Room, now: number, rng: Rng, opts: { force?: boo
     stats: { suspicion: {}, nightKills: 0, saves: 0, revives: 0, voteEliminations: 0, investigations: 0 },
     startedAt: now,
     endedAt: null,
+    startLogSeq: room.logSeq,
   };
   room.status = 'active';
   enterPhase(room, 'reveal', now);
@@ -1210,8 +1211,7 @@ function afterVote(room: Room, now: number) {
     g.mafiaLeft = { round: g.round, count };
     addLog(room, now, 'verdict', count === 1 ? '1 member of the Mafia is still among you.' : `${count} members of the Mafia are still among you.`, 'public', 'mafiacount');
   }
-  // Even rounds hold a little longer so the Mafia count can sink in.
-  const pause = (s.verdictSeconds ?? 8) > 0 ? (s.verdictSeconds ?? 8) + (g.round % 2 === 0 ? 4 : 0) : 0;
+  const pause = s.verdictSeconds ?? 8; // the result card shows exactly this long, then Dawn/Night (with its own short break)
   if (pause <= 0) return beginNightCycle(room, now);
   enterPhase(room, 'verdict', now);
   g.phaseEndsAt = now + pause * 1000; // a pause, not a clock: it runs even with "No timers at all"

@@ -94,7 +94,9 @@ export default function Display() {
 }
 
 /** The big-screen wall of faces. Eliminated players' photos are cut in two. */
-function PhotoWall({ players, lobby = false, settings, winners = null, box, replayFinale = true }: { players: PublicPlayer[]; lobby?: boolean; settings: Parameters<typeof roleAlignment>[1]; winners?: string[] | null; box: Box | null; replayFinale?: boolean }) {
+function PhotoWall({ players: all, lobby = false, settings, winners = null, box, replayFinale = true }: { players: PublicPlayer[]; lobby?: boolean; settings: Parameters<typeof roleAlignment>[1]; winners?: string[] | null; box: Box | null; replayFinale?: boolean }) {
+  // During the game the living come first and the dead move to the end.
+  const players = lobby || winners ? all : [...all.filter((p) => p.alive), ...all.filter((p) => !p.alive)];
   const n = players.length;
   const { size, cols } = fitFaces(n, box);
   if (!n) return <p className="mt-6 text-xl text-mute">Waiting for the first guest…</p>;
@@ -379,7 +381,11 @@ function TvGame({ view, serverNow, send, finaleDone, finaleReplay }: { view: Non
           )}
           {g.nightProgress && <p className="text-[clamp(1rem,2.6vh,1.3rem)] text-mute">{g.nightProgress.done}/{g.nightProgress.total} locked in</p>}
           {g.votingProgress && <p className="text-[clamp(1rem,2.6vh,1.3rem)] text-mute">{g.votingProgress.done}/{g.votingProgress.total} votes in</p>}
-          <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />
+          {!over && (
+            <div className="tv-clock-slot">
+              <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />
+            </div>
+          )}
           {send && !over && <TvControls view={view} send={send} />}
         </div>
       </div>

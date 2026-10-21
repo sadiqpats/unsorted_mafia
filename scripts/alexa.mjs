@@ -17,8 +17,6 @@ const require = createRequire(import.meta.url);
  * next song.
  */
 export const PLAYLIST = 'play my playlist dramatic suspense mix on spotify';
-/** The opening: only during the role card reveal, ~28 s, then the rounds use the playlist. */
-export const INTRO = { command: 'play the shadow of death by justin vargas on spotify', seconds: 28 };
 /** Phases with music (the discussion is quiet: people are talking). */
 export const MUSIC = { reveal: true, dawn: true, night: true, vote: true };
 /** Alexa built-in sound effects (only IDs from Amazon's own library play on an Echo). */
@@ -50,8 +48,6 @@ export function createAlexa(config, save, log = console.log) {
   const alexa = new Alexa();
   let ready = false;
   let device = null;
-  let queue = Promise.resolve();
-  const q = (fn) => (queue = queue.then(fn).catch((e) => log(`🔈 Alexa: ${e?.message ?? e}`)));
   const call = (fn) => new Promise((res, rej) => fn((err, r) => (err ? rej(err) : res(r))));
 
   const opts = {
@@ -98,31 +94,77 @@ export function createAlexa(config, save, log = console.log) {
     });
 
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  const rnd = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
   const cmd = (c, v = null) => call((cb) => alexa.sendCommand(device.serialNumber, c, v, cb));
+  const say = (text) => call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'textCommand', text, cb));
   let started = false; // the playlist has been put on this session
-  let introId = 0;
-  let musicOn = false; // music is currently playing (not paused)
-  let musicKey = null; // the phase the current song belongs to
+  let musicOn = false; // music is playing right now
+  let musicKey = null; // the round whose song is loaded
   let vol = { music: a.musicVolume ?? 35, sfx: a.sfxVolume ?? 70 };
   let volNow = null;
+  let sfxUntil = 0; // an effect is playing at the effects volume until then
   const setVol = async (v) => {
     if (volNow === v) return;
     volNow = v;
     await cmd('volume', v);
   };
-  const say = (text) => call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'textCommand', text, cb));
-  /** Load the playlist in silence (during the role reveal) so the first round starts instantly. */
-  const preload = async () => {
-    if (started) return;
-    log('🎵 Loading Dramatic Suspense Mix (shuffled, silent)');
-    await setVol(0);
-    await say(PLAYLIST);
-    await wait(2500);
-    await cmd('shuffle', true).catch(() => {});
-    await cmd('pause').catch(() => {});
-    started = true;
-    musicOn = false;
+
+  /*
+   * The music is a small state machine. The game says what it WANTS (music on for round N, or
+   * off); one worker brings the Echo there with fast direct commands (pause / play / next, each
+   * ~0.3 s). If the game moves on while a command is in flight, the worker goes straight to the
+   * newest wish — there is never a backlog of stale commands (that is what made it lag).
+   */
+  let want = { on: false, token: null };
+  let busy = false;
+  let dirty = false;
+  const apply = async (w) => {
+    if (!w.on) {
+      if (musicOn) {
+        musicOn = false;
+        await cmd('pause');
+      }
+      return;
+    }
+    if (Date.now() >= sfxUntil) await setVol(vol.music);
+    if (!started) {
+      // The first song: the playlist, shuffled, on a random song from its beginning.
+      log(`🎵 round ${w.token}: playlist starts`);
+      await say(PLAYLIST);
+      await wait(2200);
+      await cmd('shuffle', true).catch(() => {});
+      await cmd('next').catch(() => {});
+      started = true;
+      musicOn = true;
+      musicKey = w.token;
+      return;
+    }
+    if (musicKey !== w.token) {
+      log(`🎵 round ${w.token}: next song`);
+      musicKey = w.token;
+      await cmd('next'); // a new song, from its beginning
+      if (!musicOn) await cmd('play');
+      musicOn = true;
+      return;
+    }
+    if (!musicOn) {
+      musicOn = true;
+      await cmd('play'); // the same song carries on where it paused
+    }
+  };
+  const reconcile = async () => {
+    if (busy) {
+      dirty = true;
+      return;
+    }
+    busy = true;
+    try {
+      do {
+        dirty = false;
+        await apply({ ...want }).catch((e) => log(`🔈 Alexa: ${e?.message ?? e}`));
+      } while (dirty);
+    } finally {
+      busy = false;
+    }
   };
 
   const api = {
@@ -132,95 +174,50 @@ export function createAlexa(config, save, log = console.log) {
     },
     devices: () => Object.values(alexa.serialNumbers ?? {}).map((d) => d.accountName),
     /** Music and effect volumes (0–100), from the host's sliders. */
-    setVolumes: (music, sfx) =>
-      q(async () => {
-        if (!ready) return;
-        vol = { music: music ?? vol.music, sfx: sfx ?? vol.sfx };
-        if (musicOn) await setVol(vol.music);
-      }),
-    volume: (v) => q(() => ready && setVol(v)),
-    /** Get the music ready without playing it (call when the game starts). */
-    preload: () => q(async () => ready && preload()),
-    /**
-     * The role card reveal: "The Shadow of Death" for ~28 s, faded out, then the playlist is
-     * loaded silently for the rounds. If the first round starts sooner, the rounds' music takes over.
-     */
-    intro: () =>
-      q(async () => {
-        if (!ready || started) return;
-        log('🎵 Intro: The Shadow of Death (role reveal)');
-        await setVol(vol.music);
-        await say(INTRO.command);
-        const mine = ++introId;
-        setTimeout(() => {
-          if (mine !== introId || started) return;
-          q(async () => {
-            if (started) return; // a round already began: its music is on
-            await setVol(Math.round(vol.music / 2));
-            await wait(600);
-            await say('pause'); // the intro fades out; round one starts the playlist
-            musicOn = false;
-          });
-        }, INTRO.seconds * 1000);
-      }),
+    setVolumes: (music, sfx) => {
+      if (!ready) return;
+      const changed = music !== undefined && music !== vol.music;
+      vol = { music: music ?? vol.music, sfx: sfx ?? vol.sfx };
+      if (changed && musicOn && Date.now() >= sfxUntil) setVol(vol.music).catch(() => {});
+    },
+    volume: (v) => ready && setVol(v).catch(() => {}),
     /** Music for a phase of round `token`: the round's song resumes; a new round starts the next song. */
-    music: (key, token = key) =>
-      q(async () => {
-        if (!ready || !MUSIC[key]) return;
-        if (musicOn && musicKey === token) return;
-        await setVol(vol.music);
-        if (!started) {
-          // Round one: start the playlist fresh, shuffled, on a random song from its beginning.
-          log(`🎵 round ${token}: playlist starts`);
-          await say(PLAYLIST);
-          await wait(2500);
-          await cmd('shuffle', true).catch(() => {});
-          await cmd('next').catch(() => {});
-          started = true;
-          musicOn = true;
-        } else if (musicKey !== null && musicKey !== token) {
-          log(`🎵 round ${token}: next song`);
-          await cmd('next'); // a new song, from its beginning
-          musicOn = true;
-        } else if (!musicOn) {
-          await say('resume'); // Alexa's own "resume" continues the song from where it stopped
-          musicOn = true;
-        }
-        musicKey = token;
-      }),
-    pause: () =>
-      q(async () => {
-        if (!ready || !musicOn) return;
-        musicOn = false;
-        await say('pause');
-      }),
+    music: (key, token = key) => {
+      if (!ready) return;
+      want = MUSIC[key] ? { on: true, token } : { ...want, on: false };
+      reconcile();
+    },
+    pause: () => {
+      if (!ready) return;
+      want = { ...want, on: false };
+      reconcile();
+    },
     /**
-     * A sound effect. The music is NOT stopped: Alexa ducks it under the effect and carries on
-     * by itself from the same point (stopping it ourselves made Spotify restart the song).
+     * A sound effect — sent at once, never queued behind the music. Alexa plays it over the
+     * music (ducking it) and the music carries on by itself.
      */
-    sfx: (name) =>
-      q(async () => {
-        if (!ready || !SFX[name]) return;
-        log(`🔊 ${name}`);
-        const back = musicOn ? vol.music : null;
-        await setVol(vol.sfx);
+    sfx: (name) => {
+      if (!ready || !SFX[name]) return;
+      log(`🔊 ${name}`);
+      sfxUntil = Date.now() + 3500;
+      (async () => {
+        if (vol.sfx !== volNow) await setVol(vol.sfx).catch(() => {});
         await call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'sound', SFX[name], cb));
-        if (back !== null) {
-          await wait(3500);
-          await setVol(back);
-        }
-      }),
-    say: (text) => q(() => ready && call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'speak', text, cb))),
+        await wait(3500);
+        if (Date.now() >= sfxUntil && musicOn) await setVol(vol.music).catch(() => {});
+      })().catch((e) => log(`🔈 Alexa: ${e?.message ?? e}`));
+    },
+    say: (text) => ready && call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'speak', text, cb)),
     /** Any Alexa command, as if spoken (testing). */
-    command: (text) => q(() => ready && call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'textCommand', text, cb))),
-    stop: () =>
-      q(async () => {
-        if (!ready) return;
-        musicOn = false;
-        started = false;
-        musicKey = null;
-        await cmd('pause').catch(() => {});
-      }),
+    command: (text) => ready && say(text),
+    /** The game is over / left: music off, and the next game starts the playlist afresh. */
+    stop: () => {
+      if (!ready) return;
+      want = { on: false, token: null };
+      started = false;
+      musicKey = null;
+      reconcile();
+    },
   };
   return api;
 }

@@ -189,6 +189,8 @@ export interface Game {
   newsFromSeq?: number;
   /** Private notes newer than this time belong to the current phase. */
   newsFromAt?: number;
+  /** Log seq when this game started: earlier games' announcements are not shown. */
+  startLogSeq?: number;
   /** Log seq / time at which the current phase began. */
   phaseLogSeq?: number;
 }

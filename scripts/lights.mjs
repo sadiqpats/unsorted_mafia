@@ -244,7 +244,6 @@ let showId = 0;
 let alexa = null;
 const MUSIC_FOR = { reveal: 'reveal', dawn: 'dawn', night: 'night', vote: 'vote' };
 let phaseToken = ''; // changes every phase, so each new round gets a new song
-let holdMusic = false; // a big announcement is about to play: the music waits for it
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function runSteps(steps, id) {
@@ -262,7 +261,7 @@ async function applyScene(name, { force = false } = {}) {
   current = name;
   const id = ++showId;
   console.log(`💡 ${new Date().toLocaleTimeString()}  ${name}`);
-  if (alexa && !holdMusic) MUSIC_FOR[name] ? alexa.music(MUSIC_FOR[name], phaseToken) : name !== 'party' && alexa.pause();
+  if (alexa) MUSIC_FOR[name] ? alexa.music(MUSIC_FOR[name], phaseToken) : name !== 'party' && alexa.pause();
   await snapshot();
   const sc = SCENES[name];
   do {
@@ -310,13 +309,12 @@ function scheduleCountdown(view) {
 }
 
 /** A one-off effect, then back to whatever the game is in now. */
-async function effect(name, steps) {
+async function effect(name, steps, { sound = false } = {}) {
   if (!steps?.length) return;
   const id = ++showId;
   current = null;
   console.log(`⚡ ${name}`);
-  if (alexa) alexa.sfx(name in EFFECTS ? name : 'mafiacount');
-  holdMusic = false; // after the effect, the scene (and its music) comes back
+  if (alexa && sound) alexa.sfx(name in EFFECTS ? name : 'mafiacount');
   await snapshot();
   if (await runSteps(steps, id)) applyScene(wanted, { force: true });
 }
@@ -466,9 +464,6 @@ async function follow(config) {
         finaleShow(view).catch(() => {});
         return;
       }
-      // Big news: the dramatic sound plays first, the music after it (no queueing behind each other).
-      holdMusic = tags.length > 0;
-      if (alexa && holdMusic) alexa.pause();
       applyScene(scene).catch(() => {});
       if (tags.length) {
         // The kill/revive/… effect lands with the news (after the ~2 s curtain); after an even
@@ -476,6 +471,9 @@ async function follow(config) {
         const left = view.game?.mafiaLeft && tags.includes('mafiacount') ? view.game.mafiaLeft.count : null;
         const main = tags.find((t) => EFFECTS[t]);
         const delay = g?.phase === 'verdict' ? 1500 : 2000;
+        // Alexa takes ~1 s to play a sound, so it is sent a second early: it lands with the lights.
+        const sound = main ?? (left !== null ? 'mafiacount' : null);
+        if (alexa && sound) setTimeout(() => alexa.sfx(sound), Math.max(0, delay - 1000));
         flashTimer = setTimeout(() => {
           const steps = [...(main ? EFFECTS[main] : []), ...(left !== null ? [[OFF, 1500], ...countPulse(left)] : [])];
           effect(main ?? 'mafia count', steps).catch(() => {});

@@ -121,7 +121,8 @@ export function buildPublic(room: Room, connected: Set<string>, now: number): Pu
     distribution: analyzeDistribution(room.settings, room.status === 'lobby' ? undefined : room.players.length),
     players,
     game,
-    feed: room.log.filter((l) => l.visibility === 'public').slice(-FEED_LIMIT),
+    // Only this game's announcements (a rematch starts with a clean list).
+    feed: room.log.filter((l) => l.visibility === 'public' && (!room.game || l.seq > (room.game.startLogSeq ?? 0))).slice(-FEED_LIMIT),
   };
 }
 
