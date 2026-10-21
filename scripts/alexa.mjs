@@ -104,17 +104,28 @@ export function createAlexa(config, save, log = console.log) {
     volNow = v;
     await cmd('volume', v);
   };
-  /** Jump to a random song in the (shuffled) playlist and start it part-way through. */
+  const say = (text) => call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'textCommand', text, cb));
+  /** A different random song (the playlist is shuffled), started part-way through — silently, then faded up. */
   const randomSpot = async () => {
-    for (let i = rnd(1, 4); i > 0; i--) {
-      await cmd('next');
-      await wait(700);
-    }
-    await wait(1500);
-    for (let i = rnd(2, 5); i > 0; i--) {
-      await cmd('forward'); // skips ahead ~30 s
-      await wait(500);
-    }
+    await setVol(0);
+    await cmd('next');
+    await say(`skip ahead ${rnd(40, 110)} seconds`);
+    await wait(250);
+    await setVol(Math.round(vol.music / 2));
+    await wait(300);
+    await setVol(vol.music);
+  };
+  /** Load the playlist in silence (during the role reveal) so the first Night starts instantly. */
+  const preload = async () => {
+    if (started) return;
+    log('🎵 Loading Dramatic Suspense Mix (shuffled, silent)');
+    await setVol(0);
+    await say(PLAYLIST);
+    await wait(2500);
+    await cmd('shuffle', true).catch(() => {});
+    await cmd('pause').catch(() => {});
+    started = true;
+    musicOn = false;
   };
 
   const api = {
@@ -131,33 +142,24 @@ export function createAlexa(config, save, log = console.log) {
         if (musicOn) await setVol(vol.music);
       }),
     volume: (v) => q(() => ready && setVol(v)),
+    /** Get the music ready without playing it (call when the game starts). */
+    preload: () => q(async () => ready && preload()),
     /** Music for a phase: a new phase gets a new random song; the same phase just carries on. */
     music: (key, token = key) =>
       q(async () => {
         if (!ready || !MUSIC[key]) return;
         if (musicOn && musicKey === token) return;
-        await setVol(vol.music);
-        if (!started) {
-          log('🎵 Dramatic Suspense Mix (shuffled)');
-          await call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'textCommand', PLAYLIST, cb));
-          await wait(4000);
-          await cmd('shuffle', true).catch(() => {});
-          started = true;
-          musicOn = true;
-          musicKey = token;
-          await randomSpot();
-          return;
-        }
+        if (!started) await preload();
         if (!musicOn) {
+          await setVol(0);
           await cmd('play');
           musicOn = true;
-          await wait(800);
         }
         if (musicKey !== token) {
           log(`🎵 ${key}: a different song`);
           musicKey = token;
           await randomSpot();
-        }
+        } else await setVol(vol.music);
       }),
     pause: () =>
       q(async () => {

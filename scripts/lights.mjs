@@ -244,6 +244,7 @@ let showId = 0;
 let alexa = null;
 const MUSIC_FOR = { dawn: 'dawn', night: 'night', day: 'day', vote: 'vote' };
 let phaseToken = ''; // changes every phase, so each new round gets a new song
+let holdMusic = false; // a big announcement is about to play: the music waits for it
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function runSteps(steps, id) {
@@ -261,7 +262,7 @@ async function applyScene(name, { force = false } = {}) {
   current = name;
   const id = ++showId;
   console.log(`💡 ${new Date().toLocaleTimeString()}  ${name}`);
-  if (alexa) MUSIC_FOR[name] ? alexa.music(MUSIC_FOR[name], `${name}:${phaseToken}`) : name !== 'party' && alexa.pause();
+  if (alexa && !holdMusic) MUSIC_FOR[name] ? alexa.music(MUSIC_FOR[name], `${name}:${phaseToken}`) : name !== 'party' && alexa.pause();
   await snapshot();
   const sc = SCENES[name];
   do {
@@ -276,6 +277,7 @@ async function effect(name, steps) {
   current = null;
   console.log(`⚡ ${name}`);
   if (alexa) alexa.sfx(name in EFFECTS ? name : 'mafiacount');
+  holdMusic = false; // after the effect, the scene (and its music) comes back
   await snapshot();
   if (await runSteps(steps, id)) applyScene(wanted, { force: true });
 }
@@ -424,6 +426,10 @@ async function follow(config) {
         finaleShow(view).catch(() => {});
         return;
       }
+      // Big news: the dramatic sound plays first, the music after it (no queueing behind each other).
+      holdMusic = tags.length > 0;
+      if (alexa && holdMusic) alexa.pause();
+      if (alexa && scene === 'reveal') alexa.preload();
       applyScene(scene).catch(() => {});
       if (tags.length) {
         // The kill/revive/… effect lands with the news (after the ~2 s curtain); after an even
