@@ -77,6 +77,7 @@ sock.on('message', (buf, rinfo) => {
   if (discovering && msg?.result?.mac) discovering.set(rinfo.address, msg.result);
 });
 let discovering = null;
+sock.on('error', (e) => console.log(`(network: ${e.message})`));
 await new Promise((res) => sock.bind(0, () => (sock.setBroadcast(true), res())));
 
 function send(ip, method, params = {}, tries = 3) {
@@ -187,7 +188,14 @@ let flashTimer = null;
 
 async function refreshBulbs(roomId) {
   const found = (await discover()).filter((d) => d.roomId === roomId && !/SOCKET/i.test(d.module));
-  if (found.length) bulbs = found;
+  if (found.length) {
+    const was = bulbs.map((b) => b.mac).sort().join();
+    // Keep a light we knew about even if it missed this one look (UDP replies can get lost).
+    const merged = new Map(bulbs.map((b) => [b.mac, b]));
+    for (const f of found) merged.set(f.mac, f);
+    bulbs = [...merged.values()];
+    if (bulbs.map((b) => b.mac).sort().join() !== was) console.log(`💡 Found ${bulbs.length} light(s) in the living room: ${bulbs.map((b) => b.ip).join(', ')}`);
+  }
   return bulbs;
 }
 
@@ -350,7 +358,14 @@ async function follow(config) {
 
   await poll();
   setInterval(poll, 8000);
-  setInterval(() => refreshBulbs(config.wizRoomId).catch(() => {}), 120_000); // bulbs can change address
+  // Bulbs can change address (the Wi-Fi hands them out); look often until we have them, then every 2 minutes.
+  let lastLook = Date.now();
+  setInterval(() => {
+    const every = bulbs.length ? 120_000 : 15_000;
+    if (Date.now() - lastLook < every) return;
+    lastLook = Date.now();
+    refreshBulbs(config.wizRoomId).catch(() => {});
+  }, 5_000);
 }
 
 // ------------------------------------------------------------------ main
