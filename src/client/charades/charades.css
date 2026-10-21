@@ -118,7 +118,7 @@
 .movie-card-tv .movie-title { font-size: clamp(2.6rem, 5vw, 4.5rem); margin-top: 0.4rem; }
 
 /* ---------- TV */
-.tv-spotlight { position: absolute; top: -10%; width: 40vw; height: 120vh; pointer-events: none; background: linear-gradient(180deg, rgba(255, 230, 160, 0.18), transparent 70%); filter: blur(8px); transform-origin: top center; animation: sweep 9s ease-in-out infinite alternate; }
+.tv-spotlight { position: absolute; top: -10%; width: 40vw; height: 120vh; pointer-events: none; background: linear-gradient(180deg, rgba(255, 230, 160, 0.16), transparent 75%); transform-origin: top center; animation: sweep 9s ease-in-out infinite alternate; will-change: transform; }
 .tv-spotlight.left { left: 5%; }
 .tv-spotlight.right { right: 5%; animation-delay: -4s; }
 @keyframes sweep { from { transform: rotate(18deg); } to { transform: rotate(-18deg); } }

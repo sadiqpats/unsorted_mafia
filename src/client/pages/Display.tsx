@@ -38,7 +38,7 @@ export default function Display() {
 
   const g = view.game;
   return (
-    <div className="grain relative flex min-h-dvh flex-col p-5 tv:h-dvh tv:overflow-hidden tv:p-8">
+    <div className="tv-page grain relative flex min-h-dvh flex-col p-5 tv:h-dvh tv:overflow-hidden tv:p-8">
       <div className="ambient" aria-hidden="true" />
       <PhaseCurtain scene={scene} />
       {spotlight && g && (
