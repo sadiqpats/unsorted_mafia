@@ -17,6 +17,8 @@ const require = createRequire(import.meta.url);
  * next song.
  */
 export const PLAYLIST = 'play my playlist dramatic suspense mix on spotify';
+/** The opening: only during the role card reveal, ~28 s, then the rounds use the playlist. */
+export const INTRO = { command: 'play the shadow of death by justin vargas on spotify', seconds: 28 };
 /** Phases with music (the discussion is quiet: people are talking). */
 export const MUSIC = { dawn: true, night: true, vote: true };
 /** Alexa built-in sound effects (only IDs from Amazon's own library play on an Echo). */
@@ -99,6 +101,7 @@ export function createAlexa(config, save, log = console.log) {
   const rnd = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
   const cmd = (c, v = null) => call((cb) => alexa.sendCommand(device.serialNumber, c, v, cb));
   let started = false; // the playlist has been put on this session
+  let introId = 0;
   let musicOn = false; // music is currently playing (not paused)
   let musicKey = null; // the phase the current song belongs to
   let vol = { music: a.musicVolume ?? 35, sfx: a.sfxVolume ?? 70 };
@@ -138,6 +141,27 @@ export function createAlexa(config, save, log = console.log) {
     volume: (v) => q(() => ready && setVol(v)),
     /** Get the music ready without playing it (call when the game starts). */
     preload: () => q(async () => ready && preload()),
+    /**
+     * The role card reveal: "The Shadow of Death" for ~28 s, faded out, then the playlist is
+     * loaded silently for the rounds. If the first round starts sooner, the rounds' music takes over.
+     */
+    intro: () =>
+      q(async () => {
+        if (!ready || started) return;
+        log('🎵 Intro: The Shadow of Death (role reveal)');
+        await setVol(vol.music);
+        await say(INTRO.command);
+        const mine = ++introId;
+        setTimeout(() => {
+          if (mine !== introId || started) return;
+          q(async () => {
+            if (started) return; // a round already began: its music is on
+            await setVol(Math.round(vol.music / 2));
+            await wait(600);
+            await preload(); // silent switch to the playlist, ready for round one
+          });
+        }, INTRO.seconds * 1000);
+      }),
     /** Music for a phase of round `token`: the round's song resumes; a new round starts the next song. */
     music: (key, token = key) =>
       q(async () => {

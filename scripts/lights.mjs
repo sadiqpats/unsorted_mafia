@@ -469,7 +469,7 @@ async function follow(config) {
       // Big news: the dramatic sound plays first, the music after it (no queueing behind each other).
       holdMusic = tags.length > 0;
       if (alexa && holdMusic) alexa.pause();
-      if (alexa && scene === 'reveal') alexa.preload();
+      if (alexa && scene === 'reveal') alexa.intro();
       applyScene(scene).catch(() => {});
       if (tags.length) {
         // The kill/revive/… effect lands with the news (after the ~2 s curtain); after an even
