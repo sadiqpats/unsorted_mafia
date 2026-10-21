@@ -10,6 +10,8 @@ import { Avatar } from '../components/Avatar';
 import type { PublicPlayer } from '../../shared/view-types';
 import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, QR, Timer, useTitle, winHeadline, Confetti } from '../components/ui';
 import { useRoom } from '../lib/useRoom';
+import { loadSession } from '../lib/session';
+import type { CommandInput } from '../../shared/protocol';
 import { revealPlan } from '../lib/reveal';
 
 /** TV / projector view. Connects as a read-only "display" and receives only public data. */
@@ -17,8 +19,14 @@ export default function Display() {
   useTitle('Mafia Night · TV · Unsorted');
   const { code = '' } = useParams();
   const upper = code.toUpperCase();
-  const auth = useMemo(() => ({ display: true }), []);
-  const { view, status, serverNow, endedReason } = useRoom(upper, auth);
+  // On the host's own computer (its session is in this browser) the TV also gets the host's
+  // Next phase / Pause buttons. Anywhere else it is a read-only display.
+  const hostSession = useMemo(() => {
+    const ss = loadSession(upper);
+    return ss?.kind === 'host' ? ss : null;
+  }, [upper]);
+  const auth = useMemo(() => (hostSession ? { token: hostSession.token } : { display: true }), [hostSession]);
+  const { view, status, serverNow, endedReason, send } = useRoom(upper, auth);
   const joinUrl = `${window.location.origin}/join/${upper}`;
   const scene = usePhaseFx(view);
   const spotlight = useMoments(view);
@@ -38,7 +46,7 @@ export default function Display() {
       )}
       {!soundOn && (
         <button
-          className="btn btn-ghost fixed bottom-5 right-5 z-50 !min-h-10 text-sm"
+          className="btn btn-ghost fixed bottom-5 left-5 z-50 !min-h-10 text-sm"
           onClick={() => {
             sounds.unlock();
             sounds.seal();
@@ -51,10 +59,10 @@ export default function Display() {
       <div className={`mx-auto flex w-full shrink-0 items-center justify-between ${g && view.status !== 'lobby' ? 'max-w-[1800px]' : 'max-w-7xl'}`}>
         <div>
           <div className="flex items-end gap-3">
-            <img src={LOGO.wordmark} alt="Unsorted" className="h-[clamp(1.5rem,4.5vh,2.75rem)] w-auto" />
+            <img src={LOGO.wordmark} alt="Unsorted" className={`w-auto ${g && view.status !== 'lobby' ? 'h-[clamp(1.1rem,3vh,1.8rem)]' : 'h-[clamp(1.5rem,4.5vh,2.75rem)]'}`} />
             <span className="eyebrow pb-1">presents</span>
           </div>
-          <h1 className="brand-title mt-1 text-[clamp(1.75rem,5.5vh,3rem)] font-black leading-tight">{view.settings.bollywood ? 'Bollywood Mafia Night' : 'Mafia Night'}</h1>
+          <h1 className={`brand-title mt-1 font-black leading-tight ${g && view.status !== 'lobby' ? 'text-[clamp(1.2rem,3.6vh,2rem)]' : 'text-[clamp(1.75rem,5.5vh,3rem)]'}`}>{view.settings.bollywood ? 'Bollywood Mafia Night' : 'Mafia Night'}</h1>
         </div>
         <div className="flex items-center gap-3">
           <span className="font-[family-name:var(--font-display)] text-3xl tracking-[0.3em] text-gold">{upper}</span>
@@ -79,67 +87,7 @@ export default function Display() {
           </div>
         </div>
       ) : (
-        <div className={`mx-auto mt-[2.5vh] grid w-full max-w-[1800px] min-h-0 flex-1 gap-8 ${g.phase === 'game_over' ? '' : 'tv:grid-cols-[minmax(0,1fr)_minmax(15rem,22rem)]'}`}>
-          <div className="flex min-h-0 min-w-0 flex-col">
-            <div className="flex shrink-0 flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="eyebrow">{g.round ? `Round ${g.round}` : ''}</p>
-                <h2 key={finaleDone ? 'won' : 'wait'} className={`font-[family-name:var(--font-display)] text-[clamp(2.25rem,7vh,3.75rem)] leading-tight ${g.phase === 'game_over' && finaleDone ? 'headline-drop-now' : ''}`}>
-                  {g.phase === 'game_over' && g.winner ? (finaleDone ? winHeadline(g.winner.faction, !!view.settings.bollywood) : 'The truth comes out…') : PHASE_LABEL[g.phase]}
-                </h2>
-              </div>
-              <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />
-            </div>
-            <p className="mt-1 shrink-0 font-[family-name:var(--font-serif)] text-[clamp(1.1rem,3.6vh,1.875rem)] italic text-mute">
-              {
-                {
-                  reveal: 'Check your phone — privately.',
-                  prenight: 'Dawn — everyone makes a choice on their phone.',
-                  night: 'Everyone, eyes on your own screen. Make your choice.',
-                  morning: 'The town wakes…',
-                  discussion: g.phaseEndsAt !== null || (g.pausedRemainingMs ?? -1) >= 0 ? 'Discuss. Accuse. Defend. The vote opens when the clock runs out.' : 'Discuss. Accuse. Defend. The host opens the vote.',
-                  voting: 'Vote now — secretly, on your phone.',
-                  verdict: 'The town has spoken.',
-                  game_over: finaleDone ? (g.winner?.reason ?? '') : 'Every card turns over — the Mafia first.',
-                  lobby: '',
-                }[g.phase]
-              }
-            </p>
-            {g.phase !== 'game_over' && g.phase !== 'reveal' && (
-              <p className="mt-1 flex shrink-0 gap-3 text-[clamp(0.95rem,2.6vh,1.25rem)]" data-testid="tv-counts">
-                <span className="chip border-ok/40 text-bone">
-                  <span className="h-2 w-2 rounded-full bg-ok" aria-hidden="true" />
-                  {view.players.filter((p) => p.alive).length} alive
-                </span>
-                <span className="chip border-ember/40 text-bone">
-                  <span className="h-2 w-2 rounded-full bg-ember" aria-hidden="true" />
-                  {view.players.filter((p) => !p.alive).length} out
-                </span>
-              </p>
-            )}
-            {g.news.length > 0 && g.phase !== 'game_over' && (
-              <div className="mt-[2vh] shrink-0 space-y-1 rounded-2xl border border-gold/30 bg-black/30 px-4 py-[1.5vh]" data-testid="tv-news">
-                {g.news.map((n, i) => (
-                  <p key={n.seq} className={`news-line ${n.tag ? `news-${n.tag}` : ''} font-[family-name:var(--font-serif)] text-[clamp(1rem,3.2vh,1.5rem)] leading-snug text-bone`} style={{ animationDelay: `${revealPlan(g.news).at(i) - 0.9}s` }}>
-                    {n.text.replace(/^📣\s*/, '')}
-                  </p>
-                ))}
-              </div>
-            )}
-            {g.nightProgress && <p className="mt-2 shrink-0 text-[clamp(1rem,2.8vh,1.25rem)] text-mute">{g.nightProgress.done} / {g.nightProgress.total} locked in</p>}
-            {g.votingProgress && <p className="mt-2 shrink-0 text-[clamp(1rem,2.8vh,1.25rem)] text-mute">{g.votingProgress.done} / {g.votingProgress.total} votes in</p>}
-            <FitBox>{(box) => <PhotoWall players={view.players} settings={view.settings} box={box} winners={g.phase === 'game_over' ? (g.winner?.winnerIds ?? []) : null} replayFinale={finaleReplay} />}</FitBox>
-            {g.phase === 'game_over' && g.winner && g.winner.faction !== 'none' && g.winner.faction !== 'draw' && (
-              <Confetti palette={view.settings.bollywood ? 'party' : g.winner.faction} count={110} delay={finaleReplay ? finale(view.players, view.settings).end : 0} />
-            )}
-          </div>
-          {g.phase !== 'game_over' && (
-            <div className="card max-h-full min-h-0 self-start overflow-hidden p-5">
-              <h3 className="eyebrow mb-3">Announcements</h3>
-              <Feed entries={view.feed} limit={14} inGame />
-            </div>
-          )}
-        </div>
+        <TvGame view={view} serverNow={serverNow} send={hostSession ? send : null} finaleDone={finaleDone} finaleReplay={finaleReplay} />
       )}
     </div>
   );
@@ -266,7 +214,7 @@ function fitGrouped(groups: { count: number; title: string }[], box: Box | null,
   const list = groups.filter((g) => g.count > 0);
   // The heading ("SPECIAL CHARACTERS 2") can be wider than its cards.
   const headW = (title: string) => title.length * 17 + 60;
-  for (let size = 200; size >= 34; size -= 2) {
+  for (let size = 260; size >= 34; size -= 2) {
     const cell = size + PAD + GAP_X;
     const maxCols = Math.max(1, Math.floor((box.w + GAP_X) / cell));
     let lineW = 0;
@@ -334,7 +282,7 @@ function useBox(ref: RefObject<HTMLElement | null>): Box | null {
 }
 
 /** Name + role line under each face. */
-const nameFont = (size: number) => Math.round(Math.max(12, Math.min(18, size * 0.19)));
+const nameFont = (size: number) => Math.round(Math.max(12, Math.min(30, size * 0.17)));
 const labelHeight = (size: number) => Math.ceil(nameFont(size) * 1.375) + 4 + 16;
 
 /** The biggest face size (and column count) that fits every player into the box, without scrolling. */
@@ -344,7 +292,7 @@ function fitFaces(n: number, box: Box | null): { size: number; cols: number | nu
   for (let cols = 1; cols <= n; cols++) {
     const rows = Math.ceil(n / cols);
     const byWidth = (box.w - GAP_X * (cols - 1)) / cols - PAD;
-    let size = Math.min(byWidth, 170);
+    let size = Math.min(byWidth, 280);
     // Shrink until the rows (face + label) fit the height.
     for (let guard = 0; guard < 4; guard++) {
       const byHeight = (box.h - GAP_Y * (rows - 1)) / rows - labelHeight(size) - 8;
@@ -384,4 +332,95 @@ function useFinale(view: ReturnType<typeof useRoom>['view']): { done: boolean; r
   }, [over, key]);
   if (!over) return { done: true, replay: false };
   return { done: !replay || doneKey === key, replay };
+}
+
+const TAGLINE: Record<string, string> = {
+  reveal: 'Check your phone — privately.',
+  prenight: 'Dawn — make your choice on your phone.',
+  night: 'Eyes on your own screen. Make your choice.',
+  morning: 'The town wakes…',
+  voting: 'Vote now — secretly, on your phone.',
+  verdict: 'The town has spoken.',
+};
+
+/**
+ * The TV during a game. The faces get most of the screen (they must be readable from the back
+ * of the room); a slim top bar holds the phase, the counts and the clock; this round's
+ * announcements sit in a narrow corner panel (earlier rounds are cleared).
+ */
+function TvGame({ view, serverNow, send, finaleDone, finaleReplay }: { view: NonNullable<ReturnType<typeof useRoom>['view']>; serverNow: () => number; send: ((c: CommandInput) => Promise<unknown>) | null; finaleDone: boolean; finaleReplay: boolean }) {
+  const g = view.game!;
+  const over = g.phase === 'game_over';
+  const alive = view.players.filter((p) => p.alive).length;
+  const roundFeed = view.feed.filter((e) => e.round === g.round && e.visibility !== 'host');
+  const tagline = over ? (finaleDone ? (g.winner?.reason ?? '') : 'Every card turns over — the Mafia first.') : g.phase === 'discussion' ? (g.phaseEndsAt !== null || (g.pausedRemainingMs ?? -1) >= 0 ? 'Discuss. Accuse. Defend. The vote opens when the clock runs out.' : 'Discuss. Accuse. Defend. The host opens the vote.') : (TAGLINE[g.phase] ?? '');
+  return (
+    <div className="mx-auto mt-[1.5vh] flex w-full max-w-[1900px] min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2">
+        <div className="min-w-0">
+          <p className="eyebrow">{g.round ? `Round ${g.round}` : ''}</p>
+          <h2 key={over ? (finaleDone ? 'won' : 'wait') : g.phase} className={`font-[family-name:var(--font-display)] text-[clamp(2.4rem,7.5vh,4.4rem)] leading-none ${over && finaleDone ? 'headline-drop-now' : 'phase-title-in'}`}>
+            {over && g.winner ? (finaleDone ? winHeadline(g.winner.faction, !!view.settings.bollywood) : 'The truth comes out…') : PHASE_LABEL[g.phase]}
+          </h2>
+          <p className="mt-1 truncate font-[family-name:var(--font-serif)] text-[clamp(1rem,3vh,1.6rem)] italic text-mute">{tagline}</p>
+        </div>
+        <div className="flex items-center gap-4">
+          {!over && g.phase !== 'reveal' && (
+            <div className="flex flex-col gap-1.5 text-[clamp(0.9rem,2.4vh,1.2rem)]" data-testid="tv-counts">
+              <span className="chip border-ok/40 text-bone">
+                <span className="h-2 w-2 rounded-full bg-ok" aria-hidden="true" />
+                {alive} alive
+              </span>
+              <span className="chip border-ember/40 text-bone">
+                <span className="h-2 w-2 rounded-full bg-ember" aria-hidden="true" />
+                {view.players.length - alive} out
+              </span>
+            </div>
+          )}
+          {g.nightProgress && <p className="text-[clamp(1rem,2.6vh,1.3rem)] text-mute">{g.nightProgress.done}/{g.nightProgress.total} locked in</p>}
+          {g.votingProgress && <p className="text-[clamp(1rem,2.6vh,1.3rem)] text-mute">{g.votingProgress.done}/{g.votingProgress.total} votes in</p>}
+          <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />
+          {send && !over && <TvControls view={view} send={send} />}
+        </div>
+      </div>
+      <div className={`mt-[1.5vh] grid min-h-0 flex-1 gap-5 ${over ? '' : 'tv:grid-cols-[minmax(0,1fr)_minmax(12rem,17rem)]'}`}>
+        <div className="flex min-h-0 min-w-0 flex-col">
+          <FitBox>{(box) => <PhotoWall players={view.players} settings={view.settings} box={box} winners={over ? (g.winner?.winnerIds ?? []) : null} replayFinale={finaleReplay} />}</FitBox>
+          {over && g.winner && g.winner.faction !== 'none' && g.winner.faction !== 'draw' && (
+            <Confetti palette={view.settings.bollywood ? 'party' : g.winner.faction} count={110} delay={finaleReplay ? finale(view.players, view.settings).end : 0} />
+          )}
+        </div>
+        {!over && (
+          <aside className="card max-h-full min-h-0 self-end overflow-hidden p-3" data-testid="tv-news">
+            <h3 className="eyebrow mb-2 !text-[0.65rem]">Round {g.round} · announcements</h3>
+            {roundFeed.length ? <Feed entries={roundFeed} limit={6} inGame /> : <p className="text-sm text-mute">Nothing yet this round.</p>}
+          </aside>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The host's buttons on the TV (only on the host's own computer). */
+function TvControls({ view, send }: { view: NonNullable<ReturnType<typeof useRoom>['view']>; send: (c: CommandInput) => Promise<unknown> }) {
+  const g = view.game!;
+  const [busy, setBusy] = useState(false);
+  const run = async (c: CommandInput) => {
+    setBusy(true);
+    try {
+      await send(c);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-1.5" data-testid="tv-controls">
+      <button className="btn btn-gold !min-h-10 !px-4 !py-1.5 text-sm" disabled={busy || !!g.pendingTie} onClick={() => run({ type: 'advance', phaseSeq: g.phaseSeq })}>
+        {g.phase === 'discussion' ? '🗳️ Start voting' : 'Next phase ⏭'}
+      </button>
+      <button className="btn btn-ghost !min-h-10 !px-4 !py-1.5 text-sm" disabled={busy} onClick={() => run({ type: g.paused ? 'resume' : 'pause' })}>
+        {g.paused ? '▶ Resume' : '⏸ Pause timer'}
+      </button>
+    </div>
+  );
 }

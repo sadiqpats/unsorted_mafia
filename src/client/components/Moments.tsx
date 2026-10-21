@@ -36,7 +36,10 @@ export function useMoments(view: ClientView | null, { startDelayMs = 1900, maxSe
         ...m.silenced.map((id) => ({ id, kind: 'silenced' as const })),
       ];
       const saved = m.saved ? `${roleTitle('doctor', view.settings)} saved a life tonight.` : null;
-      next = { title: 'Last night…', cards, note: cards.some((c) => c.kind === 'killed') ? saved : (saved ?? 'A quiet night — nobody died.'), mafiaLeft: null, seconds: 30 };
+      next = { title: 'Last night…', cards, note: cards.some((c) => c.kind === 'killed') ? saved : (saved ?? 'A quiet night — nobody died.'), mafiaLeft: null, seconds: 8 };
+    } else if (g.phase === 'night' && before.phase === 'prenight' && g.lastDawn && g.lastDawn.round === g.round && g.lastDawn.revived.length) {
+      // Someone came back at Dawn: their card rises from the dead, for 5 seconds.
+      next = { title: 'Back from the dead!', cards: g.lastDawn.revived.map((id) => ({ id, kind: 'revived' as const })), note: null, mafiaLeft: null, seconds: 5 };
     } else if (before.phase === 'voting' && g.lastVerdict && (g.phase === 'verdict' ? !g.pendingTie : g.phase === 'prenight' || g.phase === 'night')) {
       const v = g.lastVerdict;
       const left = g.mafiaLeft && g.mafiaLeft.round === v.round ? g.mafiaLeft.count : null;
@@ -181,6 +184,8 @@ export function MomentsOverlay({ moment, view, variant, clock, onClose }: { mome
       {moment.note && <p className="moments-note">{moment.note}</p>}
       {moment.mafiaLeft !== null && <MafiaCountCard count={moment.mafiaLeft} delay={countDelay} />}
       {variant === 'phone' && <p className="moments-hint">Tap to close</p>}
+      <span className="moments-bar" style={{ ['--secs' as string]: `${moment.seconds}s` }} aria-hidden="true" />
+      {moment.cards.some((c) => c.kind === 'revived') && <RiseSparks />}
     </div>
   );
 }
@@ -191,4 +196,15 @@ export function PhoneMoments({ view }: { view: ClientView }) {
   const [closed, setClosed] = useState<number | null>(null);
   if (!moment || closed === moment.key) return null;
   return <MomentsOverlay key={moment.key} moment={moment} view={view} variant="phone" onClose={() => setClosed(moment.key)} />;
+}
+
+/** Golden sparks drifting up behind a revival. */
+function RiseSparks() {
+  return (
+    <div className="rise-sparks" aria-hidden="true">
+      {Array.from({ length: 26 }, (_, i) => (
+        <span key={i} style={{ left: `${(i * 37 + 11) % 100}%`, animationDelay: `${((i * 0.29) % 2.4).toFixed(2)}s`, animationDuration: `${2.6 + ((i * 0.53) % 1.8)}s` }} />
+      ))}
+    </div>
+  );
 }

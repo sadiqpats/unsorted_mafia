@@ -169,6 +169,8 @@ export interface Game {
   lastMorning: MorningReport | null;
   /** After an even round's vote: how many Mafia members are still alive (shown as a big card). */
   mafiaLeft?: { round: number; count: number } | null;
+  /** Who came back from the dead at this round's Dawn (public: they are visibly back). */
+  lastDawn?: { round: number; revived: string[] } | null;
   winner: WinResult | null;
   jesterWinners: string[];
   stats: {

@@ -38,6 +38,7 @@ export interface PublicGame {
   lastMorning: MorningReport | null;
   lastVerdict: Verdict | null;
   mafiaLeft: { round: number; count: number } | null;
+  lastDawn: { round: number; revived: string[] } | null;
   winner: WinResult | null;
   stats: { suspicion: Record<string, number>; nightKills: number; saves: number; revives: number; voteEliminations: number; investigations: number } | null;
   aliveCount: number;

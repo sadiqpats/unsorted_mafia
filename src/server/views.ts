@@ -101,6 +101,7 @@ export function buildPublic(room: Room, connected: Set<string>, now: number): Pu
       lastMorning: morning,
       lastVerdict: verdict,
       mafiaLeft: g.mafiaLeft ?? null,
+      lastDawn: g.lastDawn ?? null,
       winner: g.winner,
       stats: over ? g.stats : null,
       aliveCount: room.players.filter((p) => p.alive).length,

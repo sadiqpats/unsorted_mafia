@@ -124,8 +124,8 @@ const CUE: Partial<Record<EventTag, Parameters<ReturnType<typeof useFx>['play']>
   tie: 'tension',
   runoff: 'tension',
   joker: 'joker',
-  'win-town': 'winTown',
-  'win-mafia': 'winMafia',
+  'win-town': 'dramaticReveal', // a dramatic sting, no cheering
+  'win-mafia': 'dramaticReveal',
   'win-other': 'gameOver',
   removed: 'voteOut',
   restored: 'saved',
@@ -153,7 +153,9 @@ export function usePhaseFx(view: ClientView | null) {
   const g = view?.game ?? null;
   const key = g ? g.phaseSeq : -1;
   const online = view?.settings.playMode === 'online';
-  const quietPhone = !online && view?.kind === 'player';
+  // Same-room games: phones are silent; with "Playing at Elita home" the Echo carries every
+  // sound, so the TV and the host's device are silent too (no doubled sounds).
+  const quietPhone = (!online && view?.kind === 'player') || (!online && !!view?.settings.homeLights);
   const musicPhase = !!g && view?.status === 'active' && (g.phase === 'prenight' || g.phase === 'night');
   const wantMusic = online && musicPhase && prefs.music && !prefs.muted && prefs.volume > 0;
   const feedTop = view?.feed.length ? view.feed[view.feed.length - 1].seq : 0;

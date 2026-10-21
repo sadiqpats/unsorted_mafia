@@ -33,7 +33,7 @@ test('home lights: the lights helper follows a game with “Playing at Elita hom
     const other = t.byRole('Villager')[1];
     for (const s of await t.alive()) await vote(s, s === m ? other.name : m.name);
     await expect(t.host.getByTestId('host-phase')).toHaveText('Game Over', { timeout: 60_000 });
-    await expect.poll(() => log, { timeout: 20_000 }).toContain('party');
+    await expect.poll(() => log, { timeout: 20_000 }).toContain('🎬 finale');
   } finally {
     agent.kill('SIGINT');
     await new Promise((r) => setTimeout(r, 800));

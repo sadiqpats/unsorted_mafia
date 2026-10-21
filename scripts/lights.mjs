@@ -82,7 +82,7 @@ function sceneFor(view) {
   if (view.status === 'lobby') return 'lobby';
   const phase = view.game?.phase;
   if (!phase) return 'lobby';
-  return { reveal: 'reveal', prenight: 'dawn', night: 'night', morning: 'day', discussion: 'day', voting: 'vote', verdict: 'verdict', game_over: 'party' }[phase] ?? 'lobby';
+  return { reveal: 'reveal', prenight: 'dawn', night: 'night', morning: 'day', discussion: 'day', voting: 'vote', verdict: 'verdict', game_over: 'day' }[phase] ?? 'lobby';
 }
 
 // ------------------------------------------------------------------ WiZ (UDP)
@@ -262,12 +262,51 @@ async function applyScene(name, { force = false } = {}) {
   current = name;
   const id = ++showId;
   console.log(`💡 ${new Date().toLocaleTimeString()}  ${name}`);
-  if (alexa && !holdMusic) MUSIC_FOR[name] ? alexa.music(MUSIC_FOR[name], `${name}:${phaseToken}`) : name !== 'party' && alexa.pause();
+  if (alexa && !holdMusic) MUSIC_FOR[name] ? alexa.music(MUSIC_FOR[name], phaseToken) : name !== 'party' && alexa.pause();
   await snapshot();
   const sc = SCENES[name];
   do {
     if (!(await runSteps(sc.steps, id))) return;
   } while (sc.loop && id === showId);
+}
+
+/**
+ * The countdown: the room's light blinks once a second for the last seconds of a timed phase
+ * (5 s for Dawn, Night and the vote; 10 s for the discussion), then the scene comes back.
+ */
+const COUNTDOWN = { dawn: 5, night: 5, vote: 5, day: 10 };
+let countdownTimer = null;
+let countdownRan = ''; // the phase + end time whose countdown already started (never run twice)
+function colourOf(name) {
+  const p = SCENES[name]?.steps?.[0]?.[0] ?? {};
+  if (p.sceneId !== undefined) return { temp: 3000 };
+  const { dimming, ...c } = p;
+  return c;
+}
+async function countdown(name, seconds) {
+  const id = ++showId;
+  current = null;
+  console.log(`⏱️  ${name}: last ${seconds} s`);
+  const c = colourOf(name);
+  for (let i = 0; i < seconds; i++) {
+    if (!(await runSteps([[{ ...c, dimming: 85 }, 220], [{ ...c, dimming: 12 }, 780]], id))) return;
+  }
+  if (id === showId) applyScene(wanted, { force: true });
+}
+function scheduleCountdown(view) {
+  clearTimeout(countdownTimer);
+  const g = view.game;
+  const scene = sceneFor(view);
+  const n = COUNTDOWN[scene];
+  if (!g || !n || !g.phaseEndsAt || g.pausedRemainingMs !== null) return;
+  const offset = (view.serverNow ?? Date.now()) - Date.now(); // server clock minus ours
+  const startIn = g.phaseEndsAt - offset - n * 1000 - Date.now();
+  const key = `${g.phaseSeq}:${g.phaseEndsAt}`;
+  if (startIn < -500 || countdownRan === key) return;
+  countdownTimer = setTimeout(() => {
+    countdownRan = key;
+    countdown(scene, n).catch(() => {});
+  }, Math.max(0, startIn));
 }
 
 /** A one-off effect, then back to whatever the game is in now. */
@@ -332,12 +371,13 @@ async function finaleShow(view) {
       : w === 'good'
         ? [[{ r: 255, g: 200, b: 90, dimming: 30 }, 400], [{ r: 255, g: 210, b: 110, dimming: 70 }, 3500]]
         : [[{ sceneId: 4, speed: 200, dimming: 70 }, 3500]];
-  if (await runSteps(win, id)) applyScene('party', { force: true });
+  if (await runSteps(win, id)) applyScene('day', { force: true }); // back to daylight: the game is over
 }
 
 /** Put every light back exactly as it was before the game took over. */
 async function restore() {
   showId++; // stop any scene or effect still running
+  clearTimeout(countdownTimer);
   if (alexa) alexa.stop();
   if (!original.size) return;
   console.log('↩️  Putting the lights back the way they were');
@@ -411,10 +451,10 @@ async function follow(config) {
     const seq = view.status === 'lobby' ? -1 : (g?.phaseSeq ?? -1);
     const scene = sceneFor(view);
     wanted = scene;
-    phaseToken = String(seq);
+    phaseToken = String(g?.round ?? 0); // one song per round
     if (alexa) alexa.setVolumes(view.settings?.musicVolume, view.settings?.sfxVolume);
     // The party is over and the lights are back to normal: leave them alone until the next game.
-    if (scene === 'party' && room.overAt && Date.now() - room.overAt > 45_000) return;
+    scheduleCountdown(view); // re-aimed on every update (pause, +30 s, a new phase)
     if (seq !== room.seq) {
       const first = room.seq === undefined;
       room.seq = seq;
@@ -478,7 +518,6 @@ async function follow(config) {
         join(want.code);
       } else if (!room && want) join(want.code);
       // Game over: party for a while, then the lights go back to normal.
-      if (room?.overAt && Date.now() - room.overAt > 45_000 && original.size) await restore();
     } catch (e) {
       const msg = `Can't reach the game server (${e.message}). Retrying…`;
       if (msg !== lastError) console.log(msg);

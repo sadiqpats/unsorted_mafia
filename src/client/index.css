@@ -224,6 +224,7 @@ body.night-mode {
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
+  will-change: transform;
   animation: tv-flip 0.95s cubic-bezier(0.34, 1.3, 0.5, 1) var(--d, 0s) both;
 }
 .tv-flip-face {
@@ -245,10 +246,7 @@ body.night-mode {
 .tv-flip-back.is-evil { border-color: rgba(224, 122, 200, 0.7); }
 .tv-flip-back.is-good { border-color: rgba(120, 190, 140, 0.6); }
 .tv-flip-back.is-neutral { border-color: rgba(160, 140, 220, 0.65); }
-.tv-flip.is-winner .tv-flip-back {
-  box-shadow: 0 0 0 3px #e2c27d inset;
-  animation: tv-win-glow 1.6s ease-in-out calc(var(--d, 0s) + 0.95s) infinite alternate both;
-}
+.tv-flip.is-winner .tv-flip-back { box-shadow: 0 0 0 3px #e2c27d inset, 0 0 26px rgba(226, 194, 125, 0.55); }
 .tv-flip-label { animation: tv-label 0.5s ease-out calc(var(--d, 0s) + 0.55s) both; }
 @keyframes tv-flip {
   0% { transform: rotateY(0deg) scale(1); }
@@ -320,6 +318,11 @@ body.night-mode {
 .is-dead .cut-a { transform: translate(-7%, -6%) rotate(-5deg); filter: grayscale(1) brightness(0.55) contrast(1.1); }
 .is-dead .cut-b { transform: translate(7%, 6%) rotate(4deg); filter: grayscale(1) brightness(0.55) contrast(1.1); }
 .is-dead .cut-slash { transform: translateY(-50%) rotate(-11.3deg) scaleX(1); }
+/* Blood drips slowly from the cut, over and over (transform/opacity only). */
+.cut-blood { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; border-radius: 18%; }
+.cut-blood span { position: absolute; width: 7%; height: 11%; min-width: 3px; min-height: 5px; border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%; background: linear-gradient(180deg, #d0101c, #7a0008); box-shadow: 0 0 4px rgba(160, 0, 10, 0.7); opacity: 0; animation: blood-drip 3.6s cubic-bezier(0.55, 0, 0.75, 0.6) infinite; will-change: transform, opacity; }
+@keyframes blood-drip { 0% { opacity: 0; transform: translateY(0) scaleY(0.5); } 12% { opacity: 1; transform: translateY(0) scaleY(1.3); } 70% { opacity: 1; } 100% { opacity: 0; transform: translateY(420%) scaleY(1.6); } }
+.reduce-motion .cut-blood span { animation: none; opacity: 1; transform: translateY(60%); }
 
 /* ================================================================
    POLISH — ambience, transitions, micro-interactions
@@ -453,7 +456,7 @@ body.phase-dawn .ambient { opacity: 0.55; }
 @keyframes spark { 0% { opacity: 0; transform: translate(0, 20px) scale(0.4); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx, 0), -70px) scale(1); } }
 .curtain-inner { position: relative; text-align: center; animation: curtain-zoom 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @keyframes curtain-zoom { 0% { opacity: 0; transform: scale(0.82); } 26% { opacity: 1; transform: scale(1.02); } 40% { transform: scale(1); } 100% { transform: scale(1.06); } }
-.curtain-emblem { position: relative; margin: 0 auto; color: rgb(var(--c)); filter: drop-shadow(0 0 22px rgba(var(--c), 0.55)); }
+.curtain-emblem { position: relative; margin: 0 auto; width: clamp(110px, 18vmin, 190px); height: auto; color: rgb(var(--c)); filter: drop-shadow(0 0 22px rgba(var(--c), 0.55)); }
 .curtain-emblem * { stroke-dasharray: 180; stroke-dashoffset: 180; animation: draw-in 1.1s ease 0.15s forwards; }
 @keyframes draw-in { to { stroke-dashoffset: 0; } }
 .curtain-title {
@@ -463,8 +466,8 @@ body.phase-dawn .ambient { opacity: 0.55; }
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: 0.08em;
-  font-size: clamp(2.2rem, 9vw, 4.6rem);
-  line-height: 1.1;
+  font-size: clamp(3.2rem, 14vw, 9rem);
+  line-height: 1.05;
   /* gold with a light sweep passing across it */
   background: linear-gradient(110deg, #c9a45c 0%, #f6e7bf 30%, #c9a45c 42%, #fff8e3 50%, #c9a45c 58%, #8a7243 100%);
   background-size: 250% 100%;
@@ -475,7 +478,7 @@ body.phase-dawn .ambient { opacity: 0.55; }
 }
 @keyframes title-in { from { opacity: 0; transform: translateY(18px) scale(0.92); } to { opacity: 1; transform: none; } }
 @keyframes title-shine { from { background-position: 100% 0; } to { background-position: 0% 0; } }
-.curtain-sub { margin-top: 0.5rem; font-family: var(--font-display); letter-spacing: 0.4em; font-size: 0.8rem; color: var(--color-mute); text-transform: uppercase; animation: fade-up 0.8s ease 0.5s both; }
+.curtain-sub { margin-top: 0.8rem; font-family: var(--font-display); letter-spacing: 0.4em; font-size: clamp(0.9rem, 2.4vw, 1.6rem); color: var(--color-mute); text-transform: uppercase; animation: fade-up 0.8s ease 0.5s both; }
 .curtain-ray { animation: draw-in 1.1s ease 0.15s forwards, ray-pulse 1.6s ease-in-out 1s infinite alternate !important; }
 @keyframes ray-pulse { from { opacity: 0.5; } to { opacity: 1; } }
 .curtain-twinkle { animation: draw-in 0.6s ease forwards, twinkle 1.1s ease-in-out infinite alternate !important; }
@@ -630,8 +633,13 @@ body.fx-shake #root { position: relative; animation: fx-shake 0.55s cubic-bezier
 @keyframes mc-cut-fade { to { opacity: 0.35; } }
 .mc-killed .mc-top, .mc-voted .mc-top { animation: mc-top-off 0.8s cubic-bezier(0.3,0,0.2,1) calc(var(--d) + 1.35s) both; }
 .mc-killed .mc-bottom, .mc-voted .mc-bottom { animation: mc-bot-off 0.9s cubic-bezier(0.3,0,0.2,1) calc(var(--d) + 1.35s) both; }
-@keyframes mc-top-off { to { transform: translate(-7%, -11%) rotate(-7deg); filter: grayscale(0.85) brightness(0.75); } }
-@keyframes mc-bot-off { to { transform: translate(7%, 13%) rotate(6deg); filter: grayscale(0.85) brightness(0.75); } }
+@keyframes mc-top-off { to { transform: translate(-7%, -11%) rotate(-7deg); } }
+@keyframes mc-bot-off { to { transform: translate(7%, 13%) rotate(6deg); } }
+/* drained of colour: a dark overlay fades in (cheaper than animating a filter) */
+.mc-face::after { content: ''; position: absolute; inset: 0; background: rgba(20, 8, 10, 0.55); opacity: 0; pointer-events: none; }
+.mc-killed .mc-face::after, .mc-voted .mc-face::after { animation: mc-dim 0.8s ease calc(var(--d) + 1.35s) forwards; }
+@keyframes mc-dim { to { opacity: 1; } }
+.mc-card, .mc-face, .mc-knife { will-change: transform; }
 .mc-killed .mc-drop, .mc-voted .mc-drop { animation: mc-drip 1.4s cubic-bezier(0.4,0,0.6,1) calc(var(--d) + 1.25s + var(--i) * 0.07s) both; }
 @keyframes mc-drip { 0% { opacity: 0; transform: translateY(0) scale(0.6); } 15% { opacity: 1; } 100% { opacity: 0.9; transform: translateY(calc(var(--w) * 0.55)) scale(1, 1.6); } }
 .mc-killed .mc-what, .mc-voted .mc-what { background: rgba(176,32,42,0.9); color: #fff; }
@@ -639,8 +647,10 @@ body.fx-shake #root { position: relative; animation: fx-shake 0.55s cubic-bezier
 /* revived: starts in pieces and grey; the halves join, a golden glow, colour returns */
 .mc-revived .mc-top { animation: mc-top-on 0.8s cubic-bezier(0.2,0.9,0.3,1) calc(var(--d) + 0.6s) both; }
 .mc-revived .mc-bottom { animation: mc-bot-on 0.8s cubic-bezier(0.2,0.9,0.3,1) calc(var(--d) + 0.6s) both; }
-@keyframes mc-top-on { from { transform: translate(-7%, -11%) rotate(-7deg); filter: grayscale(1) brightness(0.6); } 70% { filter: grayscale(1) brightness(0.8); } to { transform: none; filter: none; } }
-@keyframes mc-bot-on { from { transform: translate(7%, 13%) rotate(6deg); filter: grayscale(1) brightness(0.6); } 70% { filter: grayscale(1) brightness(0.8); } to { transform: none; filter: none; } }
+@keyframes mc-top-on { from { transform: translate(-7%, -11%) rotate(-7deg); } to { transform: none; } }
+@keyframes mc-bot-on { from { transform: translate(7%, 13%) rotate(6deg); } to { transform: none; } }
+.mc-revived .mc-face::after { opacity: 1; animation: mc-undim 1s ease calc(var(--d) + 0.9s) forwards; }
+@keyframes mc-undim { to { opacity: 0; } }
 .mc-revived .mc-face { border-color: rgba(246,231,191,0.95); }
 .mc-halo { position: absolute; inset: -8%; border-radius: 22px; background: radial-gradient(circle, rgba(255,226,150,0.65), transparent 65%); opacity: 0; animation: mc-halo 1.6s ease calc(var(--d) + 1.25s) both; pointer-events: none; }
 @keyframes mc-halo { 0% { opacity: 0; transform: scale(0.7); } 35% { opacity: 1; transform: scale(1.12); } 100% { opacity: 0.35; transform: scale(1); } }
@@ -652,8 +662,17 @@ body.fx-shake #root { position: relative; animation: fx-shake 0.55s cubic-bezier
 @keyframes mc-tape { to { transform: rotate(-8deg) scale(1); opacity: 1; } }
 .mc-silenced .mc-what { background: rgba(110,70,190,0.9); color: #fff; }
 
+.moments-bar { position: absolute; left: 0; bottom: 0; height: 6px; width: 100%; background: linear-gradient(90deg, #8a7243, #e2c27d); transform-origin: left; animation: spot-bar var(--secs, 8s) linear both; will-change: transform; }
+@keyframes spot-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.rise-sparks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.rise-sparks span { position: absolute; bottom: -10px; width: 5px; height: 5px; border-radius: 50%; background: #ffe7a8; box-shadow: 0 0 12px 3px rgba(255, 210, 120, 0.8); animation: rise-spark 3s ease-out infinite; will-change: transform, opacity; }
+@keyframes rise-spark { 0% { opacity: 0; transform: translateY(0) scale(0.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-85vh) scale(1.2); } }
+/* Revival: the card rises out of the dark before its halves rejoin. */
+.mc-revived { animation: mc-rise 1.2s cubic-bezier(0.2, 0.9, 0.3, 1) var(--d) both; }
+@keyframes mc-rise { 0% { opacity: 0; transform: translateY(45%) scale(0.85); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+
 /* The Mafia count flash card */
-.mafia-count { --d: 0s; position: relative; display: flex; flex-direction: column; align-items: center; padding: 1.6vh 4vw 2vh; border-radius: 22px; border: 3px solid rgba(255,80,70,0.9); background: radial-gradient(circle at 50% 30%, #5a0c12, #1a0507 75%); box-shadow: 0 0 0 6px rgba(224,71,63,0.18), 0 0 80px 10px rgba(224,71,63,0.45); animation: count-in 0.7s cubic-bezier(0.2,1.4,0.4,1) var(--d) both, count-glow 1.2s ease-in-out calc(var(--d) + 0.7s) infinite alternate; overflow: hidden; }
+.mafia-count { --d: 0s; position: relative; display: flex; flex-direction: column; align-items: center; padding: 1.6vh 4vw 2vh; border-radius: 22px; border: 3px solid rgba(255,80,70,0.9); background: radial-gradient(circle at 50% 30%, #5a0c12, #1a0507 75%); box-shadow: 0 0 0 6px rgba(224,71,63,0.18), 0 0 80px 10px rgba(224,71,63,0.45); animation: count-in 0.7s cubic-bezier(0.2,1.4,0.4,1) var(--d) both; overflow: hidden; will-change: transform, opacity; }
 @keyframes count-in { from { opacity: 0; transform: scale(2.6) rotate(-6deg); } to { opacity: 1; transform: none; } }
 @keyframes count-glow { to { box-shadow: 0 0 0 10px rgba(224,71,63,0.25), 0 0 120px 24px rgba(224,71,63,0.6); } }
 .mafia-count-flash { position: absolute; inset: 0; background: #fff; opacity: 0; animation: count-flash 0.6s ease-out var(--d) both; pointer-events: none; }
@@ -885,3 +904,9 @@ p { text-wrap: pretty; }
 .bolly .main-menu-link { border-color: rgba(255, 179, 0, 0.5); color: #fff4d6; }
 /* Cormorant's old-style figures make "P1" look like "Pı": use full-height numbers everywhere. */
 [class*='font-serif'] { font-variant-numeric: lining-nums; }
+
+/* Inside a turning card, a CSS filter would be re-painted every frame (judder on TVs):
+   the dead photo is darkened with a plain overlay instead. */
+.tv-flip .is-dead .cut-half, .mc .is-dead .cut-half { filter: none; }
+.tv-flip .cut-photo.is-dead::after { content: ''; position: absolute; inset: 0; border-radius: 18%; background: rgba(15, 8, 10, 0.55); z-index: 1; pointer-events: none; }
+.tv-flip-face { transform: translateZ(0); }

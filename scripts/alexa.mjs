@@ -11,25 +11,29 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 
 /**
- * The music: one Spotify playlist (saved in the Spotify library linked to Alexa), shuffled.
- * Every new phase jumps to a different random song and starts it part-way through, so it
- * never sounds like the same intro twice.
+ * The music: the "Dramatic Suspense Mix" Spotify playlist, shuffled. ONE song per round,
+ * from its beginning: it plays through Dawn, Night and the vote, pauses for the discussion and
+ * for every dramatic sound, and carries on from the same point. The next round moves to the
+ * next song.
  */
 export const PLAYLIST = 'play my playlist dramatic suspense mix on spotify';
-/** Phases that have music (the others are quiet). */
-export const MUSIC = { dawn: true, night: true, day: true, vote: true };
-/** Alexa sound library effects (soundStringId), played between music. */
+/** Phases with music (the discussion is quiet: people are talking). */
+export const MUSIC = { dawn: true, night: true, vote: true };
+/** Alexa built-in sound effects (only IDs from Amazon's own library play on an Echo). */
 export const SFX = {
-  kill: 'amzn_sfx_scifi_explosion_2x_01',
-  voteout: 'amzn_sfx_trumpet_bugle_04',
-  revive: 'amzn_sfx_magic_blast_1x_01',
-  silence: 'amzn_sfx_church_bell_1x_02',
-  saved: 'amzn_sfx_magic_blast_1x_01',
-  joker: 'amzn_sfx_drum_comedy_01',
-  mafiacount: 'amzn_sfx_church_bell_1x_02',
-  suspense: 'amzn_sfx_scifi_alarm_01',
-  winTown: 'amzn_sfx_large_crowd_cheer_01',
-  winMafia: 'amzn_sfx_scifi_explosion_2x_01',
+  kill: 'halloween_wolf', // a howl in the night
+  voteout: 'horror_10', // a creaking door shuts
+  removed: 'horror_10',
+  revive: 'holiday_halloween_ghost', // back from the dead
+  silence: 'halloween_footsteps',
+  saved: 'amzn_sfx_church_bell_1x_02',
+  restored: 'amzn_sfx_church_bell_1x_02',
+  theft: 'squeaky_12',
+  joker: 'boing_01',
+  mafiacount: 'clock_01', // ticking: they are still among you
+  suspense: 'halloween_wind', // the finale begins
+  winTown: 'amzn_sfx_church_bell_1x_02', // the reveal ends: a bell tolls (no cheering)
+  winMafia: 'halloween_crows',
 };
 
 export function createAlexa(config, save, log = console.log) {
@@ -105,17 +109,7 @@ export function createAlexa(config, save, log = console.log) {
     await cmd('volume', v);
   };
   const say = (text) => call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'textCommand', text, cb));
-  /** A different random song (the playlist is shuffled), started part-way through — silently, then faded up. */
-  const randomSpot = async () => {
-    await setVol(0);
-    await cmd('next');
-    await say(`skip ahead ${rnd(40, 110)} seconds`);
-    await wait(250);
-    await setVol(Math.round(vol.music / 2));
-    await wait(300);
-    await setVol(vol.music);
-  };
-  /** Load the playlist in silence (during the role reveal) so the first Night starts instantly. */
+  /** Load the playlist in silence (during the role reveal) so the first round starts instantly. */
   const preload = async () => {
     if (started) return;
     log('🎵 Loading Dramatic Suspense Mix (shuffled, silent)');
@@ -144,22 +138,22 @@ export function createAlexa(config, save, log = console.log) {
     volume: (v) => q(() => ready && setVol(v)),
     /** Get the music ready without playing it (call when the game starts). */
     preload: () => q(async () => ready && preload()),
-    /** Music for a phase: a new phase gets a new random song; the same phase just carries on. */
+    /** Music for a phase of round `token`: the round's song resumes; a new round starts the next song. */
     music: (key, token = key) =>
       q(async () => {
         if (!ready || !MUSIC[key]) return;
         if (musicOn && musicKey === token) return;
         if (!started) await preload();
-        if (!musicOn) {
-          await setVol(0);
-          await cmd('play');
+        await setVol(vol.music);
+        if (musicKey !== null && musicKey !== token) {
+          log(`🎵 round ${token}: next song`);
+          await cmd('next'); // a new song, from its beginning
+          musicOn = true;
+        } else if (!musicOn) {
+          await cmd('play'); // carry on where this round's song paused
           musicOn = true;
         }
-        if (musicKey !== token) {
-          log(`🎵 ${key}: a different song`);
-          musicKey = token;
-          await randomSpot();
-        } else await setVol(vol.music);
+        musicKey = token;
       }),
     pause: () =>
       q(async () => {

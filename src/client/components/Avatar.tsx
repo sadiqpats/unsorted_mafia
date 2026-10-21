@@ -28,6 +28,13 @@ export function Avatar({ name, photo, dead = false, size = 48, className = '' }:
       <div className="cut-half cut-a">{face}</div>
       <div className="cut-half cut-b">{face}</div>
       <div className="cut-slash" aria-hidden="true" />
+      {dead && size >= 36 && (
+        <div className="cut-blood" aria-hidden="true">
+          {[22, 41, 58, 77].map((x, i) => (
+            <span key={x} style={{ left: `${x}%`, top: `${58 - x * 0.2}%`, animationDelay: `${(i * 0.9 + 0.6).toFixed(1)}s` }} />
+          ))}
+        </div>
+      )}
       <div className="pointer-events-none absolute inset-0 rounded-[18%] ring-1 ring-gold/30" aria-hidden="true" />
     </div>
   );

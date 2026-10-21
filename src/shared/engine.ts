@@ -1020,6 +1020,7 @@ export function resolvePreNight(room: Room, now: number, rng: Rng) {
   if (ctx.stolen.length) lines.push([themeText(A.theft, g.settings), 'theft']);
   if (!lines.length) lines.push([A.quietPreNight, 'dawn-quiet']);
   for (const [l, tag] of lines) addLog(room, now, 'prenight', l, 'public', tag);
+  g.lastDawn = { round: g.round, revived: [...ctx.revived] };
   const win = checkWin(room);
   if (win) return endGame(room, win, now);
   startNight(room, now);

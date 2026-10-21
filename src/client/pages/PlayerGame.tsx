@@ -158,7 +158,7 @@ function PhaseHeader({ view, serverNow }: { view: ClientView; serverNow: () => n
     <div className="card flex items-center justify-between gap-3 p-4">
       <div>
         <div className="eyebrow">{roundLabel || (view.settings.bollywood ? 'Bollywood Mafia Night' : 'Mafia Night')}</div>
-        <h1 key={g.phase} className="phase-title-in font-[family-name:var(--font-display)] text-2xl text-bone">{PHASE_LABEL[g.phase]}</h1>
+        <h1 key={g.phase} className="phase-title-in font-[family-name:var(--font-display)] text-4xl text-bone">{PHASE_LABEL[g.phase]}</h1>
       </div>
       <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
     </div>
@@ -316,7 +316,7 @@ function RevealPanel({ view, send }: { view: ClientView; send: Send }) {
     <div className="space-y-3 anim-fade-up">
       <p className="text-center text-sm text-mute">Make sure nobody can see your screen.</p>
       {/* Sized to the screen so "I've seen my role" is visible without scrolling. */}
-      <HoldToReveal minHeight="clamp(330px, calc(100dvh - 380px), 560px)">
+      <HoldToReveal minHeight="clamp(300px, calc(100dvh - 400px), 560px)">
         {/* Team info first: a held card can't be scrolled, so it must be visible straight away. */}
         {(me.mafia || me.knownMafia) && <RoleBadge roleId={me.roleId!} alignment={me.alignment!} settings={view.settings} />}
         {me.mafia && <MafiaTeam view={view} />}

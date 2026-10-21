@@ -358,6 +358,14 @@ export const sounds = {
     noiseBurst(0.32, 0.18, 0.25, 1500);
   },
   /** Game over: a short brass-like fanfare (the same for winners and losers). */
+  /** The finale's reveal: a deep boom, a dark swell that rises, then a single low bell. No cheering. */
+  dramaticReveal() {
+    tone(41.2, 0, 2.6, { type: 'sine', gain: 0.16, attack: 0.01, slideTo: 30 });
+    noiseBurst(0, 0.5, 0.18, 220);
+    [55, 58.27, 82.41].forEach((f) => tone(f, 0.2, 2.8, { type: 'sawtooth', gain: 0.035, attack: 1.2, filter: 420 }));
+    [110, 130.81, 164.81].forEach((f) => tone(f, 1.4, 2.6, { type: 'triangle', gain: 0.03, attack: 0.5 }));
+    bell(146.83, 2.2, 0.09, 4);
+  },
   gameOver() {
     const seq: [number, number][] = [
       [392, 0],
