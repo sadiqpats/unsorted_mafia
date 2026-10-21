@@ -27,8 +27,9 @@ fi
 echo "Copying the helper to $APP…"
 mkdir -p "$APP" "$(dirname "$PLIST")" "$(dirname "$LOG")"
 cp "$HERE/lights.mjs" "$APP/lights.mjs"
+cp "$HERE/alexa.mjs" "$APP/alexa.mjs"
 cat > "$APP/package.json" <<'JSON'
-{ "name": "unsorted-lights", "private": true, "type": "module", "dependencies": { "socket.io-client": "^4.8.4" } }
+{ "name": "unsorted-lights", "private": true, "type": "module", "dependencies": { "socket.io-client": "^4.8.4", "alexa-remote2": "8.1.1" } }
 JSON
 PATH="$(dirname "$NODE"):$PATH" "$NPM" install --prefix "$APP" --omit=dev --no-audit --no-fund --loglevel=error
 
@@ -54,6 +55,8 @@ cat > "$PLIST" <<PLISTXML
 PLISTXML
 
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+# wait until the old copy has fully stopped (and put the lights back) before starting the new one
+for _ in $(seq 1 20); do launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1 || break; sleep 0.5; done
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 launchctl enable "gui/$(id -u)/$LABEL"
 echo "✅ Lights helper installed. It starts by itself whenever you log in."

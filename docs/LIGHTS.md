@@ -51,3 +51,18 @@ The Mac must be awake and on the home Wi-Fi during the game.
 
 Found at Elita home: 6 colour bulbs in one WiZ room (the living room and entrance) — those
 are the ones used. Other rooms and the smart plug are never touched.
+
+## Music and sound on the living-room Echo (Alexa)
+
+When signed in, the helper also plays suspense music through Spotify on **Living room Echo**
+(Dawn, Night, Day and the vote each have their own mood), pauses it for the big moments and
+plays an Alexa sound effect (a kill, a revival, a silence, the Mafia count, the finale, the
+winner). Everything goes over Wi-Fi through the Amazon account — no Bluetooth.
+
+```bash
+npm run lights -- --alexa-login   # sign in to Amazon once, in your own browser (localhost:3001)
+npm run lights:install            # restart the background helper with it
+```
+
+The Amazon session (not the password) is saved in `~/.unsorted-lights.json`, readable only by you.
+Spotify must be linked in the Alexa app. The music searches and effects are in `scripts/alexa.mjs`.

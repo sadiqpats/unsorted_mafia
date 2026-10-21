@@ -18,6 +18,7 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { io } from 'socket.io-client';
+import { createAlexa } from './alexa.mjs';
 
 const CONFIG_FILE = path.join(os.homedir(), '.unsorted-lights.json');
 const DEFAULT_SERVER = 'https://mafia-night-1c5h.onrender.com';
@@ -239,6 +240,9 @@ async function setAll(params, label) {
 
 // Everything the lights do runs as one "show" at a time; starting a new one stops the old.
 let showId = 0;
+/** The living-room Echo (music + sound effects), when signed in. */
+let alexa = null;
+const MUSIC_FOR = { dawn: 'dawn', night: 'night', day: 'day', vote: 'vote' };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function runSteps(steps, id) {
@@ -256,6 +260,7 @@ async function applyScene(name, { force = false } = {}) {
   current = name;
   const id = ++showId;
   console.log(`💡 ${new Date().toLocaleTimeString()}  ${name}`);
+  if (alexa) MUSIC_FOR[name] ? alexa.music(MUSIC_FOR[name]) : name !== 'party' && alexa.pause();
   await snapshot();
   const sc = SCENES[name];
   do {
@@ -269,6 +274,7 @@ async function effect(name, steps) {
   const id = ++showId;
   current = null;
   console.log(`⚡ ${name}`);
+  if (alexa) alexa.sfx(name in EFFECTS ? name : 'mafiacount');
   await snapshot();
   if (await runSteps(steps, id)) applyScene(wanted, { force: true });
 }
@@ -299,6 +305,7 @@ async function finaleShow(view) {
   const id = ++showId;
   current = null;
   console.log('🎬 finale');
+  if (alexa) alexa.pause();
   await snapshot();
   const { mafiaAt, end } = finaleTimes(view);
   const t0 = Date.now();
@@ -306,6 +313,7 @@ async function finaleShow(view) {
   // The curtain: lights sink to a dim red.
   if (!(await runSteps([[{ ...RED, dimming: 25 }, 600], [{ ...RED, dimming: 12 }, 0]], id))) return;
   await at(FIN.suspenseAt);
+  if (alexa && id === showId) alexa.sfx('suspense');
   // Suspense: a slow candle flicker.
   if (!(await runSteps([[{ sceneId: 29, speed: 80, dimming: 22 }, 0]], id))) return;
   for (const sec of mafiaAt) {
@@ -314,6 +322,7 @@ async function finaleShow(view) {
   }
   await at(end);
   const w = view.game?.winner?.faction;
+  if (alexa && id === showId) alexa.sfx(w === 'mafia' ? 'winMafia' : 'winTown');
   const win =
     w === 'mafia'
       ? [[{ ...RED, dimming: 90 }, 200], [OFF, 200], [{ ...RED, dimming: 90 }, 200], [OFF, 200], [{ ...RED, dimming: 60 }, 3500]]
@@ -326,6 +335,7 @@ async function finaleShow(view) {
 /** Put every light back exactly as it was before the game took over. */
 async function restore() {
   showId++; // stop any scene or effect still running
+  if (alexa) alexa.stop();
   if (!original.size) return;
   console.log('↩️  Putting the lights back the way they were');
   for (const b of bulbs) {
@@ -371,6 +381,11 @@ async function demo(config) {
 // ------------------------------------------------------------------ following the game
 
 async function follow(config) {
+  if (config.alexa?.cookieData) {
+    alexa = createAlexa(config, saveConfig);
+    if (alexa && (await alexa.start())) alexa.volume(config.alexa.volume ?? 35);
+    else alexa = null;
+  }
   const server = (serverArg ?? config.server ?? DEFAULT_SERVER).replace(/\/$/, '');
   await refreshBulbs(config.wizRoomId);
   console.log(`💡 Lights helper running — ${bulbs.length} light(s) in the living room${DRY ? ' (dry run)' : ''}.`);
@@ -489,6 +504,18 @@ if (!process.stdin.isTTY && ((!args.has('--demo') && !config.hostCode) || config
   process.exit(0);
 }
 const demoMode = args.has('--demo');
+if (args.has('--alexa-login')) {
+  // Sign in to Amazon once (in your own browser); the session is saved and used from then on.
+  config.alexa = { ...(config.alexa ?? {}), cookieData: undefined };
+  const a = createAlexa(config, (c) => {
+    saveConfig(c);
+    console.log('\n✅ Signed in to Amazon. Restart the background helper:  npm run lights:install');
+    setTimeout(() => process.exit(0), 1500);
+  });
+  console.log('\n🔈 Open this in your browser and sign in to Amazon:  http://localhost:3001\n   (Amazon\'s own sign-in page — this helper never sees your password.)\n');
+  await a?.start();
+  await new Promise(() => {}); // wait for the sign-in
+}
 if ((!demoMode && !config.hostCode) || config.wizRoomId === undefined || args.has('--setup')) config = await setup(config, { needCode: !demoMode });
 
 const stop = async () => {
