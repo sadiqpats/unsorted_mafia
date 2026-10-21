@@ -356,8 +356,12 @@ async function follow(config) {
     }
   };
 
-  await poll();
-  setInterval(poll, 8000);
+  // Check often while a game is being followed; gently when nothing is happening (it runs all day).
+  const loop = async () => {
+    await poll();
+    setTimeout(loop, room ? 8000 : 20_000);
+  };
+  await loop();
   // Bulbs can change address (the Wi-Fi hands them out); look often until we have them, then every 2 minutes.
   let lastLook = Date.now();
   setInterval(() => {
@@ -371,6 +375,12 @@ async function follow(config) {
 // ------------------------------------------------------------------ main
 
 let config = loadConfig();
+// Running in the background (started automatically): nobody can answer a question, so say what's
+// missing and stop instead of waiting forever.
+if (!process.stdin.isTTY && ((!args.has('--demo') && !config.hostCode) || config.wizRoomId === undefined)) {
+  console.log('Not set up yet. Run once in Terminal:  npm run lights  (it asks for the host code), then restart the background helper.');
+  process.exit(0);
+}
 const demoMode = args.has('--demo');
 if ((!demoMode && !config.hostCode) || config.wizRoomId === undefined || args.has('--setup')) config = await setup(config, { needCode: !demoMode });
 

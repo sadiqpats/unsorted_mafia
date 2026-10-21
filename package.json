@@ -17,7 +17,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "lights": "node scripts/lights.mjs"
+    "lights": "node scripts/lights.mjs",
+    "lights:install": "bash scripts/install-lights.sh",
+    "lights:uninstall": "bash scripts/uninstall-lights.sh"
   },
   "dependencies": {
     "express": "^5.3.0",

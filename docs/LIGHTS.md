@@ -37,5 +37,17 @@ by you) and finds the lights. It follows the most recently active game that has
 - `npm run lights -- --setup` — asks for the host code and the lights room again.
 - `npm run lights -- --dry-run` — follows the game but only prints what it would do.
 
+## Running it automatically (installed at Elita home)
+
+```bash
+npm run lights:install     # starts by itself at login, restarts if it crashes
+npm run lights:uninstall   # removes it
+```
+
+It runs from `~/.unsorted-lights` and logs to `~/Library/Logs/unsorted-lights.log`. It does
+nothing until a game has "Playing at Elita home" on, and checks for games every 20 s while
+idle. After changing `scripts/lights.mjs`, run `npm run lights:install` again to update it.
+The Mac must be awake and on the home Wi-Fi during the game.
+
 Found at Elita home: 6 colour bulbs in one WiZ room (the living room and entrance) — those
 are the ones used. Other rooms and the smart plug are never touched.
