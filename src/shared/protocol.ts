@@ -23,6 +23,7 @@ export const HostCommandSchema = z.discriminatedUnion('type', [
   z.object({ ...base, type: z.literal('set_host_plays'), hostPlays: z.boolean() }),
   z.object({ ...base, type: z.literal('kick'), playerId: id }),
   z.object({ ...base, type: z.literal('start'), force: z.boolean().optional() }),
+  z.object({ ...base, type: z.literal('start_trial') }),
   z.object({ ...base, type: z.literal('advance'), phaseSeq: z.number().int() }),
   z.object({ ...base, type: z.literal('pause') }),
   z.object({ ...base, type: z.literal('resume') }),

@@ -43,7 +43,9 @@ export class RoomService {
   // ------------------------------------------------------------ presence
   connected(code: string): Set<string> {
     const m = this.presence.get(code);
-    return new Set(m ? [...m.entries()].filter(([, c]) => c > 0).map(([id]) => id) : []);
+    const ids = new Set(m ? [...m.entries()].filter(([, c]) => c > 0).map(([id]) => id) : []);
+    for (const p of this.rooms.get(code)?.players ?? []) if (p.bot) ids.add(p.id); // trial bots are always "here"
+    return ids;
   }
 
   markPresence(code: string, presenceId: string, delta: 1 | -1) {
@@ -221,6 +223,9 @@ export class RoomService {
         case 'start':
           E.startGame(room, now, this.opts.rng, { force: cmd.force });
           break;
+        case 'start_trial':
+          E.startTrial(room, now, this.opts.rng);
+          break;
         case 'advance':
           if (!room.game || cmd.phaseSeq !== room.game.phaseSeq) throw new GameError('phase_closed', 'The phase already changed.');
           E.advancePhase(room, now, this.opts.rng, 'host');
@@ -296,7 +301,8 @@ export class RoomService {
     for (const room of this.rooms.values()) {
       if (room.status !== 'active') continue;
       try {
-        if (E.tick(room, now, this.opts.rng)) this.commit(room, 'server', 'tick', true, room.game?.phase);
+        const bots = room.trial ? E.botsAct(room, now, this.opts.rng) : false;
+        if (E.tick(room, now, this.opts.rng) || bots) this.commit(room, 'server', 'tick', true, room.game?.phase);
       } catch (e) {
         console.error('tick failed for', room.code, e);
       }

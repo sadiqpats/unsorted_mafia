@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeDistribution, suggestDistribution } from '../../src/shared/distribution';
-import { addPlayer, createRoom, startGame, updateSettings } from '../../src/shared/engine';
+import { addPlayer, createRoom, resetToLobby, startGame, updateSettings } from '../../src/shared/engine';
 import { ROLES, isMafiaTeam } from '../../src/shared/roles';
 import { MAX_PLAYERS, MIN_PLAYERS, defaultSettings, type Settings } from '../../src/shared/settings';
 import { T0, testRng } from './helpers';
@@ -126,5 +126,41 @@ describe('new default mix', () => {
       expect(d.priest ?? 0).toBe(0);
       expect(d.bodyguard ?? 0).toBe(0);
     }
+  });
+});
+
+describe('fair role rotation across rematches', () => {
+  const play = (seed: number) => {
+    let a = seed >>> 0; // mulberry32: a decent PRNG, like the server's real randomness
+    const r = () => {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = Math.imul(a ^ (a >>> 15), a | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const rng = { int: (m: number) => Math.floor(r() * m), id: () => `r${Math.floor(r() * 1e9)}` };
+    const room = createRoom({ code: 'ROT', hostName: 'Host', hostTokenHash: 'h', hostPlays: false, now: 1, playerCount: 8 });
+    updateSettings(room, { roles: { mafia: 2, doctor: 1, detective: 1, villager: 4 } });
+    for (let i = 0; i < 8; i++) addPlayer(room, { id: `p${i}`, name: `Player ${i}`, tokenHash: `t${i}`, now: 1 });
+    const games: Record<string, string>[] = [];
+    for (let g = 0; g < 4; g++) {
+      for (const p of room.players) p.ready = true;
+      startGame(room, 1, rng);
+      games.push(Object.fromEntries(room.players.map((p) => [p.name, p.roleId!])));
+      resetToLobby(room, 2);
+    }
+    return games;
+  };
+  it('over 4 games, the Mafia cards go round the table (but it stays random)', () => {
+    let repeats = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const games = play(seed);
+      const mafiaOnce = new Set(games.flatMap((g) => Object.entries(g).filter(([, r]) => r === 'mafia').map(([n]) => n)));
+      expect(mafiaOnce.size, `seed ${seed}`).toBeGreaterThanOrEqual(6); // 8 Mafia cards spread over at least 6 people
+      for (let i = 1; i < games.length; i++) for (const [n, r] of Object.entries(games[i])) if (r === 'mafia' && games[i - 1][n] === 'mafia') repeats++;
+    }
+    // Back-to-back Mafia is rare — but it can happen, so nobody can rule anyone out.
+    expect(repeats).toBeGreaterThan(0);
+    expect(repeats).toBeLessThan(40);
   });
 });

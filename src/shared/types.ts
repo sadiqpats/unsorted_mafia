@@ -40,6 +40,8 @@ export interface Player {
   rejoinCodeHash: string | null;
   /** Bumped on every photo change; null = no photo. Photo bytes live in their own table. */
   photoVersion?: number | null;
+  /** A trial-run bot: plays by itself (random picks and votes). */
+  bot?: boolean;
 
   // ---- In-game state (reset on every new game) ----
   alive: boolean;
@@ -209,4 +211,8 @@ export interface Room {
   recentActionIds: Record<string, string[]>;
   gamesPlayed: number;
   nextSeat: number;
+  /** Roles each player has had in this room (by name, most recent last) — for a fairer shuffle. */
+  roleHistory?: Record<string, string[]>;
+  /** A host-only trial run: the empty seats are bots that play by themselves. */
+  trial?: boolean;
 }

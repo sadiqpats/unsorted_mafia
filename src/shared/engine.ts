@@ -264,6 +264,43 @@ export function shuffle<T>(arr: T[], rng: Rng): T[] {
   return a;
 }
 
+const historyKey = (name: string) => name.trim().toLowerCase();
+
+/**
+ * Deal the roles fairly over a night of games, without being predictable.
+ * The first game is a plain shuffle. After that, many shuffles are tried and each is scored
+ * against what everyone has already played in this room (the same role again costs most, the
+ * same side again a little); one of the better shuffles is then picked AT RANDOM — so a player
+ * can still be Mafia twice in a row, it is just less likely, and over 3–4 games everyone tends
+ * to play everything.
+ */
+function fairDeal(room: Room, seated: Player[], deck: string[], rng: Rng): string[] {
+  const hist = room.roleHistory ?? {};
+  if (!seated.some((p) => hist[historyKey(p.name)]?.length)) return shuffle(deck, rng);
+  const s = room.settings;
+  const cost = (p: Player, role: string) => {
+    const h = hist[historyKey(p.name)] ?? [];
+    if (!h.length) return 0;
+    const last = h[h.length - 1];
+    // Same role before costs a lot (more each time), the same side before a bit, and doing it
+    // again straight away the most.
+    let c = h.filter((r) => r === role).length * 4;
+    if (isMafiaTeam(role, s)) c += h.filter((r) => isMafiaTeam(r, s)).length * 2;
+    if (last === role) c += 3;
+    return c;
+  };
+  const tries: { deal: string[]; score: number }[] = [];
+  for (let i = 0; i < 400; i++) {
+    const deal = shuffle(deck, rng);
+    tries.push({ deal, score: seated.reduce((t, p, j) => t + cost(p, deal[j]), 0) });
+  }
+  const best = Math.min(...tries.map((t) => t.score));
+  // Usually one of the fairest deals; now and then a looser one, so a repeat stays possible.
+  const slack = rng.int(10) < 6 ? 2 : 16;
+  const good = tries.filter((t) => t.score <= best + slack);
+  return good[rng.int(good.length)].deal;
+}
+
 export function startGame(room: Room, now: number, rng: Rng, opts: { force?: boolean } = {}) {
   if (room.status !== 'lobby') fail('wrong_phase', 'The game has already started.');
   const s = room.settings;
@@ -276,10 +313,14 @@ export function startGame(room: Room, now: number, rng: Rng, opts: { force?: boo
 
   const deck: string[] = [];
   for (const [roleId, count] of Object.entries(s.roles)) for (let i = 0; i < count; i++) deck.push(roleId);
-  const shuffled = shuffle(deck, rng);
-
   const frozen: Settings = structuredClone(s);
   const seated = [...room.players].sort(bySeat);
+  const shuffled = fairDeal(room, seated, deck, rng);
+  room.roleHistory ??= {};
+  seated.forEach((p, i) => {
+    const k = historyKey(p.name);
+    room.roleHistory![k] = [...(room.roleHistory![k] ?? []), shuffled[i]].slice(-12);
+  });
   seated.forEach((p, i) => {
     Object.assign(p, freshPlayerState(), { ready: p.ready });
     p.roleId = shuffled[i];
@@ -1344,6 +1385,11 @@ export function resetToLobby(room: Room, now: number) {
   room.game = null;
   room.privateResults = [];
   room.recentActionIds = {};
+  // A trial run's bots leave with it.
+  if (room.trial) {
+    room.players = room.players.filter((p) => !p.bot);
+    room.trial = false;
+  }
   for (const p of room.players) Object.assign(p, freshPlayerState(), { ready: p.isHost });
   if (room.players.length > room.settings.playerCount) {
     room.settings = { ...room.settings, playerCount: room.players.length, roles: suggestDistribution(room.players.length) };
@@ -1354,4 +1400,66 @@ export function resetToLobby(room: Room, now: number) {
 export function closeRoom(room: Room, now: number) {
   room.status = 'closed';
   addLog(room, now, 'room', 'The host closed the room.');
+}
+
+// ---------------------------------------------------------------- trial run (host-only)
+
+const BOT_NAMES = ['Raju', 'Basanti', 'Jai', 'Veeru', 'Mogambo', 'Circuit', 'Geet', 'Rancho', 'Chulbul', 'Poo', 'Simran', 'Raj', 'Anjali', 'Rahul', 'Munni', 'Bablu', 'Pinky', 'Golu', 'Chintu', 'Tina', 'Kabir', 'Naina', 'Bunny', 'Aditi', 'Sameer', 'Zoya'];
+
+/**
+ * A trial run for the host: every empty seat gets a bot, then the game starts. Bots play by
+ * themselves (see botsAct) so the host can watch the TV, a phone, the lights and the music go
+ * through a whole game alone. The host's settings (Bollywood, timers, home lights…) all apply.
+ */
+export function startTrial(room: Room, now: number, rng: Rng) {
+  if (room.status !== 'lobby') fail('wrong_phase', 'The game has already started.');
+  const free = room.settings.playerCount - room.players.length;
+  const names = shuffle(BOT_NAMES.filter((n) => !room.players.some((p) => p.name.toLowerCase() === n.toLowerCase())), rng);
+  for (let i = 0; i < free; i++) {
+    const p = addPlayer(room, { id: `bot-${rng.id()}`, name: names[i] ?? `Bot ${i + 1}`, tokenHash: `bot:${rng.id()}`, now });
+    p.bot = true;
+    p.ready = true;
+  }
+  for (const p of room.players) p.ready = true;
+  room.trial = true;
+  startGame(room, now, rng, { force: true });
+  addLog(room, now, 'host', 'Trial run: the empty seats are bots.', 'host');
+}
+
+/** Bots act a few seconds into each phase (so the screens look like a real table). Returns true if anything changed. */
+export function botsAct(room: Room, now: number, rng: Rng): boolean {
+  const g = room.game;
+  if (!room.trial || room.status !== 'active' || !g || g.pausedRemainingMs !== null) return false;
+  const bots = room.players.filter((p) => p.bot);
+  if (!bots.length) return false;
+  const since = now - Math.max(g.phaseStartedAt, g.phaseOpensAt ?? 0);
+  // Each bot waits its own 2–7 s (stable per bot and phase).
+  const ready = (p: Player) => since >= 2000 + ((p.seat * 7919 + g.phaseSeq * 104729) % 5000);
+  let changed = false;
+  if (g.phase === 'reveal') {
+    for (const p of bots) if (!p.revealAck && ready(p)) {
+      p.revealAck = true;
+      changed = true;
+    }
+  } else if ((g.phase === 'prenight' || g.phase === 'night') && phaseOpen(room, now)) {
+    for (const p of bots) {
+      if (!ready(p)) continue;
+      for (const o of nightOptions(room, p.id)) {
+        if (g.night.actions[`${p.id}:${o.abilityId}`]) continue;
+        const target = o.targets.length && rng.int(10) > 0 ? o.targets[rng.int(o.targets.length)] : null;
+        submitNightAction(room, p.id, { abilityId: o.abilityId, targetId: target, phaseSeq: g.phaseSeq }, now);
+        changed = true;
+      }
+    }
+  } else if (g.phase === 'voting') {
+    for (const p of bots) {
+      if (g.day.votes[p.id] || !ready(p) || !voteEligibility(room, p).ok) continue;
+      const targets = voteTargets(room, p);
+      const target = targets.length && (rng.int(8) > 0 || !g.settings.allowAbstain) ? targets[rng.int(targets.length)] : null;
+      if (target === null && !g.settings.allowAbstain) continue;
+      submitVote(room, p.id, { targetId: target, phaseSeq: g.phaseSeq }, now);
+      changed = true;
+    }
+  }
+  return changed;
 }
