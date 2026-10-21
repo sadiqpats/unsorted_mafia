@@ -150,7 +150,7 @@ export function createAlexa(config, save, log = console.log) {
           await cmd('next'); // a new song, from its beginning
           musicOn = true;
         } else if (!musicOn) {
-          await cmd('play'); // carry on where this round's song paused
+          await say('resume'); // Alexa's own "resume" continues the song from where it stopped
           musicOn = true;
         }
         musicKey = token;
@@ -159,19 +159,23 @@ export function createAlexa(config, save, log = console.log) {
       q(async () => {
         if (!ready || !musicOn) return;
         musicOn = false;
-        await cmd('pause');
+        await say('pause');
       }),
-    /** A sound effect: music pauses for it (louder volume for the effect); the caller restarts music after. */
+    /**
+     * A sound effect. The music is NOT stopped: Alexa ducks it under the effect and carries on
+     * by itself from the same point (stopping it ourselves made Spotify restart the song).
+     */
     sfx: (name) =>
       q(async () => {
         if (!ready || !SFX[name]) return;
-        if (musicOn) {
-          musicOn = false;
-          await cmd('pause').catch(() => {});
-        }
-        await setVol(vol.sfx);
         log(`🔊 ${name}`);
+        const back = musicOn ? vol.music : null;
+        await setVol(vol.sfx);
         await call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'sound', SFX[name], cb));
+        if (back !== null) {
+          await wait(3500);
+          await setVol(back);
+        }
       }),
     say: (text) => q(() => ready && call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'speak', text, cb))),
     /** Any Alexa command, as if spoken (testing). */

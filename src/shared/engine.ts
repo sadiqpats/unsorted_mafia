@@ -499,6 +499,8 @@ export function tick(room: Room, now: number, rng: Rng): boolean {
   if (room.status !== 'active' || !room.game) return false;
   const g = room.game;
   if (g.pausedRemainingMs !== null || g.phase === 'game_over') return false;
+  // A trial run never moves on by itself: the host presses Next to look at every screen.
+  if (room.trial) return false;
   const s = g.settings;
   // Everyone has acted → move on early.
   if (g.phase === 'reveal' && room.players.every((p) => p.revealAck)) {

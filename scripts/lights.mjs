@@ -41,12 +41,12 @@ const SCENES = {
   lobby: { steps: [[{ sceneId: 6, speed: 60, dimming: 45 }, 0]] },
   // Role reveal: low mysterious violet.
   reveal: { steps: [[{ r: 110, g: 20, b: 190, dimming: 30 }, 0]] },
-  // Dawn: a sunrise — amber rising from dim.
-  dawn: { steps: [[{ r: 255, g: 95, b: 15, dimming: 12 }, 900], [{ r: 255, g: 110, b: 20, dimming: 30 }, 1800], [{ r: 255, g: 125, b: 30, dimming: 45 }, 0]] },
+  // Dawn: a faint orange glow — still night-time, just the first hint of sun.
+  dawn: { steps: [[{ r: 255, g: 80, b: 0, dimming: 10 }, 1200], [{ r: 255, g: 95, b: 10, dimming: 16 }, 0]] },
   // Night: deep red, slowly breathing.
   night: { loop: true, steps: [[{ ...RED, dimming: 30 }, 2600], [{ ...RED, dimming: 18 }, 2600]] },
-  // Day: soft golden white — light enough to see faces, still cozy.
-  day: { steps: [[{ sceneId: 30, speed: 50, dimming: 55 }, 0]] },
+  // Day: a low, warm, candle-like light — enough to see faces, cozy like the night.
+  day: { steps: [[{ temp: 2200, dimming: 22 }, 0]] },
   // Vote: a crimson heartbeat.
   vote: { loop: true, steps: [[{ r: 220, g: 0, b: 50, dimming: 55 }, 160], [{ r: 220, g: 0, b: 50, dimming: 22 }, 220], [{ r: 220, g: 0, b: 50, dimming: 45 }, 160], [{ r: 220, g: 0, b: 50, dimming: 18 }, 900]] },
   // The pause on the vote's result: dark, still red.

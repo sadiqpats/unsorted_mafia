@@ -138,7 +138,7 @@ function HostLobby({ view, send }: GameProps) {
               disabled={busy}
               data-testid="trial-run"
               onClick={() => act({ type: 'start_trial' })}
-              title="Fill the empty seats with bots that play by themselves, and start — to check the TV, a phone, the lights and the music."
+              title="Fill the empty seats with bots that play by themselves, and start. Nothing moves on until you press Next — to check the TV, a phone, the lights and the music."
             >
               🧪 Trial run — fill {view.settings.playerCount - view.players.length} empty seat{view.settings.playerCount - view.players.length === 1 ? '' : 's'} with bots and start
             </button>

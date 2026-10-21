@@ -17,8 +17,11 @@ test('trial run: bots fill the empty seats and play by themselves; the host just
   await me.getByRole('button', { name: /reveal/i }).first().click();
   await me.getByRole('button', { name: /Your secret card/ }).click();
   await me.getByRole('button', { name: 'I’ve seen my role' }).click();
-  // Bots look at their cards by themselves → the game moves on.
-  await expect(host.getByTestId('host-phase')).not.toHaveText('Role Reveal', { timeout: 30_000 });
+  // Everyone has looked, but a trial run waits for the host's Next.
+  await host.waitForTimeout(9000);
+  await expect(host.getByTestId('host-phase')).toHaveText('Role Reveal');
+  await host.getByRole('button', { name: /Next phase/ }).click();
+  await expect(host.getByTestId('host-phase')).not.toHaveText('Role Reveal');
   // Keep pressing Next: bots act, vote, the game reaches an end.
   for (let i = 0; i < 60; i++) {
     const phase = (await host.getByTestId('host-phase').innerText()).trim();
