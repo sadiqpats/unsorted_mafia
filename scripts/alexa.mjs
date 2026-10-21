@@ -20,7 +20,7 @@ export const PLAYLIST = 'play my playlist dramatic suspense mix on spotify';
 /** The opening: only during the role card reveal, ~28 s, then the rounds use the playlist. */
 export const INTRO = { command: 'play the shadow of death by justin vargas on spotify', seconds: 28 };
 /** Phases with music (the discussion is quiet: people are talking). */
-export const MUSIC = { dawn: true, night: true, vote: true };
+export const MUSIC = { reveal: true, dawn: true, night: true, vote: true };
 /** Alexa built-in sound effects (only IDs from Amazon's own library play on an Echo). */
 export const SFX = {
   kill: 'halloween_wolf', // a howl in the night
@@ -158,7 +158,8 @@ export function createAlexa(config, save, log = console.log) {
             if (started) return; // a round already began: its music is on
             await setVol(Math.round(vol.music / 2));
             await wait(600);
-            await preload(); // silent switch to the playlist, ready for round one
+            await say('pause'); // the intro fades out; round one starts the playlist
+            musicOn = false;
           });
         }, INTRO.seconds * 1000);
       }),
@@ -167,9 +168,17 @@ export function createAlexa(config, save, log = console.log) {
       q(async () => {
         if (!ready || !MUSIC[key]) return;
         if (musicOn && musicKey === token) return;
-        if (!started) await preload();
         await setVol(vol.music);
-        if (musicKey !== null && musicKey !== token) {
+        if (!started) {
+          // Round one: start the playlist fresh, shuffled, on a random song from its beginning.
+          log(`🎵 round ${token}: playlist starts`);
+          await say(PLAYLIST);
+          await wait(2500);
+          await cmd('shuffle', true).catch(() => {});
+          await cmd('next').catch(() => {});
+          started = true;
+          musicOn = true;
+        } else if (musicKey !== null && musicKey !== token) {
           log(`🎵 round ${token}: next song`);
           await cmd('next'); // a new song, from its beginning
           musicOn = true;

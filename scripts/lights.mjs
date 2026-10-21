@@ -242,7 +242,7 @@ async function setAll(params, label) {
 let showId = 0;
 /** The living-room Echo (music + sound effects), when signed in. */
 let alexa = null;
-const MUSIC_FOR = { dawn: 'dawn', night: 'night', day: 'day', vote: 'vote' };
+const MUSIC_FOR = { reveal: 'reveal', dawn: 'dawn', night: 'night', vote: 'vote' };
 let phaseToken = ''; // changes every phase, so each new round gets a new song
 let holdMusic = false; // a big announcement is about to play: the music waits for it
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -451,7 +451,7 @@ async function follow(config) {
     const seq = view.status === 'lobby' ? -1 : (g?.phaseSeq ?? -1);
     const scene = sceneFor(view);
     wanted = scene;
-    phaseToken = String(g?.round ?? 0); // one song per round
+    phaseToken = String(Math.max(1, g?.round ?? 1)); // one song per round (the card reveal belongs to round one)
     if (alexa) alexa.setVolumes(view.settings?.musicVolume, view.settings?.sfxVolume);
     // The party is over and the lights are back to normal: leave them alone until the next game.
     scheduleCountdown(view); // re-aimed on every update (pause, +30 s, a new phase)
@@ -469,7 +469,6 @@ async function follow(config) {
       // Big news: the dramatic sound plays first, the music after it (no queueing behind each other).
       holdMusic = tags.length > 0;
       if (alexa && holdMusic) alexa.pause();
-      if (alexa && scene === 'reveal') alexa.intro();
       applyScene(scene).catch(() => {});
       if (tags.length) {
         // The kill/revive/… effect lands with the news (after the ~2 s curtain); after an even
