@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 import { ROLES, roleAlignment, roleArt, roleShort, roleTitle } from '../../shared/roles';
 import { RoleArt } from '../components/RoleArt';
 import { MomentsOverlay, useMoments } from '../components/Moments';
+import { FinaleShow } from '../components/FinaleShow';
 import { finale } from '../lib/finale';
 import { Avatar } from '../components/Avatar';
 import type { PublicPlayer } from '../../shared/view-types';
@@ -41,6 +42,7 @@ export default function Display() {
     <div className="tv-page grain relative flex min-h-dvh flex-col p-5 tv:h-dvh tv:overflow-hidden tv:p-8">
       <div className="ambient" aria-hidden="true" />
       <PhaseCurtain scene={scene} />
+      {g?.phase === 'game_over' && finaleReplay && !finaleDone && <FinaleShow key={g.phaseSeq} view={view} variant="tv" />}
       {spotlight && g && (
         <MomentsOverlay key={spotlight.key} moment={spotlight} view={view} variant="tv" clock={<Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />} />
       )}
@@ -391,7 +393,7 @@ function TvGame({ view, serverNow, send, finaleDone, finaleReplay }: { view: Non
       </div>
       <div className={`mt-[1.5vh] grid min-h-0 flex-1 gap-5 ${over ? '' : 'tv:grid-cols-[minmax(0,1fr)_minmax(12rem,17rem)]'}`}>
         <div className="flex min-h-0 min-w-0 flex-col">
-          <FitBox>{(box) => <PhotoWall players={view.players} settings={view.settings} box={box} winners={over ? (g.winner?.winnerIds ?? []) : null} replayFinale={finaleReplay} />}</FitBox>
+          <FitBox>{(box) => <PhotoWall players={view.players} settings={view.settings} box={box} winners={over ? (g.winner?.winnerIds ?? []) : null} replayFinale={false} />}</FitBox>
           {over && g.winner && g.winner.faction !== 'none' && g.winner.faction !== 'draw' && (
             <Confetti palette={view.settings.bollywood ? 'party' : g.winner.faction} count={110} delay={finaleReplay ? finale(view.players, view.settings).end : 0} />
           )}

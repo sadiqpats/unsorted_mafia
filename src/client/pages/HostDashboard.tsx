@@ -360,6 +360,7 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           <Select label="Mafia kill decision" value={s.mafiaDecision} options={[['plurality', 'Most picks'], ['leader', 'First-seated Mafia decides']]} onChange={(v) => patch({ mafiaDecision: v })} />
           <Select label="Mafia win when Mafia members" value={s.mafiaWin} options={[['parity', 'equal the rest (Godfather not counted)'], ['majority', 'outnumber the rest']]} onChange={(v) => patch({ mafiaWin: v })} />
           <Toggle label="Godfather appears innocent to the Detective" checked={s.godfatherAppearsInnocent} onChange={(v) => patch({ godfatherAppearsInnocent: v })} />
+          <Toggle label="Godfather takes over when every Mafia member is dead" hint="He makes the night kill himself, and the game goes on until he is caught." checked={s.godfatherTakesOver} onChange={(v) => patch({ godfatherTakesOver: v })} />
         </Group>
         <Group title="Doctor">
           <Select

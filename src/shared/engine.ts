@@ -7,7 +7,7 @@
  *
  * Resolution order (night):  see NIGHT ORDER below and docs/RULES.md.
  */
-import { ABILITIES, ROLES, ROLE_ORDER, isMafiaTeam, roleAlignment, roleTitle, themeText, type AbilityDef } from './roles';
+import { ABILITIES, ROLES, ROLE_ORDER, isKiller, isMafiaTeam, roleAlignment, roleTitle, themeText, type AbilityDef } from './roles';
 import { analyzeDistribution, suggestDistribution } from './distribution';
 import { MAX_PLAYERS, defaultSettings, fillTemplate, mergeSettings, type Settings, type SettingsPatch } from './settings';
 import type { EventTag, Game, LogEntry, MorningReport, NightAction, Phase, Player, Room, Verdict, WinResult } from './types';
@@ -108,6 +108,7 @@ function freshPlayerState(): Omit<Player, 'id' | 'name' | 'seat' | 'tokenHash' |
     lastReviveRound: null,
     lastSelfProtectRound: null,
     lastStolenAbility: null,
+    heir: false,
     lastStealRound: null,
     revivedCount: 0,
     lateJoiner: false,
@@ -530,6 +531,39 @@ export function acknowledgeRole(room: Room, playerId: string) {
   getPlayer(room, playerId).revealAck = true;
 }
 
+// ---------------------------------------------------------------- the Mafia's chat
+
+/** Who is in the Mafia's secret chat: the Mafia members and the Godfather (who shows only as "Godfather"). */
+export function inMafiaChat(p: Player, s: Settings): boolean {
+  return isMafiaTeam(p.roleId, s) || p.roleId === 'godfather';
+}
+
+/** A message in the Mafia's chat — open from the role reveal until the game ends, living members only. */
+export function sendMafiaChat(room: Room, playerId: string, text: string, now: number) {
+  const g = requireGame(room);
+  if (g.phase === 'game_over') fail('phase_closed', 'The game is over.');
+  const p = getPlayer(room, playerId);
+  if (!inMafiaChat(p, g.settings)) fail('forbidden', 'Only the Mafia can use this chat.');
+  if (!p.alive) fail('forbidden', 'The dead can read the chat, but not write in it.');
+  // eslint-disable-next-line no-control-regex
+  const clean = text.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+  if (!clean) fail('bad_request', 'Type a message first.');
+  const chat = g.mafiaChat ?? [];
+  chat.push({ seq: (chat.at(-1)?.seq ?? 0) + 1, at: now, from: p.id, text: clean });
+  g.mafiaChat = chat.slice(-200);
+  if (g.mafiaTyping) delete g.mafiaTyping[p.id];
+}
+
+/** "… is typing" in the Mafia's chat, for a few seconds (the phone repeats it while typing goes on). */
+export function mafiaTyping(room: Room, playerId: string, now: number) {
+  const g = requireGame(room);
+  const p = getPlayer(room, playerId);
+  if (g.phase === 'game_over' || !p.alive || !inMafiaChat(p, g.settings)) fail('forbidden', 'Only the Mafia can use this chat.');
+  const typing = Object.fromEntries(Object.entries(g.mafiaTyping ?? {}).filter(([, until]) => until > now));
+  typing[p.id] = now + 4000;
+  g.mafiaTyping = typing;
+}
+
 // ---------------------------------------------------------------- abilities
 
 export interface HeldAbility {
@@ -547,6 +581,7 @@ export function heldAbilities(room: Room, p: Player): HeldAbility[] {
     if (p.lostAbilities.includes(a.id)) continue;
     out.push({ abilityId: a.id, source: 'role', charges: a.id in p.charges ? p.charges[a.id] : null });
   }
+  if (p.heir && !out.some((h) => h.abilityId === 'mafia_kill')) out.push({ abilityId: 'mafia_kill', source: 'role', charges: null });
   if (p.stolen && !out.some((h) => h.abilityId === p.stolen!.abilityId)) {
     out.push({ abilityId: p.stolen.abilityId, source: 'stolen', charges: p.stolen.charges });
   }
@@ -613,7 +648,7 @@ function targetsFor(room: Room, p: Player, def: AbilityDef): string[] {
       }
       break;
     case 'alive-non-mafia':
-      list = players.filter((x) => x.alive && !isMafiaTeam(x.roleId, s));
+      list = players.filter((x) => x.alive && !isKiller(x, s));
       break;
     case 'dead':
       list = players.filter((x) => !x.alive && x.id !== p.id);
@@ -738,7 +773,7 @@ export function hitVoters(room: Room): Player[] {
     .filter((p) => {
       if (!p.alive) return false;
       const h = hasUsable(room, p, 'mafia_kill');
-      return !!h && (isMafiaTeam(p.roleId, s) || h.source === 'stolen');
+      return !!h && (isKiller(p, s) || h.source === 'stolen');
     })
     .sort((a, b) => a.seat - b.seat);
 }
@@ -757,7 +792,7 @@ export function mafiaDecision(room: Room): string | null {
     const actor = room.players.find((p) => p.id === a.actorId)!;
     const target = room.players.find((p) => p.id === a.targetId);
     // The Thief doesn't know who the Mafia are, so his pick may even be one of them.
-    return !!target && target.alive && (!isMafiaTeam(target.roleId, s) || !isMafiaTeam(actor.roleId, s));
+    return !!target && target.alive && (!isKiller(target, s) || !isKiller(actor, s));
   });
   if (!votes.length) return null;
   const leader = mafiaLeader(room);
@@ -977,7 +1012,7 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
     order: order++,
     run: () => {
       const target = mafiaDecision(room);
-      const thief = hitVoters(room).find((p) => !isMafiaTeam(p.roleId, s));
+      const thief = hitVoters(room).find((p) => !isKiller(p, s));
       if (thief) useCharge(room, thief, 'mafia_kill');
       if (target) {
         ctx.attacks.push({ targetId: target, source: 'mafia' });
@@ -1033,7 +1068,7 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
   const report: MorningReport = { round: g.round, deaths: ctx.deaths, revived: ctx.revived, silenced: ctx.silenced.filter((id) => getPlayer(room, id).alive), saved: ctx.saved.length > 0 };
   g.lastMorning = report;
 
-  const win = checkWin(room);
+  const win = settle(room, now);
   if (win) return endGame(room, win, now);
   startDay(room, now, null);
 }
@@ -1065,7 +1100,7 @@ export function resolvePreNight(room: Room, now: number, rng: Rng) {
   if (!lines.length) lines.push([A.quietPreNight, 'dawn-quiet']);
   for (const [l, tag] of lines) addLog(room, now, 'prenight', l, 'public', tag);
   g.lastDawn = { round: g.round, revived: [...ctx.revived] };
-  const win = checkWin(room);
+  const win = settle(room, now);
   if (win) return endGame(room, win, now);
   startNight(room, now);
 }
@@ -1207,7 +1242,7 @@ function afterVote(room: Room, now: number) {
   const g = room.game!;
   const s = g.settings;
   if (g.round % 2 === 0) {
-    const count = room.players.filter((p) => p.alive && isMafiaTeam(p.roleId, s)).length;
+    const count = room.players.filter((p) => p.alive && isKiller(p, s)).length;
     g.mafiaLeft = { round: g.round, count };
     addLog(room, now, 'verdict', count === 1 ? '1 member of the Mafia is still among you.' : `${count} members of the Mafia are still among you.`, 'public', 'mafiacount');
   }
@@ -1236,7 +1271,7 @@ function eliminateByVote(room: Room, targetId: string, verdict: Verdict, now: nu
       return endGame(room, { faction: 'jester', winnerIds: [t.id], reason: themeText(`${t.name} the Joker tricked the town into voting them out.`, s) }, now);
     }
   }
-  const win = checkWin(room);
+  const win = settle(room, now);
   if (win) return endGame(room, win, now);
   afterVote(room, now);
 }
@@ -1265,11 +1300,28 @@ export function resolveTie(room: Room, targetId: string | null, now: number) {
  * Survivor neutrals (Thief, Imposter) co-win if alive; an earlier Jester win (when the
  * game continued) is also listed.
  */
+/**
+ * After any death or return: with godfatherTakesOver on, once every Mafia member is dead a living
+ * Godfather takes over the nightly hit (and counts as a killer), so the game plays on. Then the win check.
+ */
+function settle(room: Room, now: number): WinResult | null {
+  const s = settingsOf(room);
+  if (s.godfatherTakesOver && room.game) {
+    const alive = alivePlayers(room);
+    const gf = alive.find((p) => p.roleId === 'godfather' && !p.heir);
+    if (gf && !alive.some((p) => isKiller(p, s))) {
+      gf.heir = true;
+      addLog(room, now, 'host', `${gf.name} (Godfather) has taken over the Mafia's hit.`, 'host');
+    }
+  }
+  return checkWin(room);
+}
+
 export function checkWin(room: Room): WinResult | null {
   const s = settingsOf(room);
   const alive = alivePlayers(room);
   // The Town wins when every MAFIA member (the killers) is dead — the Godfather does not count.
-  const killers = alive.filter((p) => isMafiaTeam(p.roleId, s)).length;
+  const killers = alive.filter((p) => isKiller(p, s)).length;
   // A Mafia takeover counts Mafia MEMBERS only: the Godfather (Evil) is on their side but
   // doesn't count, so 1 Mafia + Godfather vs 2 others plays on; 2 Mafia vs 2 others is a Mafia win.
   const mafiaSide = killers;
@@ -1352,7 +1404,7 @@ export function hostEliminate(room: Room, playerId: string, now: number) {
   killPlayer(room, p, 'host');
   delete g.day.votes[p.id];
   addLog(room, now, 'correction', `Game Master correction: ${p.name} has been removed from play.` + (g.settings.revealRoleOnDeath ? ` They were ${roleTitle(p.roleId, g.settings)}.` : ''), 'public', 'removed');
-  const win = checkWin(room);
+  const win = settle(room, now);
   if (win) endGame(room, win, now);
 }
 
@@ -1364,7 +1416,7 @@ export function hostRestore(room: Room, playerId: string, now: number) {
   p.deathRound = null;
   p.deathCause = null;
   addLog(room, now, 'correction', `Game Master correction: ${p.name} has been restored to the game.`, 'public', 'restored');
-  const win = checkWin(room);
+  const win = settle(room, now);
   if (win) endGame(room, win, now);
 }
 

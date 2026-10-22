@@ -69,6 +69,8 @@ export interface MeView {
   alive: boolean;
   roleId: string | null;
   alignment: Alignment | null;
+  /** The Godfather who took over the Mafia's hit. */
+  heir: boolean;
   abilities: { abilityId: string; source: 'role' | 'stolen'; charges: number | null }[];
   stolen: StolenAbility | null;
   lostAbilities: string[];
@@ -100,6 +102,10 @@ export interface MeView {
   } | null;
   /** Godfather only: who the Mafia are (the Mafia never learn who the Godfather is). */
   knownMafia: { id: string; name: string }[] | null;
+  /** The Mafia's secret chat (only for its members). The Godfather shows as "Godfather", with no name or photo. */
+  /** Who else is typing in the Mafia's chat right now ("Godfather" for him), with ms left. */
+  mafiaTyping: { name: string; godfather: boolean; msLeft: number }[] | null;
+  mafiaChat: { seq: number; at: number; text: string; name: string; photo: string | null; godfather: boolean; you: boolean }[] | null;
   privateResults: { id: string; round: number; kind: string; text: string; at: number }[];
   allRoles: Record<string, string> | null;
 }

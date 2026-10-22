@@ -15,6 +15,8 @@ export const PlayerCommandSchema = z.discriminatedUnion('type', [
   z.object({ ...base, type: z.literal('ready'), ready: z.boolean() }),
   z.object({ ...base, type: z.literal('ack_role') }),
   z.object({ ...base, type: z.literal('night_action'), abilityId: id, targetId: id.nullable(), phaseSeq: z.number().int() }),
+  z.object({ ...base, type: z.literal('mafia_chat'), text: z.string().min(1).max(300) }),
+  z.object({ ...base, type: z.literal('mafia_typing') }),
   z.object({ ...base, type: z.literal('vote'), targetId: id.nullable(), rally: z.boolean().optional(), phaseSeq: z.number().int() }),
 ]);
 

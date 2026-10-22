@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { NightOption } from '../../shared/engine';
 import type { Ack, CommandInput } from '../../shared/protocol';
@@ -12,6 +12,8 @@ import { revealPlan } from '../lib/reveal';
 import { PhotoPicker } from '../components/PhotoPicker';
 import { RoleArt } from '../components/RoleArt';
 import { PhoneMoments } from '../components/Moments';
+import { FinaleShow, useFinaleShow } from '../components/FinaleShow';
+import { MafiaChat } from '../components/MafiaChat';
 import { finale } from '../lib/finale';
 import { uploadPhoto } from '../lib/photo';
 import { loadSession } from '../lib/session';
@@ -106,11 +108,13 @@ function CheckMark() {
 export function PlayerGame({ view, send, serverNow }: GameProps) {
   const me = view.me!;
   const g = view.game;
+  const show = useFinaleShow(view);
   if (view.status === 'lobby' || !g) return <PlayerLobby view={view} send={send} />;
   const phase = g.phase;
   return (
     <div className="space-y-4">
       <PhoneMoments view={view} />
+      {show.on && <FinaleShow key={show.key} view={view} variant="phone" />}
       <PhaseHeader view={view} serverNow={serverNow} />
       {me.alive || phase === 'game_over' ? null : <DeadBanner view={view} />}
       {me.silenced && me.alive && phase !== 'game_over' && (
@@ -119,12 +123,18 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
           {view.settings.silencedCanVote ? 'You can still vote.' : 'You cannot vote today.'}
         </div>
       )}
+      {me.heir && me.alive && phase !== 'game_over' && (
+        <div className="rounded-xl border border-ember/50 bg-crimson/10 p-3 text-center text-sm" role="status" data-testid="heir-banner">
+          🩸 <b>The Mafia have fallen — the family is yours.</b> Each night you now choose who dies, as well as who is silenced.
+        </div>
+      )}
       {phase === 'reveal' && <RevealPanel view={view} send={send} />}
       {(phase === 'night' || phase === 'prenight') && <NightPanel key={g.phaseSeq} view={view} send={send} serverNow={serverNow} />}
       {phase === 'discussion' && <DiscussionPanel view={view} />}
       {phase === 'voting' && <DayPanel key={g.phaseSeq} view={view} send={send} />}
       {phase === 'verdict' && <VerdictPanel view={view} />}
       {phase === 'game_over' && <GameOverPanel view={view} />}
+      {me.mafiaChat && phase !== 'game_over' && <MafiaChat view={view} send={send} />}
       {/* Action phases show ONLY the action — no lists, feeds or extra buttons. */}
       {phase === 'voting' && <MyRoleButton view={view} />}
       {/* The dead have no action, so they always get the full running commentary. */}
@@ -575,6 +585,14 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
   }
   const submit = (target: string | null) =>
     act({ type: 'night_action', abilityId: option.abilityId, targetId: target, phaseSeq: view.game!.phaseSeq });
+  // The Mafia hit can be changed all night, so a tap locks it in straight away.
+  const instant = option.abilityId === 'mafia_kill' && option.changeable;
+  const choose = (t: string) => {
+    setPick(t);
+    if (instant && !busy && submitted[option.abilityId] !== t) submit(t);
+  };
+  // A pick that was never locked in still counts: it is sent just before the clock runs out.
+  useLastSecondLock(view, !done && pick !== null && !locked, () => pick !== null && submit(pick));
   return (
     <div data-option={option.abilityId}>
       {option.source === 'decoy' && (
@@ -590,7 +608,7 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
           const selected = pick === t;
           if (option.targetKind === 'player') {
             return (
-              <PlayerChoice key={t} view={view} id={t} selected={selected} disabled={locked || busy} onPick={() => setPick(t)}>
+              <PlayerChoice key={t} view={view} id={t} selected={selected} disabled={locked || (busy && !instant)} onPick={() => choose(t)}>
                 {familyOn[t]?.length ? <span className="block text-[0.75rem] font-semibold text-ember">🗡 {familyOn[t].join(', ')}</span> : null}
               </PlayerChoice>
             );
@@ -601,7 +619,7 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
               role="radio"
               aria-checked={selected}
               disabled={locked || busy}
-              onClick={() => setPick(t)}
+              onClick={() => choose(t)}
               className={`choice-tile min-h-12 rounded-xl border px-3 py-2 text-sm font-medium ${selected ? 'border-gold bg-gold/15 text-bone' : 'border-line bg-black/30 text-bone/90 hover:border-gold/50'}`}
             >
               {ABILITIES[t]?.name ?? t}
@@ -611,7 +629,7 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
       </div>
       <div className="mt-3 flex gap-2">
         <button className="btn btn-primary flex-1" disabled={locked || busy || !pick || (done && submitted[option.abilityId] === pick)} onClick={() => submit(pick)}>
-          {done ? (locked ? `✓ Locked: ${submitted[option.abilityId] === null ? 'skipped' : option.targetKind === 'power' ? ABILITIES[submitted[option.abilityId]!]?.name : nameOf(view, submitted[option.abilityId])}` : 'Change pick') : 'Lock in'}
+          {done ? (locked || (instant && submitted[option.abilityId] === pick) ? `✓ Locked: ${submitted[option.abilityId] === null ? 'skipped' : option.targetKind === 'power' ? ABILITIES[submitted[option.abilityId]!]?.name : nameOf(view, submitted[option.abilityId])}` : 'Change pick') : 'Lock in'}
         </button>
         {!done && (
           <button className="btn btn-ghost" disabled={busy} onClick={() => submit(null)}>
@@ -717,6 +735,7 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
   const { act, busy } = useAct(send);
   const [pick, setPick] = useState<string | null | undefined>(v?.myVote);
   const [rally, setRally] = useState(false);
+  useLastSecondLock(view, !!v && !v.myVote && v.myVote !== null && pick !== undefined, () => pick !== undefined && act({ type: 'vote', targetId: pick ?? null, rally, phaseSeq: view.game!.phaseSeq }));
   const runoff = view.game!.runoff;
   const voted = v?.myVote !== undefined;
   const canChange = view.settings.allowVoteChange;
@@ -967,4 +986,22 @@ function fmtDuration(sec: number): string {
   if (sec % 60 === 0) return sec === 60 ? '1 minute' : `${sec / 60} minutes`;
   if (sec % 30 === 0 && sec > 60) return `${Math.floor(sec / 60)}½ minutes`;
   return `${sec} seconds`;
+}
+
+/**
+ * Run `fire` once, 2.5 s before the phase clock runs out, if `armed` is still true then — so a
+ * choice someone tapped but forgot to lock in still counts.
+ */
+function useLastSecondLock(view: ClientView, armed: boolean, fire: () => void) {
+  const g = view.game!;
+  const ref = useRef({ armed, fire });
+  ref.current = { armed, fire };
+  useEffect(() => {
+    if (!g.phaseEndsAt || g.paused) return;
+    const offset = view.serverNow - Date.now(); // the server's clock minus ours
+    const ms = g.phaseEndsAt - offset - Date.now() - 2500;
+    if (ms < -2000) return;
+    const t = setTimeout(() => ref.current.armed && ref.current.fire(), Math.max(0, ms));
+    return () => clearTimeout(t);
+  }, [g.phaseSeq, g.phaseEndsAt, g.paused]);
 }

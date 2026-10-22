@@ -55,6 +55,19 @@ test('big moments: knife-cut card on TV and phones, pause after the vote, Mafia-
   await advanceTo(t, 'Vote');
   for (const s of await t.alive()) await vote(s, s === m2 ? det.name : m2.name);
   await expect(t.host.getByTestId('host-phase')).toHaveText('Game Over', { timeout: 30_000 });
+  // The finale show: full screen on the TV and on every phone, the Mafia first, big, with photos.
+  await expect(tv.getByTestId('tv-finale')).toBeVisible();
+  await expect(det.page.getByTestId('phone-finale')).toBeVisible();
+  await expect(tv.getByTestId('tv-finale').locator('section').first()).toHaveAttribute('aria-label', 'The Mafia');
+  await expect(tv.getByTestId('tv-finale').locator('.fs-big')).toHaveCount(3);
+  if (process.env.SHOTS) {
+    for (const [sec, name] of [[3.5, 'a'], [5, 'b'], [4.5, 'c'], [6, 'd']] as const) {
+      await tv.waitForTimeout(sec * 1000);
+      await tv.screenshot({ path: `${process.env.SHOTS}/tv-${name}.png` });
+      await det.page.screenshot({ path: `${process.env.SHOTS}/phone-${name}.png` });
+    }
+  }
+  await expect(tv.getByTestId('tv-finale')).toHaveCount(0, { timeout: 30_000 });
   await expect(tv.getByTestId('tv-reveal').locator('section').first()).toHaveAttribute('aria-label', 'The Mafia');
   await expect(tv.getByRole('heading', { name: 'Gaon Wale Jeet Gaye!' })).toBeVisible({ timeout: 30_000 });
 });

@@ -152,7 +152,9 @@ export async function nightAct(seat: Seat, abilityId: string, target: string | n
         await card.getByRole('button', { name: 'Skip' }).click({ timeout: 8000 });
       } else {
         await card.getByRole('radio', { name: new RegExp(`^${target}( \\(you\\))?(\\s*🗡.*)?$`) }).click({ timeout: 8000 });
-        await card.getByRole('button', { name: /Lock in|Change pick/ }).click({ timeout: 8000 });
+        // The Mafia hit locks in on the tap itself.
+        const instant = await card.getByRole('button', { name: /✓ Locked/ }).waitFor({ timeout: abilityId === 'mafia_kill' ? 2000 : 1 }).then(() => true, () => false);
+        if (!instant) await card.getByRole('button', { name: /Lock in|Change pick/ }).click({ timeout: 8000 });
       }
       await expect(done).toBeVisible({ timeout: 8000 });
       return;

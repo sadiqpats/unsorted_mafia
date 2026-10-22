@@ -81,6 +81,8 @@ export const SettingsSchema = z.object({
   deadCanSeeRoles: z.boolean(),
   detectiveResult: z.enum(['alignment', 'binary']),
   godfatherAppearsInnocent: z.boolean(),
+  /** When every Mafia member is dead, a living Godfather takes over the nightly hit (and the game plays on). */
+  godfatherTakesOver: z.boolean(),
 
   // ---- Mafia ----
   mafiaDecision: z.enum(['plurality', 'leader']),
@@ -170,6 +172,7 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     deadCanSeeRoles: false,
     detectiveResult: 'binary',
     godfatherAppearsInnocent: false,
+    godfatherTakesOver: false,
     mafiaDecision: 'plurality',
     mafiaWin: 'parity',
     doctorSelfProtect: 'alternate',

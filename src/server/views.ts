@@ -17,13 +17,14 @@ import {
   hasUsable,
   heldAbilities,
   hitVoters,
+  inMafiaChat,
   mafiaLeader,
   nightOptions,
   voteEligibility,
   voteTargets,
   voteWeight,
 } from '../shared/engine';
-import { ROLES, isMafiaTeam, roleAlignment } from '../shared/roles';
+import { ROLES, isKiller, isMafiaTeam, roleAlignment, roleTitle } from '../shared/roles';
 import type { Alignment, Room } from '../shared/types';
 import type { ClientView, HostPanel, MeView, PublicGame, PublicPlayer, PublicView } from '../shared/view-types';
 
@@ -126,7 +127,7 @@ export function buildPublic(room: Room, connected: Set<string>, now: number): Pu
   };
 }
 
-function buildMe(room: Room, playerId: string): MeView | null {
+function buildMe(room: Room, playerId: string, now: number): MeView | null {
   const p = room.players.find((x) => x.id === playerId);
   if (!p) return null;
   const g = room.game;
@@ -156,9 +157,9 @@ function buildMe(room: Room, playerId: string): MeView | null {
     night = { options, submitted };
   }
   let mafia: MeView['mafia'] = null;
-  if (inGame && isMafiaTeam(p.roleId, s)) {
+  if (inGame && isKiller(p, s)) {
     const team = room.players
-      .filter((x) => isMafiaTeam(x.roleId, s))
+      .filter((x) => isMafiaTeam(x.roleId, s) || x.id === p.id)
       .map((x) => ({ id: x.id, name: x.name, roleId: x.roleId!, canAct: x.alive && !!hasUsable(room, x, 'mafia_kill') }));
     mafia = { team };
   }
@@ -166,7 +167,7 @@ function buildMe(room: Room, playerId: string): MeView | null {
   if (g && g.phase === 'night' && p.alive) {
     const voters = hitVoters(room);
     const youVote = voters.some((v) => v.id === p.id);
-    if (youVote || isMafiaTeam(p.roleId, s)) {
+    if (youVote || isKiller(p, s)) {
       // Shuffled per night (stable within it) so a slot number never maps to a seat. The server-only
       // secret in the key stops anyone recomputing the order from the (public) player ids.
       const key = (id: string) => slotHash(`${room.hostTokenHash}:${g.phaseSeq}:${id}`);
@@ -182,6 +183,36 @@ function buildMe(room: Room, playerId: string): MeView | null {
       };
     }
   }
+  const mafiaChat =
+    inGame && inMafiaChat(p, s)
+      ? (g!.mafiaChat ?? []).map((m) => {
+          const from = room.players.find((x) => x.id === m.from);
+          const gf = from?.roleId === 'godfather';
+          return {
+            seq: m.seq,
+            at: m.at,
+            text: m.text,
+            name: gf ? roleTitle('godfather', s) : (from?.name ?? '?'),
+            photo: !gf && from?.photoVersion ? `/api/rooms/${room.code}/photos/${from.id}?v=${from.photoVersion}` : null,
+            godfather: gf,
+            you: m.from === p.id,
+          };
+        })
+      : null;
+  const nameInChat = (id: string) => {
+    const from = room.players.find((x) => x.id === id);
+    const gf = from?.roleId === 'godfather';
+    return { gf, name: gf ? roleTitle('godfather', s) : (from?.name ?? '?'), from };
+  };
+  const mafiaTyping =
+    mafiaChat === null
+      ? null
+      : Object.entries(g!.mafiaTyping ?? {})
+          .filter(([id, until]) => id !== p.id && until > now)
+          .map(([id, until]) => {
+            const n = nameInChat(id);
+            return { name: n.name, godfather: n.gf, msLeft: until - now };
+          });
   const knownMafia =
     inGame && ROLES[p.roleId!]?.knowsMafia ? room.players.filter((x) => isMafiaTeam(x.roleId, s)).map((x) => ({ id: x.id, name: x.name })) : null;
   const allRoles = g && ((!p.alive && s.deadCanSeeRoles) || g.phase === 'game_over') ? Object.fromEntries(room.players.map((x) => [x.id, x.roleId ?? ''])) : null;
@@ -192,6 +223,7 @@ function buildMe(room: Room, playerId: string): MeView | null {
     alive: p.alive,
     roleId: inGame ? p.roleId : null,
     alignment: inGame ? roleAlignment(p.roleId, s) : null,
+    heir: inGame && !!p.heir,
     abilities: inGame ? heldAbilities(room, p) : [],
     stolen: inGame ? p.stolen : null,
     lostAbilities: inGame ? p.lostAbilities : [],
@@ -202,6 +234,8 @@ function buildMe(room: Room, playerId: string): MeView | null {
     mafia,
     hitPlan,
     knownMafia,
+    mafiaChat,
+    mafiaTyping,
     privateResults: room.privateResults.filter((r) => r.playerId === p.id).map((r) => ({ id: r.id, round: r.round, kind: r.kind, text: r.text, at: r.at })),
     allRoles,
   };
@@ -240,8 +274,8 @@ function buildHost(room: Room): HostPanel {
 export function buildView(room: Room, viewer: Viewer, connected: Set<string>, now: number): ClientView {
   const base = buildPublic(room, connected, now);
   if (viewer.kind === 'public') return { ...base, me: null, host: null };
-  if (viewer.kind === 'player') return { ...base, kind: 'player', me: buildMe(room, viewer.playerId), host: null };
-  const me = room.hostPlayerId ? buildMe(room, room.hostPlayerId) : null;
+  if (viewer.kind === 'player') return { ...base, kind: 'player', me: buildMe(room, viewer.playerId, now), host: null };
+  const me = room.hostPlayerId ? buildMe(room, room.hostPlayerId, now) : null;
   return { ...base, kind: 'host', me, host: buildHost(room) };
 }
 

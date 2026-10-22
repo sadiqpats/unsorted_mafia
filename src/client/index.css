@@ -910,7 +910,6 @@ p { text-wrap: pretty; }
    the dead photo is darkened with a plain overlay instead. */
 .tv-flip .is-dead .cut-half, .mc .is-dead .cut-half { filter: none; }
 .tv-flip .cut-photo.is-dead::after { content: ''; position: absolute; inset: 0; border-radius: 18%; background: rgba(15, 8, 10, 0.55); z-index: 1; pointer-events: none; }
-.tv-flip-face { transform: translateZ(0); }
 
 /* The TV (often a weak smart-TV browser): the starry sky and fog stay still — moving full-screen
    layers cost it a smooth frame rate; the big moments keep all their animation. */
@@ -918,3 +917,62 @@ p { text-wrap: pretty; }
 /* No film grain on the TV: invisible from across the room, and the full-screen overlay halved
    its frame rate (measured: ~35 → 60 fps). */
 .tv-page.grain::before, .tv-page .grain::before { display: none; }
+
+/* ---------- The finale show (TV + phones): full screen, simple fades/scales only ---------- */
+.fs { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: 3vh; padding: 5vh 4vw; background: radial-gradient(ellipse at 50% 35%, #26090c, #050304 72%); opacity: 0; animation: fs-life var(--end) linear both; overflow: hidden; }
+@keyframes fs-life { 0% { opacity: 0; } 4% { opacity: 1; } 96% { opacity: 1; } 100% { opacity: 0; } }
+.fs-phone { padding: 8vh 4vw 4vh; gap: 2.2vh; }
+.fs-suspense { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font-family: var(--font-serif); font-style: italic; font-size: clamp(2rem, 7vh, 4.6rem); color: #f6e7bf; text-shadow: 0 0 40px rgba(224, 71, 63, 0.7); opacity: 0; animation: fs-suspense 2.6s ease var(--at) both; pointer-events: none; }
+@keyframes fs-suspense { 0% { opacity: 0; transform: scale(0.96); } 18% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
+.fs-group { display: flex; flex-direction: column; align-items: center; opacity: 0; animation: fs-fade 0.5s ease var(--at) both; }
+@keyframes fs-fade { to { opacity: 1; } }
+.fs-head { margin: 0 0 1.2vh; font-family: var(--font-display); font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; font-size: clamp(1.2rem, 4vh, 2.4rem); color: #ff8f86; text-shadow: 0 0 24px rgba(224, 71, 63, 0.6); }
+.fs-head-small { font-size: clamp(0.9rem, 2.6vh, 1.4rem); color: #e2c27d; text-shadow: none; opacity: 0; animation: fs-fade 0.4s ease var(--at) both; }
+.fs-rest { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 2vh 4vw; }
+.fs-sub { display: flex; flex-direction: column; align-items: center; }
+.fs-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.6vw; }
+.fs-card { display: flex; flex-direction: column; align-items: center; opacity: 0; will-change: transform, opacity; }
+.fs-big { --w: min(22vh, 16vw); animation: fs-slam 0.7s cubic-bezier(0.2, 1.3, 0.35, 1) var(--at) both; }
+.fs-small { --w: min(11vh, 7.5vw); animation: fs-pop 0.45s ease-out var(--at) both; }
+.fs-phone .fs-big { --w: min(27vw, 15vh); }
+.fs-phone .fs-small { --w: min(17vw, 8.5vh); }
+.fs-phone .fs-rest { gap: 1.2vh 5vw; }
+@keyframes fs-slam { 0% { opacity: 0; transform: scale(1.8); } 55% { opacity: 1; transform: scale(0.95); } 100% { opacity: 1; transform: none; } }
+@keyframes fs-pop { from { opacity: 0; transform: translateY(14px) scale(0.9); } to { opacity: 1; transform: none; } }
+.fs-photo { position: relative; width: var(--w); height: calc(var(--w) * 1.25); overflow: hidden; border-radius: 14px; border: 3px solid rgba(201, 164, 92, 0.7); background: radial-gradient(circle at 30% 25%, #4a1b1e, #140f10 70%); box-shadow: 0 18px 40px -16px #000; }
+.fs-mafia .fs-photo, .fs-card.fs-mafia .fs-photo { border-color: rgba(255, 90, 80, 0.95); box-shadow: 0 0 34px -6px rgba(224, 71, 63, 0.85), 0 18px 40px -16px #000; }
+.fs-card.fs-evil .fs-photo { border-color: rgba(224, 122, 200, 0.95); box-shadow: 0 0 34px -6px rgba(224, 122, 200, 0.8), 0 18px 40px -16px #000; }
+.fs-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.fs-initials { position: absolute; inset: 0; display: grid; place-items: center; padding-bottom: 18%; font-family: var(--font-display); font-size: calc(var(--w) * 0.36); color: #e2c27d; }
+.fs-dead { position: absolute; inset: 0; background: rgba(12, 6, 8, 0.5); }
+.fs-badge { position: absolute; top: 4%; right: 4%; border-radius: 50%; background: rgba(10, 8, 9, 0.85); line-height: 0; }
+.fs-small .fs-badge svg { width: calc(var(--w) * 0.3); height: calc(var(--w) * 0.3); }
+.fs-big .fs-badge svg { width: calc(var(--w) * 0.3); height: calc(var(--w) * 0.3); }
+.fs-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 14% 5% 5%; text-align: center; font-weight: 800; font-size: calc(var(--w) * 0.12); line-height: 1.05; color: #fff; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85); background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.85) 55%); overflow-wrap: anywhere; }
+.fs-role { margin-top: 0.8vh; max-width: calc(var(--w) * 1.25); text-align: center; font-weight: 800; line-height: 1.1; font-size: calc(var(--w) * 0.15); color: #f6ecd9; }
+.fs-role small { display: block; font-size: 0.6em; font-weight: 600; color: rgba(255, 244, 226, 0.7); }
+.fs-card.fs-mafia .fs-role { color: #ff9b92; }
+.fs-card.fs-evil .fs-role { color: #e8a2d8; }
+.reduce-motion .fs { animation-duration: 0.001ms; opacity: 0; }
+
+/* ---------- The Mafia's chat: one quiet bar; opens as a sheet. No badges, no blinking. ---------- */
+.mchat-bar { display: flex; width: 100%; align-items: center; gap: 0.5rem; min-height: 2.75rem; padding: 0.5rem 0.9rem; border-radius: 0.75rem; border: 1px solid var(--color-line); background: rgba(255, 255, 255, 0.03); color: var(--color-bone); font-size: 0.9rem; text-align: left; }
+.mchat-bar-hint { margin-left: auto; font-size: 0.75rem; color: rgba(238, 230, 216, 0.5); }
+.mchat { position: fixed; inset: 0; z-index: 45; display: flex; flex-direction: column; background: #0d0a0b; padding-bottom: env(safe-area-inset-bottom); }
+.mchat-head { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border-bottom: 1px solid var(--color-line); font-family: var(--font-display); letter-spacing: 0.08em; }
+.mchat-close { min-width: 2.75rem; min-height: 2.75rem; border-radius: 999px; font-size: 1.1rem; color: var(--color-bone); }
+.mchat-list { flex: 1; overflow-y: auto; padding: 0.9rem 0.8rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.mchat-empty { margin: auto; max-width: 18rem; text-align: center; font-size: 0.9rem; color: rgba(238, 230, 216, 0.55); padding: 0.75rem; }
+.mchat-msg { display: flex; align-items: flex-end; gap: 0.5rem; max-width: 85%; }
+.mchat-you { align-self: flex-end; }
+.mchat-face { flex: none; width: 2.25rem; height: 2.25rem; border-radius: 999px; overflow: hidden; display: grid; place-items: center; background: #2a1d1f; color: #e2c27d; font-size: 0.8rem; font-weight: 700; }
+.mchat-face img { width: 100%; height: 100%; object-fit: cover; }
+.mchat-gf { background: #111; font-size: 1.1rem; border: 1px solid rgba(224, 122, 200, 0.5); }
+.mchat-bubble { display: flex; flex-direction: column; padding: 0.45rem 0.7rem; border-radius: 0.9rem; background: #211a1c; border: 1px solid var(--color-line); overflow-wrap: anywhere; }
+.mchat-you .mchat-bubble { background: #4a1418; border-color: rgba(224, 71, 63, 0.4); }
+.mchat-name { font-size: 0.72rem; font-weight: 700; color: #ff9b92; }
+.mchat-gf + .mchat-bubble .mchat-name { color: #e8a2d8; font-style: italic; }
+.mchat-text { font-size: 0.95rem; line-height: 1.35; }
+.mchat-form { display: flex; gap: 0.5rem; padding: 0.6rem 0.75rem; border-top: 1px solid var(--color-line); }
+.mchat-input { flex: 1; min-width: 0; min-height: 2.75rem; border-radius: 0.75rem; border: 1px solid var(--color-line); background: #161112; padding: 0 0.8rem; color: var(--color-bone); font-size: 16px; }
+.mchat-typing { min-height: 1.4rem; margin: 0; padding: 0 1rem; font-size: 0.8rem; font-style: italic; color: rgba(238, 230, 216, 0.6); }

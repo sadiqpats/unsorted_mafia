@@ -324,7 +324,7 @@ const flash = (tag) => effect(tag, EFFECTS[tag]);
  * The game-over finale, in step with the TV and phones: the room goes dark and flickers like a
  * candle ("And the Mafia were…"), a red flash as each Mafia card turns, then the winner's light.
  */
-const FIN = { suspenseAt: 2.4, suspenseFor: 3.0, mafiaStep: 0.9, specialStep: 0.45, villagerStep: 0.25, groupGap: 0.9, tail: 0.8 };
+const FIN = { suspenseAt: 2.4, suspenseFor: 2.6, mafiaStep: 1.6, specialStep: 0.35, villagerStep: 0.2, groupGap: 0.9, tail: 1.4 }; // same as src/client/lib/finale.ts
 function finaleTimes(view) {
   const s = view.settings ?? {};
   const isMafiaSide = (id) => id === 'mafia' || id === 'godfather' || (id === 'imposter' && s.imposterAlignment === 'mafia');

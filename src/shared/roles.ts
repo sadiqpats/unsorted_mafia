@@ -351,6 +351,11 @@ export function roleAlignment(roleId: string | null, s: Settings): Alignment {
   return ROLES[roleId]?.alignment(s) ?? 'good';
 }
 
+/** Takes part in the Mafia hit and counts as a killer: a Mafia member, or the Godfather who took over. */
+export function isKiller(p: { roleId: string | null; heir?: boolean }, s: Settings): boolean {
+  return isMafiaTeam(p.roleId, s) || !!p.heir;
+}
+
 export function isMafiaTeam(roleId: string | null, s: Settings): boolean {
   if (!roleId) return false;
   return ROLES[roleId]?.mafiaTeam(s) ?? false;

@@ -208,6 +208,12 @@ export class RoomService {
         case 'vote':
           E.submitVote(room, pid, cmd, now);
           break;
+        case 'mafia_chat':
+          E.sendMafiaChat(room, pid, cmd.text, now);
+          break;
+        case 'mafia_typing':
+          E.mafiaTyping(room, pid, now);
+          break;
         case 'update_settings':
           E.updateSettings(room, cmd.patch);
           break;
@@ -361,5 +367,6 @@ function err(code: string, message: string): Ack {
 /** Audit detail without secrets that would matter (targets are fine: audit is server-side only). */
 function summarize(cmd: { type: string } & Record<string, unknown>): string {
   const { actionId: _a, type: _t, ...rest } = cmd;
+  if (cmd.type === 'mafia_chat' || cmd.type === 'mafia_typing') return '(message)'; // the Mafia's chat is never written to the audit log
   return JSON.stringify(rest).slice(0, 300);
 }

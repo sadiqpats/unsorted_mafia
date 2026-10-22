@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkWin, hostEliminate, nightOptions, submitNightAction, voteWeight } from '../../src/shared/engine';
+import { checkWin, hostEliminate, nightOptions, sendMafiaChat, submitNightAction, voteWeight } from '../../src/shared/engine';
 import { ROLES } from '../../src/shared/roles';
 import { buildView } from '../../src/server/views';
 import { setup } from './helpers';
@@ -487,5 +487,23 @@ describe('Bollywood Mafia Night', () => {
     g.advance();
     expect(g.publicLog().join('\n')).toContain('Baburao');
     expect(g.publicLog().join('\n')).not.toContain('the Joker');
+  });
+});
+
+describe("the Mafia's chat", () => {
+  it('only the Mafia and the Godfather see it; the Godfather shows as "Godfather" with no name or photo', () => {
+    const g = setup(['mafia', 'mafia', 'godfather', 'villager', 'villager', 'villager', 'doctor', 'detective']);
+    const me = (i: number) => buildView(g.room, { kind: 'player', playerId: g.id(i) }, new Set(), 1).me!;
+    sendMafiaChat(g.room, 'p0', 'Who first?', 1);
+    sendMafiaChat(g.room, 'p2', 'The doctor.', 2);
+    expect(() => sendMafiaChat(g.room, 'p3', 'hello?', 3)).toThrow();
+    for (const i of [0, 1, 2]) expect(me(i).mafiaChat).toHaveLength(2);
+    for (const i of [3, 6, 7]) expect(me(i).mafiaChat).toBeNull();
+    const [a, b] = me(1).mafiaChat!;
+    expect(a).toMatchObject({ name: 'P0', godfather: false, you: false, text: 'Who first?' });
+    expect(b).toMatchObject({ name: 'Godfather', godfather: true, photo: null, text: 'The doctor.' });
+    expect(JSON.stringify(buildView(g.room, { kind: 'player', playerId: 'p1' }, new Set(), 1).me!.mafiaChat)).not.toContain('P2');
+    hostEliminate(g.room, 'p3', 4);
+    expect(() => sendMafiaChat(g.room, 'p0', '   ', 5)).toThrow();
   });
 });

@@ -66,6 +66,8 @@ export interface Player {
   lastStealRound?: number | null;
   revivedCount: number;
   lateJoiner: boolean;
+  /** The Godfather who took over the hit after the last Mafia member died (godfatherTakesOver). */
+  heir?: boolean;
 }
 
 export interface NightAction {
@@ -173,6 +175,10 @@ export interface Game {
   mafiaLeft?: { round: number; count: number } | null;
   /** Who came back from the dead at this round's Dawn (public: they are visibly back). */
   lastDawn?: { round: number; revived: string[] } | null;
+  /** The Mafia's secret chat (Mafia members + the Godfather). */
+  mafiaChat?: { seq: number; at: number; from: string; text: string }[];
+  /** Who is typing in the Mafia's chat, until when. */
+  mafiaTyping?: Record<string, number>;
   winner: WinResult | null;
   jesterWinners: string[];
   stats: {

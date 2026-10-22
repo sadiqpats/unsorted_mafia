@@ -12,7 +12,7 @@ export type FinaleGroupKey = 'mafia' | 'special' | 'villager';
 export type FinaleGroup = { key: FinaleGroupKey; title: string; players: PublicPlayer[]; start: number };
 export type Finale = { suspenseAt: number; groups: FinaleGroup[]; cardAt: Map<string, number>; end: number };
 
-export const FINALE = { suspenseAt: 2.4, suspenseFor: 3.0, mafiaStep: 0.9, specialStep: 0.45, villagerStep: 0.25, groupGap: 0.9, tail: 0.8 };
+export const FINALE = { suspenseAt: 2.4, suspenseFor: 2.6, mafiaStep: 1.6, specialStep: 0.35, villagerStep: 0.2, groupGap: 0.9, tail: 1.4 };
 
 export function finale(players: PublicPlayer[], settings: Settings): Finale {
   const side = (p: PublicPlayer) => (p.revealedRoleId ? roleAlignment(p.revealedRoleId, settings) : 'good');

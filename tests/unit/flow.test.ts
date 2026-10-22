@@ -126,6 +126,28 @@ describe('voting rules', () => {
 });
 
 describe('win conditions', () => {
+  it('Godfather takes over (house rule): with every Mafia member dead he makes the hit, and the game goes on', () => {
+    const g = setup(['mafia', 'godfather', V, V, V, V, V], { godfatherTakesOver: true });
+    g.goToVoting();
+    hostEliminate(g.room, 'p0', T0);
+    expect(g.room.game!.winner).toBeNull();
+    expect(g.P(1).heir).toBe(true);
+    g.goToNight();
+    expect(nightOptions(g.room, 'p1').map((o) => o.abilityId)).toContain('mafia_kill');
+    g.act(1, 'mafia_kill', 3);
+    g.goToVoting();
+    expect(g.P(3).alive).toBe(false);
+    hostEliminate(g.room, 'p1', T0);
+    expect(g.room.game!.winner!.faction).toBe('good');
+  });
+
+  it('Godfather does not take over by default: the Town wins once the Mafia members are dead', () => {
+    const g = setup(['mafia', 'godfather', V, V, V, V, V]);
+    g.goToVoting();
+    hostEliminate(g.room, 'p0', T0);
+    expect(g.room.game!.winner!.faction).toBe('good');
+  });
+
   it('Good wins when all Mafia are gone', () => {
     const g = setup(['mafia', V, V, V, V]);
     g.goToVoting();
