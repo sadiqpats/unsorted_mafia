@@ -48,7 +48,49 @@ export function createAlexa(config, save, log = console.log) {
   const alexa = new Alexa();
   let ready = false;
   let device = null;
-  const call = (fn) => new Promise((res, rej) => fn((err, r) => (err ? rej(err) : res(r))));
+  // Every Echo call gives up after 4 s, so nothing in the game ever waits on a slow reply; each
+  // call's time is logged (⏱) so delays can be seen in the helper's log.
+  let failures = 0;
+  const call = (fn, label = 'alexa') =>
+    new Promise((res, rej) => {
+      const t0 = Date.now();
+      let done = false;
+      const timer = setTimeout(() => {
+        if (done) return;
+        done = true;
+        log(`⏱ ${label}: no reply after 4 s (carrying on)`);
+        res(null);
+      }, 4000);
+      fn((err, r) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        const ms = Date.now() - t0;
+        if (ms > 1200) log(`⏱ ${label}: slow reply (${ms} ms)`);
+        if (err) {
+          failures++;
+          if (failures >= 3) reconnect();
+          return rej(err);
+        }
+        failures = 0;
+        res(r);
+      });
+    });
+  let reconnecting = false;
+  const reconnect = () => {
+    if (reconnecting) return;
+    reconnecting = true;
+    ready = false;
+    log('🔈 Alexa: connection problems — reconnecting…');
+    setTimeout(async () => {
+      try {
+        await start();
+      } finally {
+        reconnecting = false;
+        failures = 0;
+      }
+    }, 5000);
+  };
 
   const opts = {
     proxyOnly: true,
@@ -94,8 +136,14 @@ export function createAlexa(config, save, log = console.log) {
     });
 
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  const cmd = (c, v = null) => call((cb) => alexa.sendCommand(device.serialNumber, c, v, cb));
-  const say = (text) => call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'textCommand', text, cb));
+  const cmd = (c, v = null) => call((cb) => alexa.sendCommand(device.serialNumber, c, v, cb), c);
+  const say = (text) => call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'textCommand', text, cb), text.slice(0, 24));
+  // Keep the connection warm: the first command after a long idle used to take ~60 s while Amazon
+  // re-checked the sign-in. A harmless check every 2 minutes means game commands are never "cold".
+  setInterval(() => {
+    if (!ready) return;
+    call((cb) => alexa.getDevices(cb), 'keep-warm').catch(() => {});
+  }, 2 * 60_000).unref?.();
   let started = false; // the playlist has been put on this session
   let musicOn = false; // music is playing right now
   let musicKey = null; // the round whose song is loaded
@@ -173,6 +221,8 @@ export function createAlexa(config, save, log = console.log) {
       return ready;
     },
     devices: () => Object.values(alexa.serialNumbers ?? {}).map((d) => d.accountName),
+    /** Wake the connection up now (a game is about to start). */
+    warm: () => ready && call((cb) => alexa.getDevices(cb), 'warm-up').catch(() => {}),
     /** Music and effect volumes (0–100), from the host's sliders. */
     setVolumes: (music, sfx) => {
       if (!ready) return;
@@ -202,7 +252,7 @@ export function createAlexa(config, save, log = console.log) {
       sfxUntil = Date.now() + 3500;
       (async () => {
         if (vol.sfx !== volNow) await setVol(vol.sfx).catch(() => {});
-        await call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'sound', SFX[name], cb));
+        await call((cb) => alexa.sendSequenceCommand(device.serialNumber, 'sound', SFX[name], cb), `sound ${name}`);
         await wait(3500);
         if (Date.now() >= sfxUntil && musicOn) await setVol(vol.music).catch(() => {});
       })().catch((e) => log(`🔈 Alexa: ${e?.message ?? e}`));

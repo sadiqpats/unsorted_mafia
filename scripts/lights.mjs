@@ -488,6 +488,7 @@ async function follow(config) {
     const socket = io(server, { auth: { code, display: true }, transports: ['websocket'], reconnection: true });
     room = { code, socket, view: null, seq: undefined, overAt: 0 };
     console.log(`🎮 Following room ${code}`);
+    if (alexa) alexa.warm();
     socket.on('state', (v) => onView(v).catch((e) => console.error(e)));
     socket.on('connect_error', (e) => {
       if (e.message === 'no_room') leave();
