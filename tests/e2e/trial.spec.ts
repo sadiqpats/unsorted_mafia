@@ -33,7 +33,7 @@ test('trial run: bots fill the empty seats and play by themselves; the host just
     if (await tie.isVisible().catch(() => false)) await tie.click().catch(() => {});
   }
   await expect(host.getByTestId('host-phase')).toHaveText('Game Over', { timeout: 30_000 });
-  await expect(tv.getByTestId('tv-reveal')).toBeVisible();
+  await expect(tv.getByTestId('tv-finale')).toBeVisible();
   // Back to the lobby: the bots leave with the trial.
   await host.getByRole('button', { name: /Play again|Restart|Back to lobby|New game/ }).first().click();
   await expect(host.getByText('Invite players')).toBeVisible({ timeout: 15_000 });

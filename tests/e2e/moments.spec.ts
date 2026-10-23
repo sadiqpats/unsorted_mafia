@@ -59,7 +59,8 @@ test('big moments: knife-cut card on TV and phones, pause after the vote, Mafia-
   await expect(tv.getByTestId('tv-finale')).toBeVisible();
   await expect(det.page.getByTestId('phone-finale')).toBeVisible();
   await expect(tv.getByTestId('tv-finale').locator('section').first()).toHaveAttribute('aria-label', 'The Mafia');
-  await expect(tv.getByTestId('tv-finale').locator('.fs-big')).toHaveCount(3);
+  await expect(tv.getByTestId('tv-finale').locator('.fc-mafia')).toHaveCount(3);
+  await expect(tv.getByTestId('tv-finale').locator('.fc-mafia .fc-role')).toHaveCount(1); // only the Godfather is labelled
   if (process.env.SHOTS) {
     for (const [sec, name] of [[3.5, 'a'], [5, 'b'], [4.5, 'c'], [6, 'd']] as const) {
       await tv.waitForTimeout(sec * 1000);
@@ -67,7 +68,11 @@ test('big moments: knife-cut card on TV and phones, pause after the vote, Mafia-
       await det.page.screenshot({ path: `${process.env.SHOTS}/phone-${name}.png` });
     }
   }
-  await expect(tv.getByTestId('tv-finale')).toHaveCount(0, { timeout: 30_000 });
-  await expect(tv.getByTestId('tv-reveal').locator('section').first()).toHaveAttribute('aria-label', 'The Mafia');
-  await expect(tv.getByRole('heading', { name: 'Gaon Wale Jeet Gaye!' })).toBeVisible({ timeout: 30_000 });
+  // The phone's show ends by itself; the TV keeps the board, with the winner on top.
+  await expect(det.page.getByTestId('phone-finale')).toHaveCount(0, { timeout: 30_000 });
+  await expect(tv.getByTestId('tv-finale').getByRole('heading', { name: 'Gaon Wale Jeet Gaye!' })).toBeVisible({ timeout: 30_000 });
+  // A phone that opens the page after the game ended goes straight to the results (no late replay).
+  await det.page.reload();
+  await expect(det.page.getByTestId('roles-revealed')).toBeVisible();
+  await expect(det.page.getByTestId('phone-finale')).toHaveCount(0);
 });

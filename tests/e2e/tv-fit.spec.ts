@@ -11,10 +11,12 @@ async function check(tv: Page, tag: string) {
       const wall = document.querySelector('[data-testid="tv-wall"] ul');
       const lis = [...document.querySelectorAll('[data-testid="tv-wall"] li')].map((e) => e.getBoundingClientRect());
       const r = lis.length ? { bottom: Math.max(...lis.map((x) => x.bottom)), right: Math.max(...lis.map((x) => x.right)) } : null;
-      return { sh: document.documentElement.scrollHeight, ih: innerHeight, wallBottom: r ? Math.round(r.bottom) : null, wallRight: r ? Math.round(r.right) : null, iw: innerWidth };
+      const fs = document.querySelector('.fs');
+      return { fsOver: fs ? fs.scrollHeight - fs.clientHeight : 0, sh: document.documentElement.scrollHeight, ih: innerHeight, wallBottom: r ? Math.round(r.bottom) : null, wallRight: r ? Math.round(r.right) : null, iw: innerWidth };
     });
     if (D) await tv.screenshot({ path: `${D}/${tag}-${w}.png` });
     expect(m.sh, `${tag} ${w}x${h} page scrolls`).toBeLessThanOrEqual(m.ih + 1);
+    expect(m.fsOver, `${tag} ${w}x${h} finale board scrolls`).toBeLessThanOrEqual(1);
     if (m.wallRight !== null) expect(m.wallRight, `${tag} ${w}x${h} faces cut off right`).toBeLessThanOrEqual(m.iw);
     if (m.wallBottom !== null) expect(m.wallBottom, `${tag} ${w}x${h} faces cut off`).toBeLessThanOrEqual(m.ih);
   }
@@ -29,7 +31,7 @@ test('TV fits one screen: a full 26-player lobby on 720p, 768p, 1080p and small 
   await check(tv, 'lobby26');
 });
 test('TV fits one screen through Night, Day and the game-over reveal (12 players, Bollywood)', async ({ browser }) => {
-  const t = await setupTable(browser, 12, { mafia: 2, godfather: 1, doctor: 1, detective: 1, villager: 7 }, async (h) => { await h.getByLabel('Bollywood Mafia Night').click(); });
+  const t = await setupTable(browser, 12, { mafia: 2, godfather: 1, doctor: 1, detective: 1, jester: 1, villager: 6 }, async (h) => { await h.getByLabel('Bollywood Mafia Night').click(); });
   const tv = await newPhone(browser);
   await tv.goto(`/tv/${t.code}`);
   for (const s of t.seats) await revealAndAck(s);
@@ -43,7 +45,7 @@ test('TV fits one screen through Night, Day and the game-over reveal (12 players
   await t.host.getByRole('button', { name: 'End game' }).click();
   const confirm = t.host.getByRole('button', { name: /End game|Yes/ }).last();
   if (await confirm.isVisible()) await confirm.click();
-  await expect(tv.getByTestId('tv-reveal')).toBeVisible({ timeout: 20_000 });
-  await tv.waitForTimeout(9000);
+  await expect(tv.getByTestId('tv-finale')).toBeVisible({ timeout: 20_000 });
+  await tv.waitForTimeout(14000);
   await check(tv, 'over12');
 });

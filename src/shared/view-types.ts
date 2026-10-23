@@ -40,6 +40,8 @@ export interface PublicGame {
   mafiaLeft: { round: number; count: number } | null;
   lastDawn: { round: number; revived: string[] } | null;
   winner: WinResult | null;
+  /** When the game ended (server time), so every screen plays the finale in step. */
+  endedAt: number | null;
   stats: { suspicion: Record<string, number>; nightKills: number; saves: number; revives: number; voteEliminations: number; investigations: number } | null;
   aliveCount: number;
   /** What every phone shows at the top of this phase: public announcements since the previous phase began. */

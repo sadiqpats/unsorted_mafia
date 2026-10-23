@@ -104,6 +104,7 @@ export function buildPublic(room: Room, connected: Set<string>, now: number): Pu
       mafiaLeft: g.mafiaLeft ?? null,
       lastDawn: g.lastDawn ?? null,
       winner: g.winner,
+      endedAt: g.endedAt,
       stats: over ? g.stats : null,
       aliveCount: room.players.filter((p) => p.alive).length,
       news: room.log.filter((l) => l.visibility === 'public' && NEWS_KINDS.has(l.kind) && l.seq > (g.newsFromSeq ?? 0)),

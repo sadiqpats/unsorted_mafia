@@ -508,7 +508,7 @@ function HostGame({ view, send, serverNow }: GameProps) {
         </Section>
       )}
 
-      {over && <GameOverPanel view={{ ...view, me: null }} hostControls={playAgain} />}
+      {over && <GameOverPanel view={{ ...view, me: null }} serverNow={serverNow} hostControls={playAgain} />}
 
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <div className="space-y-4">

@@ -918,42 +918,50 @@ p { text-wrap: pretty; }
    its frame rate (measured: ~35 → 60 fps). */
 .tv-page.grain::before, .tv-page .grain::before { display: none; }
 
-/* ---------- The finale show (TV + phones): full screen, simple fades/scales only ---------- */
-.fs { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: 3vh; padding: 5vh 4vw; background: radial-gradient(ellipse at 50% 35%, #26090c, #050304 72%); opacity: 0; animation: fs-life var(--end) linear both; overflow: hidden; }
-@keyframes fs-life { 0% { opacity: 0; } 4% { opacity: 1; } 96% { opacity: 1; } 100% { opacity: 0; } }
-.fs-phone { padding: 8vh 4vw 4vh; gap: 2.2vh; }
-.fs-suspense { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font-family: var(--font-serif); font-style: italic; font-size: clamp(2rem, 7vh, 4.6rem); color: #f6e7bf; text-shadow: 0 0 40px rgba(224, 71, 63, 0.7); opacity: 0; animation: fs-suspense 2.6s ease var(--at) both; pointer-events: none; }
-@keyframes fs-suspense { 0% { opacity: 0; transform: scale(0.96); } 18% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
-.fs-group { display: flex; flex-direction: column; align-items: center; opacity: 0; animation: fs-fade 0.5s ease var(--at) both; }
-@keyframes fs-fade { to { opacity: 1; } }
-.fs-head { margin: 0 0 1.2vh; font-family: var(--font-display); font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; font-size: clamp(1.2rem, 4vh, 2.4rem); color: #ff8f86; text-shadow: 0 0 24px rgba(224, 71, 63, 0.6); }
-.fs-head-small { font-size: clamp(0.9rem, 2.6vh, 1.4rem); color: #e2c27d; text-shadow: none; opacity: 0; animation: fs-fade 0.4s ease var(--at) both; }
-.fs-rest { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 2vh 4vw; }
-.fs-sub { display: flex; flex-direction: column; align-items: center; }
-.fs-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.6vw; }
-.fs-card { display: flex; flex-direction: column; align-items: center; opacity: 0; will-change: transform, opacity; }
-.fs-big { --w: min(22vh, 16vw); animation: fs-slam 0.7s cubic-bezier(0.2, 1.3, 0.35, 1) var(--at) both; }
-.fs-small { --w: min(11vh, 7.5vw); animation: fs-pop 0.45s ease-out var(--at) both; }
-.fs-phone .fs-big { --w: min(27vw, 15vh); }
-.fs-phone .fs-small { --w: min(17vw, 8.5vh); }
-.fs-phone .fs-rest { gap: 1.2vh 5vw; }
-@keyframes fs-slam { 0% { opacity: 0; transform: scale(1.8); } 55% { opacity: 1; transform: scale(0.95); } 100% { opacity: 1; transform: none; } }
-@keyframes fs-pop { from { opacity: 0; transform: translateY(14px) scale(0.9); } to { opacity: 1; transform: none; } }
-.fs-photo { position: relative; width: var(--w); height: calc(var(--w) * 1.25); overflow: hidden; border-radius: 14px; border: 3px solid rgba(201, 164, 92, 0.7); background: radial-gradient(circle at 30% 25%, #4a1b1e, #140f10 70%); box-shadow: 0 18px 40px -16px #000; }
-.fs-mafia .fs-photo, .fs-card.fs-mafia .fs-photo { border-color: rgba(255, 90, 80, 0.95); box-shadow: 0 0 34px -6px rgba(224, 71, 63, 0.85), 0 18px 40px -16px #000; }
-.fs-card.fs-evil .fs-photo { border-color: rgba(224, 122, 200, 0.95); box-shadow: 0 0 34px -6px rgba(224, 122, 200, 0.8), 0 18px 40px -16px #000; }
-.fs-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.fs-initials { position: absolute; inset: 0; display: grid; place-items: center; padding-bottom: 18%; font-family: var(--font-display); font-size: calc(var(--w) * 0.36); color: #e2c27d; }
-.fs-dead { position: absolute; inset: 0; background: rgba(12, 6, 8, 0.5); }
-.fs-badge { position: absolute; top: 4%; right: 4%; border-radius: 50%; background: rgba(10, 8, 9, 0.85); line-height: 0; }
-.fs-small .fs-badge svg { width: calc(var(--w) * 0.3); height: calc(var(--w) * 0.3); }
-.fs-big .fs-badge svg { width: calc(var(--w) * 0.3); height: calc(var(--w) * 0.3); }
-.fs-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 14% 5% 5%; text-align: center; font-weight: 800; font-size: calc(var(--w) * 0.12); line-height: 1.05; color: #fff; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85); background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.85) 55%); overflow-wrap: anywhere; }
-.fs-role { margin-top: 0.8vh; max-width: calc(var(--w) * 1.25); text-align: center; font-weight: 800; line-height: 1.1; font-size: calc(var(--w) * 0.15); color: #f6ecd9; }
-.fs-role small { display: block; font-size: 0.6em; font-weight: 600; color: rgba(255, 244, 226, 0.7); }
-.fs-card.fs-mafia .fs-role { color: #ff9b92; }
-.fs-card.fs-evil .fs-role { color: #e8a2d8; }
-.reduce-motion .fs { animation-duration: 0.001ms; opacity: 0; }
+/* ---------- The finale (TV + phones): grouped board, fades and scales only ---------- */
+.fs { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: 2.4vh; padding: 3vh 2.5vw; overflow-y: auto; background: radial-gradient(ellipse at 50% 30%, #1d0c0e, #070506 70%); animation: fs-life var(--end) linear var(--start) both; }
+.fs-persist { animation: fs-in 0.5s ease var(--start) both; }
+@keyframes fs-life { 0% { opacity: 0; } 3% { opacity: 1; } 97% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+@keyframes fs-in { from { opacity: 0; } to { opacity: 1; } }
+.fs-suspense { position: fixed; inset: 0; display: grid; place-items: center; margin: 0; z-index: 2; font-family: var(--font-serif); font-style: italic; font-size: clamp(2rem, 8vh, 5rem); color: #f6e7bf; text-shadow: 0 0 40px rgba(224, 71, 63, 0.6); background: #070506; opacity: 0; animation: fs-suspense 2s ease var(--at) both; pointer-events: none; }
+@keyframes fs-suspense { 0% { opacity: 0; } 15% { opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+.fs-win { text-align: center; opacity: 0; animation: fs-rise 0.7s cubic-bezier(0.2, 1.2, 0.4, 1) var(--at) both; }
+.fs-win h2 { margin: 0; font-family: var(--font-display); font-weight: 900; line-height: 1; font-size: clamp(2.2rem, 8.5vh, 5.5rem); background: linear-gradient(180deg, #fff3c9, #e2c27d 55%, #a77d2e); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.fs-win p { margin: 0.6vh 0 0; font-family: var(--font-serif); font-style: italic; font-size: clamp(1rem, 3vh, 1.7rem); color: rgba(246, 236, 217, 0.75); }
+@keyframes fs-rise { from { opacity: 0; transform: translateY(18px) scale(0.96); } to { opacity: 1; transform: none; } }
+.fs-board { display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch; gap: 2vh 1.6vw; width: 100%; }
+.fs-panel { display: flex; flex-direction: column; align-items: center; padding: 1.6vh 1.4vw 2vh; border-radius: 22px; border: 2px solid var(--pc); background: linear-gradient(180deg, var(--pbg), rgba(10, 8, 9, 0.6) 70%); opacity: 0; animation: fs-rise 0.5s ease-out var(--at) both; }
+.fs-p-mafia { --pc: rgba(224, 71, 63, 0.75); --pbg: rgba(120, 18, 22, 0.35); --tc: #ff8a80; }
+.fs-p-neutral { --pc: rgba(176, 150, 235, 0.7); --pbg: rgba(80, 60, 140, 0.3); --tc: #c9b6ff; }
+.fs-p-town { --pc: rgba(226, 194, 125, 0.6); --pbg: rgba(90, 120, 80, 0.22); --tc: #f1d58f; flex: 1 1 auto; max-width: 100%; }
+.fs-title { display: flex; align-items: center; gap: 0.5em; margin: 0 0 1.4vh; font-family: var(--font-display); font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; font-size: clamp(1.2rem, 4.2vh, 2.6rem); color: var(--tc); }
+.fs-title span { display: inline-grid; place-items: center; min-width: 1.5em; height: 1.5em; padding: 0 0.3em; border-radius: 999px; font-size: 0.7em; letter-spacing: 0; color: #120d0e; background: var(--tc); }
+.fs-town { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.2vh 2.4vw; }
+.fs-sub { display: flex; flex-direction: column; align-items: center; opacity: 0; animation: fs-in 0.4s ease var(--at) both; }
+.fs-subtitle { margin: 0 0 1vh; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; font-size: clamp(0.85rem, 2.4vh, 1.4rem); color: rgba(246, 236, 217, 0.8); }
+.fs-sub-special .fs-subtitle { color: #8fe0a8; }
+.fs-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.6vh 1.2vw; }
+.fc { display: flex; flex-direction: column; align-items: center; width: calc(var(--w) * 1.2); opacity: 0; animation: fc-in 0.4s ease-out var(--at) both; }
+.fc-mafia { --cw: calc(var(--w) * 1.25); width: calc(var(--cw) * 1.2); animation-name: fc-slam; animation-duration: 0.55s; }
+@keyframes fc-in { from { opacity: 0; transform: translateY(10px) scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes fc-slam { 0% { opacity: 0; transform: scale(1.3); } 60% { opacity: 1; transform: scale(0.97); } 100% { opacity: 1; transform: none; } }
+.fc-photo { position: relative; width: var(--cw, var(--w)); aspect-ratio: 1; border-radius: 18%; overflow: hidden; border: 3px solid var(--pc); background: radial-gradient(circle at 30% 25%, #3a2023, #141011 70%); }
+.fc-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.fc-photo.is-out img, .fc-photo.is-out .fc-initials { opacity: 0.55; }
+.fc-initials { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-display); font-size: calc(var(--cw, var(--w)) * 0.4); color: #e2c27d; }
+.fc-out { position: absolute; right: 5%; bottom: 5%; display: grid; place-items: center; width: 26%; aspect-ratio: 1; border-radius: 50%; font-size: calc(var(--cw, var(--w)) * 0.15); background: rgba(10, 8, 9, 0.85); color: #f6ecd9; }
+.fc-name { margin-top: 0.7vh; max-width: 100%; text-align: center; font-weight: 800; line-height: 1.05; font-size: calc(var(--cw, var(--w)) * 0.19); color: #fff; overflow-wrap: anywhere; }
+.fc-role { margin-top: 0.3vh; max-width: 100%; text-align: center; font-weight: 700; line-height: 1.1; font-size: calc(var(--cw, var(--w)) * 0.14); color: var(--tc); }
+.fc-role small { display: block; font-size: 0.75em; font-weight: 600; color: rgba(246, 236, 217, 0.6); }
+.fs-phone { justify-content: flex-start; padding: 5vh 4vw 4vh; gap: 2vh; }
+.fs-phone .fs-panel { width: 100%; padding: 1.4vh 3vw 1.8vh; border-radius: 18px; }
+.fs-phone .fs-title { font-size: clamp(1rem, 5.5vw, 1.5rem); }
+.fs-phone .fs-subtitle { font-size: clamp(0.8rem, 3.6vw, 1rem); }
+.fs-phone .fc-name { font-size: max(0.85rem, calc(var(--cw, var(--w)) * 0.17)); }
+.fs-phone .fc-role { font-size: max(0.7rem, calc(var(--cw, var(--w)) * 0.13)); }
+.fs-phone .fs-row { gap: 1.4vh 3vw; }
+.fs-phone .fc, .fs-phone .fc-mafia { --cw: var(--w); width: calc(var(--w) * 1.2); }
+.reduce-motion .fs, .reduce-motion .fs * { animation-duration: 0.001ms !important; }
 
 /* ---------- The Mafia's chat: one quiet bar; opens as a sheet. No badges, no blinking. ---------- */
 .mchat-bar { display: flex; width: 100%; align-items: center; gap: 0.5rem; min-height: 2.75rem; padding: 0.5rem 0.9rem; border-radius: 0.75rem; border: 1px solid var(--color-line); background: rgba(255, 255, 255, 0.03); color: var(--color-bone); font-size: 0.9rem; text-align: left; }

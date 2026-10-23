@@ -69,9 +69,10 @@ test('full Bollywood game on the real clock (Night and Vote time out), with the 
   await shot('07-game-over');
   await expect(t.seats[0].page.getByText('Gabbar Jeet Gaya!')).toBeVisible();
   await expect(tv.getByRole('heading', { name: 'Gabbar Jeet Gaya!' })).toBeVisible();
-  // Every face turns over to show the character; the winners keep a gold glow.
-  await expect(tv.getByTestId('tv-reveal').locator('.tv-flip')).toHaveCount(6);
-  await expect(tv.getByTestId('tv-reveal').locator('.tv-flip.is-winner')).toHaveCount(2);
-  await expect(tv.locator(`li[data-player="${gf.name}"]`)).toContainText('Badde Sahab (Godfather)');
-  await expect(tv.getByRole('heading', { name: 'Bollywood Mafia Night' })).toBeVisible();
+  // The TV board: every player, grouped; the Godfather sits with the Mafia and is marked.
+  await expect(tv.getByTestId('tv-finale').locator('.fc')).toHaveCount(6);
+  await expect(tv.getByTestId('tv-finale').locator('.fc-mafia')).toHaveCount(2);
+  await expect(tv.locator(`.fc[data-player="${gf.name}"]`)).toContainText('Badde Sahab');
+  await expect(tv.locator(`.fc[data-player="${gf.name}"]`)).toContainText('Godfather');
+  await expect(tv.locator(`.fc[data-player="${mafia.name}"] .fc-role`)).toHaveCount(0);
 });

@@ -324,20 +324,25 @@ const flash = (tag) => effect(tag, EFFECTS[tag]);
  * The game-over finale, in step with the TV and phones: the room goes dark and flickers like a
  * candle ("And the Mafia were…"), a red flash as each Mafia card turns, then the winner's light.
  */
-const FIN = { suspenseAt: 2.4, suspenseFor: 2.6, mafiaStep: 1.6, specialStep: 0.35, villagerStep: 0.2, groupGap: 0.9, tail: 1.4 }; // same as src/client/lib/finale.ts
+const FIN = { suspenseAt: 2.2, suspenseFor: 2.0, head: 0.3, mafiaStep: 0.9, neutralStep: 0.5, specialStep: 0.35, villagerStep: 0.15, groupGap: 0.6, tail: 1.0 }; // same as src/client/lib/finale.ts
 function finaleTimes(view) {
   const s = view.settings ?? {};
-  const isMafiaSide = (id) => id === 'mafia' || id === 'godfather' || (id === 'imposter' && s.imposterAlignment === 'mafia');
+  // Same groups as src/client/lib/finale.ts: Mafia (+ Godfather), neutral, Town specials, villagers.
+  const side = (id) => (id === 'mafia' ? 'mafia' : id === 'godfather' ? 'evil' : id === 'thief' ? s.thiefAlignment : id === 'imposter' ? s.imposterAlignment : id === 'jester' ? 'neutral' : 'good');
+  const group = (p) => {
+    const a = side(p.revealedRoleId);
+    if (a === 'mafia' || a === 'evil') return 'mafia';
+    if (a === 'neutral') return 'neutral';
+    return !p.revealedRoleId || p.revealedRoleId === 'villager' ? 'villager' : 'special';
+  };
   const players = view.players ?? [];
-  const mafia = players.filter((p) => isMafiaSide(p.revealedRoleId));
-  const villagers = players.filter((p) => !mafia.includes(p) && p.revealedRoleId === 'villager');
-  const special = players.filter((p) => !mafia.includes(p) && !villagers.includes(p));
+  const of = (k) => players.filter((p) => group(p) === k);
   let t = FIN.suspenseAt + FIN.suspenseFor;
   const mafiaAt = [];
-  for (const [list, step, isMafia] of [[mafia, FIN.mafiaStep, true], [special, FIN.specialStep, false], [villagers, FIN.villagerStep, false]]) {
+  for (const [list, step, isMafia] of [[of('mafia'), FIN.mafiaStep, true], [of('neutral'), FIN.neutralStep, false], [of('special'), FIN.specialStep, false], [of('villager'), FIN.villagerStep, false]]) {
     if (!list.length) continue;
-    list.forEach((_, i) => isMafia && mafiaAt.push(t + 0.35 + i * step));
-    t += 0.35 + list.length * step + FIN.groupGap;
+    list.forEach((_, i) => isMafia && mafiaAt.push(t + FIN.head + i * step));
+    t += FIN.head + list.length * step + FIN.groupGap;
   }
   return { mafiaAt, end: t + FIN.tail };
 }

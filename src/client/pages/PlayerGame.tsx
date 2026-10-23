@@ -12,7 +12,7 @@ import { revealPlan } from '../lib/reveal';
 import { PhotoPicker } from '../components/PhotoPicker';
 import { RoleArt } from '../components/RoleArt';
 import { PhoneMoments } from '../components/Moments';
-import { FinaleShow, useFinaleShow } from '../components/FinaleShow';
+import { FinaleShow, finaleRoleLabel, useFinaleShow } from '../components/FinaleShow';
 import { MafiaChat } from '../components/MafiaChat';
 import { finale } from '../lib/finale';
 import { uploadPhoto } from '../lib/photo';
@@ -49,6 +49,9 @@ export function useAct(send: Send) {
   };
   return { act, busy };
 }
+
+const GROUP_TEXT: Record<string, string> = { mafia: 'text-ember', neutral: 'text-[#c9b6ff]', special: 'text-[#8fe0a8]', villager: 'text-gold' };
+const GROUP_BORDER: Record<string, string> = { mafia: 'border-crimson/60 bg-crimson/10', neutral: 'border-[#b096eb]/50 bg-[#503c8c]/15', special: 'border-[#8fe0a8]/40 bg-[#5a7850]/10', villager: 'border-gold/35' };
 
 const nameOf = (view: ClientView, id: string | null | undefined) => (id ? (view.players.find((p) => p.id === id)?.name ?? '—') : 'Nobody');
 
@@ -108,13 +111,11 @@ function CheckMark() {
 export function PlayerGame({ view, send, serverNow }: GameProps) {
   const me = view.me!;
   const g = view.game;
-  const show = useFinaleShow(view);
   if (view.status === 'lobby' || !g) return <PlayerLobby view={view} send={send} />;
   const phase = g.phase;
   return (
     <div className="space-y-4">
       <PhoneMoments view={view} />
-      {show.on && <FinaleShow key={show.key} view={view} variant="phone" />}
       <PhaseHeader view={view} serverNow={serverNow} />
       {me.alive || phase === 'game_over' ? null : <DeadBanner view={view} />}
       {me.silenced && me.alive && phase !== 'game_over' && (
@@ -133,7 +134,7 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
       {phase === 'discussion' && <DiscussionPanel view={view} />}
       {phase === 'voting' && <DayPanel key={g.phaseSeq} view={view} send={send} />}
       {phase === 'verdict' && <VerdictPanel view={view} />}
-      {phase === 'game_over' && <GameOverPanel view={view} />}
+      {phase === 'game_over' && <GameOverPanel view={view} serverNow={serverNow} />}
       {me.mafiaChat && phase !== 'game_over' && <MafiaChat view={view} send={send} />}
       {/* Action phases show ONLY the action — no lists, feeds or extra buttons. */}
       {phase === 'voting' && <MyRoleButton view={view} />}
@@ -871,7 +872,7 @@ function GoldDust() {
   );
 }
 
-export function GameOverPanel({ view, hostControls }: { view: ClientView; hostControls?: ReactNode }) {
+export function GameOverPanel({ view, serverNow, hostControls }: { view: ClientView; serverNow: () => number; hostControls?: ReactNode }) {
   const g = view.game!;
   const w = g.winner!;
   const winners = new Set(w.winnerIds);
@@ -880,57 +881,55 @@ export function GameOverPanel({ view, hostControls }: { view: ClientView; hostCo
   const iWon = me ? winners.has(me.id) : false;
   const stats = g.stats;
   const topSuspect = stats ? Object.entries(stats.suspicion).sort((a, b) => b[1] - a[1])[0] : undefined;
-  // The same suspenseful order as the TV: the Mafia first, then the special characters, then the villagers.
+  // The same groups as the TV: the Mafia, the neutral characters, then the Town (special characters, then villagers).
   const fin = useMemo(() => finale(view.players, view.settings), [view.players, view.settings]);
-  const end = `${fin.end}s`;
+  // The full-screen show plays first (in step with the TV, even on a phone that reconnects late).
+  const show = useFinaleShow(view, serverNow);
+  const afterShow = Math.max(0, fin.end - show.elapsed);
   return (
     <div className="space-y-4 anim-fade-up">
+      {show.on && <FinaleShow key={show.key} view={view} variant="phone" elapsed={show.elapsed} />}
       <GoldDust />
-      {(iWon || !me) && (w.faction === 'good' || w.faction === 'mafia' || w.faction === 'jester') && <Confetti palette={view.settings.bollywood ? 'party' : w.faction} delay={fin.end} />}
+      {(iWon || !me) && (w.faction === 'good' || w.faction === 'mafia' || w.faction === 'jester') && show.elapsed < fin.end + 1 && <Confetti palette={view.settings.bollywood ? 'party' : w.faction} delay={afterShow} />}
       <div className="card relative z-10 p-6 text-center">
         <p className="eyebrow">Game over</p>
-        <div className="relative">
-          <p className="fin-wait font-[family-name:var(--font-serif)] text-2xl italic text-bone" style={{ ['--end' as string]: end }} aria-hidden="true">
-            The truth comes out…
-          </p>
-          <h2 className="brand-title headline-drop mt-2 text-4xl font-black" style={{ animationDelay: end }}>
-            {headline}
-          </h2>
-        </div>
-        <p className="mt-2 text-mute fin-row" style={{ ['--d' as string]: end }}>
+        <h2 className="brand-title headline-drop mt-2 text-4xl font-black" style={{ animationDelay: `${afterShow}s` }}>
+          {headline}
+        </h2>
+        <p className="mt-2 text-mute">
           {w.reason}
         </p>
         {me && (
-          <p className={`mt-4 text-lg font-semibold fin-row ${iWon ? 'text-gold' : 'text-mute'}`} style={{ ['--d' as string]: end }}>
+          <p className={`mt-4 text-lg font-semibold ${iWon ? 'text-gold' : 'text-mute'}`}>
             {iWon ? '🏆 You won!' : 'You did not win this time.'}
           </p>
         )}
         {hostControls}
       </div>
       <Section title="Every role, revealed">
-        <div className="space-y-4">
+        <div className="space-y-4" data-testid="roles-revealed">
           {fin.groups.map((grp) => (
-            <div key={grp.key} className="fin-group" style={{ ['--d' as string]: `${grp.start}s` }}>
-              <h3 className={`mb-2 font-[family-name:var(--font-display)] text-sm tracking-[0.18em] uppercase ${grp.key === 'mafia' ? 'text-ember' : 'text-gold'}`}>
-                {grp.title} · {grp.players.length}
+            <div key={grp.key}>
+              <h3 className={`mb-2 font-[family-name:var(--font-display)] text-sm font-bold tracking-[0.18em] uppercase ${GROUP_TEXT[grp.key]}`}>
+                {grp.key === 'special' || grp.key === 'villager' ? `The Town · ${grp.title}` : grp.title} · {grp.players.length}
               </h3>
-              <ul className="grid gap-2 sm:grid-cols-2">
+              <ul className="grid grid-cols-2 gap-2">
                 {grp.players.map((p: PublicPlayer) => {
-                  const a = p.revealedRoleId ? roleAlignment(p.revealedRoleId, view.settings) : null;
+                  const label = finaleRoleLabel(p, view.settings);
                   return (
-                    <li key={p.id} className={`fin-row flex items-center gap-3 rounded-xl border p-2.5 ${winners.has(p.id) ? 'border-gold/60 bg-gold/5' : grp.key === 'mafia' ? 'border-crimson/50 bg-crimson/5' : 'border-line/60'}`} style={{ ['--d' as string]: `${fin.cardAt.get(p.id) ?? 0}s` }}>
-                      <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={60} />
+                    <li key={p.id} className={`flex items-center gap-2.5 rounded-xl border p-2 ${GROUP_BORDER[grp.key]}`}>
+                      <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={48} />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-mute">
+                        <div className="truncate text-base font-bold leading-tight text-bone">
                           {p.name} {winners.has(p.id) && <span className="text-gold">🏆</span>}
                         </div>
-                        <div className={`text-xl font-bold leading-tight ${a === 'mafia' ? 'text-ember' : a === 'evil' ? 'text-[#e07ac8]' : a === 'neutral' ? 'text-neutral' : 'text-bone'}`}>
-                          {roleShort(p.revealedRoleId, view.settings)}
-                          {view.settings.bollywood && p.revealedRoleId && <span className="ml-1.5 text-xs font-medium text-mute">({ROLES[p.revealedRoleId].name})</span>}
-                        </div>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-mute">
-                          {a && <AlignmentBadge alignment={a} />} <span>{p.alive ? 'Survived' : '☠ Eliminated'}</span>
-                        </div>
+                        {label && (
+                          <div className={`truncate text-sm font-semibold leading-tight ${GROUP_TEXT[grp.key]}`}>
+                            {label.main}
+                            {label.classic && <span className="ml-1 text-xs font-medium text-mute">({label.classic})</span>}
+                          </div>
+                        )}
+                        {!p.alive && <div className="text-xs text-mute">☠ Out</div>}
                       </div>
                     </li>
                   );
