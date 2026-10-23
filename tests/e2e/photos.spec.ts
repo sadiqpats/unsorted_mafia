@@ -32,6 +32,13 @@ test('players add photos; the TV wall shows them and cuts the photo of an elimin
   await host.locator('li[data-player="Cleo"]').getByRole('button', { name: 'Eliminate' }).click();
   await host.getByRole('dialog').getByRole('button', { name: 'Eliminate' }).click();
 
+  // If Cleo happened to be the only Mafia member, the game is over and the TV shows the final board.
+  await expect(tv.locator('li[data-player="Cleo"][data-dead="true"], .fc[data-player="Cleo"]').first()).toBeVisible();
+  if (await tv.getByTestId('tv-finale').isVisible()) {
+    await expect(tv.locator('.fc[data-player="Cleo"] .fc-photo')).toHaveClass(/is-out/);
+    await expect(tv.locator('.fc[data-player="Cleo"] img')).toBeVisible();
+    return;
+  }
   const cleo = tv.locator('li[data-player="Cleo"]');
   await expect(cleo).toHaveAttribute('data-dead', 'true');
   await expect(cleo.locator('.cut-photo')).toHaveClass(/is-dead/);

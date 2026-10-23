@@ -17,7 +17,7 @@ import { MafiaChat } from '../components/MafiaChat';
 import { finale } from '../lib/finale';
 import { uploadPhoto } from '../lib/photo';
 import { loadSession } from '../lib/session';
-import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, PlayerRow, Section, Timer, useCountdown, useToast, winHeadline, Confetti } from '../components/ui';
+import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, Section, Timer, useCountdown, useToast, winHeadline, Confetti } from '../components/ui';
 
 type Send = (c: CommandInput) => Promise<Ack>;
 
@@ -292,27 +292,44 @@ function LobbyPhoto({ view }: { view: ClientView }) {
   );
 }
 
+/**
+ * Everyone at the table as photo cards, three to a row on a phone (more on wider screens), so a
+ * table of 12 fits on one screen and you can see at a glance who is playing. During a game the living come first and the dead move to
+ * the end, as on the TV.
+ */
 function PlayersList({ view, lobby = false }: { view: ClientView; lobby?: boolean }) {
+  const players = lobby ? view.players : [...view.players.filter((p) => p.alive), ...view.players.filter((p) => !p.alive)];
   return (
-    <ul className="space-y-2">
-      {view.players.map((p) => (
-        <PlayerRow
-          key={p.id}
-          className="anim-slide-in"
-          p={p}
-          sub={
-            <>
-              {p.id === view.me?.id && <span className="text-gold">You</span>}
+    <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6" aria-label="Players">
+      {players.map((p) => {
+        const me = p.id === view.me?.id;
+        // Nothing secret in this always-visible list: a neighbour could glance at an awake phone.
+        // Mafia teammates live behind the hold-to-reveal card and the night panel; the dead's
+        // role list sits behind its own shield (DeadRoles).
+        const role = p.revealedRoleId ? roleTitle(p.revealedRoleId, view.settings) : view.game?.phase === 'game_over' && view.me?.allRoles?.[p.id] ? roleTitle(view.me.allRoles[p.id], view.settings) : null;
+        return (
+          <li
+            key={p.id}
+            data-player={p.name}
+            className={`anim-slide-in relative flex min-w-0 flex-col items-center rounded-xl border px-1.5 pb-1.5 pt-2 text-center ${me ? 'border-gold/60 bg-gold/[0.06]' : 'border-line/60 bg-white/[0.02]'} ${p.alive ? '' : 'opacity-60'}`}
+          >
+            <span className="relative block w-[82%] max-w-[7.5rem]">
+              <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={96} className={`aspect-square !h-auto !w-full ${lobby && !p.ready ? 'opacity-50' : ''}`} />
+              <span className={`absolute -bottom-1 -right-1 z-10 h-3.5 w-3.5 rounded-full border-2 border-coal ${p.connected ? 'bg-ok' : 'bg-ash'}`} title={p.connected ? 'Connected' : 'Disconnected'} aria-hidden="true" />
+              {p.isHost && <span className="absolute -left-1 -top-1 z-10 rounded-full bg-gold px-1.5 py-0.5 text-[0.6rem] font-bold tracking-wider text-ink">HOST</span>}
+            </span>
+            <span className={`mt-1.5 block w-full truncate text-base font-bold leading-tight ${p.alive ? 'text-bone' : 'text-mute line-through decoration-ember/70'}`}>{p.name}</span>
+            <span className="flex flex-wrap justify-center gap-x-1.5 text-[0.7rem] leading-4 text-mute">
+              <span className="sr-only">{p.connected ? 'connected' : 'disconnected'}</span>
+              {me && <span className="font-semibold text-gold">You</span>}
               {lobby && <span>{p.ready ? '✓ Ready' : 'Not ready'}</span>}
-              {p.revealedRoleId && <span>{roleTitle(p.revealedRoleId, view.settings)}</span>}
-              {/* Nothing secret in this always-visible list: a neighbour could glance at an awake phone.
-                  Mafia teammates live behind the hold-to-reveal card and the night panel; the dead's
-                  role list sits behind its own shield (DeadRoles). */}
-              {!p.revealedRoleId && view.game?.phase === 'game_over' && view.me?.allRoles?.[p.id] && <span className="text-gold">{roleTitle(view.me.allRoles[p.id], view.settings)}</span>}
-            </>
-          }
-        />
-      ))}
+              {!p.alive && <span>☠ {p.deathCause === 'vote' ? 'Voted out' : p.deathCause === 'host' ? 'Removed' : 'Killed at night'}</span>}
+              {p.silenced && <span className="text-gold">🤐 Silenced today</span>}
+              {role && <span className={p.revealedRoleId ? '' : 'text-gold'}>{role}</span>}
+            </span>
+          </li>
+        );
+      })}
     </ul>
   );
 }
