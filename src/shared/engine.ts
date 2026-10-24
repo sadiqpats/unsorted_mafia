@@ -7,7 +7,7 @@
  *
  * Resolution order (night):  see NIGHT ORDER below and docs/RULES.md.
  */
-import { ABILITIES, ROLES, ROLE_ORDER, isKiller, isMafiaTeam, roleAlignment, roleTitle, themeText, type AbilityDef } from './roles';
+import { ABILITIES, BOLLYWOOD, ROLES, ROLE_ORDER, isKiller, isMafiaTeam, roleAlignment, roleTitle, themeText, type AbilityDef } from './roles';
 import { analyzeDistribution, suggestDistribution } from './distribution';
 import { MAX_PLAYERS, defaultSettings, fillTemplate, mergeSettings, type Settings, type SettingsPatch } from './settings';
 import type { EventTag, Game, LogEntry, MorningReport, NightAction, Phase, Player, Room, Verdict, WinResult } from './types';
@@ -109,6 +109,7 @@ function freshPlayerState(): Omit<Player, 'id' | 'name' | 'seat' | 'tokenHash' |
     lastSelfProtectRound: null,
     lastStolenAbility: null,
     heir: false,
+    lastTargets: {},
     lastStealRound: null,
     revivedCount: 0,
     lateJoiner: false,
@@ -413,7 +414,7 @@ export function phaseOpen(room: Room, now: number): boolean {
  * after they die — so its presence never reveals who is still alive.
  */
 export function hasPreNight(s: Settings): boolean {
-  return s.preNightRound && ((s.roles.thief ?? 0) > 0 || (s.roles.imposter ?? 0) > 0);
+  return s.preNightRound && ((s.roles.thief ?? 0) > 0 || (s.roles.imposter ?? 0) > 0 || ((s.roles.godfather ?? 0) > 0 && s.godfatherSuperpower !== false));
 }
 
 /** Phase in which an ability is used: Dawn abilities move to 'prenight' when that round is on. */
@@ -533,15 +534,16 @@ export function acknowledgeRole(room: Room, playerId: string) {
 
 // ---------------------------------------------------------------- the Mafia's chat
 
-/** Who is in the Mafia's secret chat: the Mafia members and the Godfather (who shows only as "Godfather"). */
+/** Who is in the Mafia's secret chat: the Mafia members only (not the Godfather — he stays hidden). */
 export function inMafiaChat(p: Player, s: Settings): boolean {
-  return isMafiaTeam(p.roleId, s) || p.roleId === 'godfather';
+  return isMafiaTeam(p.roleId, s);
 }
 
 /** A message in the Mafia's chat — open from the role reveal until the game ends, living members only. */
 export function sendMafiaChat(room: Room, playerId: string, text: string, now: number) {
   const g = requireGame(room);
   if (g.phase === 'game_over') fail('phase_closed', 'The game is over.');
+  if (g.settings.mafiaChat === false) fail('forbidden', 'The family chat is switched off for this game.');
   const p = getPlayer(room, playerId);
   if (!inMafiaChat(p, g.settings)) fail('forbidden', 'Only the Mafia can use this chat.');
   if (!p.alive) fail('forbidden', 'The dead can read the chat, but not write in it.');
@@ -558,7 +560,7 @@ export function sendMafiaChat(room: Room, playerId: string, text: string, now: n
 export function mafiaTyping(room: Room, playerId: string, now: number) {
   const g = requireGame(room);
   const p = getPlayer(room, playerId);
-  if (g.phase === 'game_over' || !p.alive || !inMafiaChat(p, g.settings)) fail('forbidden', 'Only the Mafia can use this chat.');
+  if (g.phase === 'game_over' || g.settings.mafiaChat === false || !p.alive || !inMafiaChat(p, g.settings)) fail('forbidden', 'Only the Mafia can use this chat.');
   const typing = Object.fromEntries(Object.entries(g.mafiaTyping ?? {}).filter(([, until]) => until > now));
   typing[p.id] = now + 4000;
   g.mafiaTyping = typing;
@@ -627,16 +629,41 @@ export interface NightOption {
 }
 
 const DECOY_PROMPT = 'Whom do you suspect most?';
+const SUPER_BLOCK_PROMPT = 'The Godfather has made his move — he is using his Superpower tonight. You can’t use your powers tonight. Tap anyone (it changes nothing).';
+const STRIKES = new Set(['gf_strike', 'gf_strike_2']);
+
+/** Tonight is the Godfather's Superpower night (and he is still alive to use it). */
+export function superNight(room: Room): Player | null {
+  const g = room.game;
+  if (!g || g.phase !== 'night' || !g.superpower || g.superpower.round !== g.round) return null;
+  const gf = room.players.find((p) => p.id === g.superpower!.by);
+  return gf && gf.alive ? gf : null;
+}
 
 function actsWhileDead(_room: Room, _p: Player): boolean {
   return false;
+}
+
+const NO_REPEAT = new Set(['protect', 'silence']);
+
+/** Who this player may not pick tonight: the same person as last night (Doctor and Godfather). */
+function repeatBlocked(room: Room, p: Player, abilityId: string): string | null {
+  if (!NO_REPEAT.has(abilityId) || settingsOf(room).noRepeatTargets === false) return null;
+  const last = p.lastTargets?.[abilityId];
+  return last && last.round === (room.game?.round ?? 0) - 1 ? last.targetId : null;
+}
+
+function rememberTarget(room: Room, p: Player, abilityId: string, targetId: string) {
+  p.lastTargets = { ...(p.lastTargets ?? {}), [abilityId]: { round: room.game!.round, targetId } };
 }
 
 function targetsFor(room: Room, p: Player, def: AbilityDef): string[] {
   const s = settingsOf(room);
   const players = [...room.players].sort(bySeat);
   let list: Player[];
-  switch (def.target) {
+  // The Godfather may silence anyone alive, himself included (house rule, on by default).
+  const kind = def.id === 'silence' && s.godfatherSilenceSelf ? 'alive-any' : def.target;
+  switch (kind) {
     case 'alive-other':
       list = players.filter((x) => x.alive && x.id !== p.id);
       break;
@@ -657,6 +684,8 @@ function targetsFor(room: Room, p: Player, def: AbilityDef): string[] {
       list = p.alive ? [p] : [];
       break;
   }
+  const last = repeatBlocked(room, p, def.id);
+  if (last) list = list.filter((x) => x.id !== last);
   return list.map((x) => x.id);
 }
 
@@ -700,21 +729,26 @@ export function nightOptions(room: Room, playerId: string): NightOption[] {
     if (!p.alive) continue;
     if (def.id === 'steal' && p.stolen) continue;
     if (def.id === 'imposter_revive' && g.round < 2) continue; // revivals start from round 2
-    const powerMode = def.id === 'steal';
+    if (def.id === 'superpower' && phase !== 'prenight') continue; // only ever chosen at Dawn
+    if (def.id === 'mafia_kill' && superNight(room)) continue; // the Godfather kills tonight instead
+    const powerMode = def.id === 'steal' || def.id === 'superpower';
     // A Thief with the stolen Mafia Hit joins the Mafia's vote. His list is everyone else alive —
     // leaving the Mafia out would reveal who they are.
     const thiefHit = def.id === 'mafia_kill' && h.source === 'stolen';
-    const targets = powerMode
+    const targets = def.id === 'superpower'
+      ? ['superpower']
+      : powerMode
       ? stealablePowers(room, p)
       : thiefHit
         ? room.players.filter((x) => x.alive && x.id !== p.id).sort(bySeat).map((x) => x.id)
         : targetsFor(room, p, def);
     if (!targets.length) continue;
+    const notAgain = repeatBlocked(room, p, def.id);
     opts.push({
       abilityId: def.id,
       source: h.source,
       name: def.name,
-      prompt: def.prompt,
+      prompt: themeText(notAgain ? `${def.prompt} (Not ${getPlayer(room, notAgain).name} — you picked them last night.)` : def.prompt, s),
       targets,
       targetKind: powerMode ? 'power' : 'player',
       charges: h.charges,
@@ -722,14 +756,24 @@ export function nightOptions(room: Room, playerId: string): NightOption[] {
       changeable: !!def.team,
     });
   }
+  // The Superpower night: the Godfather picks two people to kill.
+  const gf = superNight(room);
+  if (gf && gf.id === p.id) {
+    const targets = room.players.filter((x) => x.alive && x.id !== p.id && !isMafiaTeam(x.roleId, s)).sort(bySeat).map((x) => x.id);
+    for (const id of ['gf_strike', 'gf_strike_2']) {
+      const def = ABILITIES[id];
+      opts.push({ abilityId: id, source: 'role', name: def.name, prompt: themeText(def.prompt, s), targets, targetKind: 'player', charges: null, team: false, changeable: false });
+    }
+  }
   if (!opts.length && p.alive) {
     // ANTI-CHEAT: players without a power still get an identical-looking choice
     // so nobody can tell who has a role by watching who taps their phone.
+    const blocked = !!gf && heldAbilities(room, p).some((h) => h.abilityId === 'mafia_kill');
     opts.push({
       abilityId: 'decoy',
       source: 'decoy',
       name: 'Dummy round',
-      prompt: DECOY_PROMPT,
+      prompt: blocked ? themeText(SUPER_BLOCK_PROMPT, s) : DECOY_PROMPT,
       targets: room.players.filter((x) => x.alive && x.id !== p.id).sort(bySeat).map((x) => x.id),
       targetKind: 'player',
       charges: null,
@@ -770,6 +814,7 @@ export function nightComplete(room: Room): boolean {
  */
 export function hitVoters(room: Room): Player[] {
   const s = settingsOf(room);
+  if (superNight(room)) return [];
   return room.players
     .filter((p) => {
       if (!p.alive) return false;
@@ -844,10 +889,25 @@ const protect = (ctx: NightCtx, targetId: string, actorId: string) => {
  * Add a resolver here when you add a new night ability.
  */
 export const NIGHT_RESOLVERS: Record<string, Resolver> = {
+  superpower(room, _ctx, a, now) {
+    const actor = getPlayer(room, a.actorId);
+    useCharge(room, actor, 'superpower');
+    room.game!.superpower = { round: room.game!.round, by: actor.id };
+    addLog(room, now, 'night', `${actor.name} (Godfather) switched on his Superpower for tonight.`, 'host');
+  },
+  gf_strike(room, ctx, a, now) {
+    if (ctx.attacks.some((x) => x.targetId === a.targetId)) return; // the same person twice = one kill
+    ctx.attacks.push({ targetId: a.targetId!, source: 'godfather' });
+    addLog(room, now, 'night', `The Godfather's Superpower targeted ${getPlayer(room, a.targetId!).name}.`, 'host');
+  },
+  gf_strike_2(room, ctx, a, now, rng) {
+    NIGHT_RESOLVERS.gf_strike(room, ctx, a, now, rng);
+  },
   protect(room, ctx, a, now) {
     const actor = getPlayer(room, a.actorId);
     protect(ctx, a.targetId!, a.actorId);
     if (a.targetId === actor.id) actor.lastSelfProtectRound = room.game!.round;
+    rememberTarget(room, actor, 'protect', a.targetId!);
     useCharge(room, actor, 'protect');
     addLog(room, now, 'night', `${actor.name} protected ${getPlayer(room, a.targetId!).name}.`, 'host');
   },
@@ -862,6 +922,7 @@ export const NIGHT_RESOLVERS: Record<string, Resolver> = {
     const t = getPlayer(room, a.targetId!);
     t.silencedRound = room.game!.round;
     ctx.silenced.push(t.id);
+    rememberTarget(room, actor, 'silence', t.id);
     useCharge(room, actor, 'silence');
     addLog(room, now, 'night', `${actor.name} silenced ${t.name}.`, 'host');
   },
@@ -909,7 +970,18 @@ export const NIGHT_RESOLVERS: Record<string, Resolver> = {
       .map((x) => ({ x, h: heldAbilities(room, x).find((h) => h.abilityId === powerId && h.source === 'role' && (h.charges === null || h.charges > 0)) }))
       .filter((c) => !!c.h && (power.kind !== 'passive' || s.thiefStealPassive));
     if (!holders.length) {
-      addPrivate(room, rng, now, thief.id, 'steal', `Nobody could give up the ${power?.name ?? ''} power this round.`);
+      // The power is listed even when its owner is out — picking it wastes the Thief's round.
+      const ownerAlive = room.players.some((x) => x.alive && x.id !== thief.id && heldAbilities(room, x).some((h) => h.abilityId === powerId && h.source === 'role'));
+      addPrivate(
+        room,
+        rng,
+        now,
+        thief.id,
+        'steal',
+        ownerAlive
+          ? `The ${power?.name ?? ''} power has no uses left — your steal came to nothing this round.`
+          : `Whoever had the ${power?.name ?? ''} power is no longer in the game — your steal came to nothing this round.`,
+      );
       addLog(room, now, 'night', `${thief.name} tried to steal ${power?.name} — no living holder.`, 'host');
       return;
     }
@@ -985,8 +1057,9 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
     }
     // Re-validate: a host correction may have changed things mid-night.
     if (!actor.alive && !actsWhileDead(room, actor)) return false;
-    return !!hasUsable(room, actor, a.abilityId) || a.abilityId === 'mafia_kill';
+    return !!hasUsable(room, actor, a.abilityId) || a.abilityId === 'mafia_kill' || STRIKES.has(a.abilityId);
   });
+  const superBy = superNight(room);
 
   type Step = { priority: number; order: number; run: () => void };
   const steps: Step[] = [];
@@ -994,6 +1067,7 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
   for (const a of actions) {
     // Every Mafia-hit vote (the Thief's included) is counted together by mafiaDecision() below.
     if (a.abilityId === 'mafia_kill') continue;
+    if (STRIKES.has(a.abilityId) && (!superBy || a.actorId !== superBy.id)) continue;
     const def = ABILITIES[a.abilityId];
     const resolver = NIGHT_RESOLVERS[a.abilityId];
     if (!def || !resolver) continue;
@@ -1056,6 +1130,9 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
     const p = getPlayer(room, id);
     lines.push([fillTemplate(A.nightDeath, { name: p.name }) + (s.revealRoleOnDeath ? ` They were ${roleTitle(p.roleId, s)}.` : ''), 'kill']);
   }
+  if (superBy) {
+    lines.unshift([s.bollywood ? `${BOLLYWOOD.godfather.name} ne Mahastra ka istemaal kiya!` : 'The Godfather used his Superpower tonight!', 'superpower']);
+  }
   if (!ctx.deaths.length) lines.push([A.noDeath, 'quiet']);
   if (ctx.saved.length && s.announceSaves) lines.push(['Someone was attacked in the night — but survived.', 'saved']);
   for (const id of ctx.revived) lines.push([fillTemplate(A.revived, { name: getPlayer(room, id).name }), 'revive']);
@@ -1066,7 +1143,7 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
     }
   }
   for (const [l, tag] of lines) addLog(room, now, 'morning', l, 'public', tag);
-  const report: MorningReport = { round: g.round, deaths: ctx.deaths, revived: ctx.revived, silenced: ctx.silenced.filter((id) => getPlayer(room, id).alive), saved: ctx.saved.length > 0 };
+  const report: MorningReport = { round: g.round, deaths: ctx.deaths, revived: ctx.revived, silenced: ctx.silenced.filter((id) => getPlayer(room, id).alive), saved: ctx.saved.length > 0, superpower: !!superBy };
   g.lastMorning = report;
 
   const win = settle(room, now);

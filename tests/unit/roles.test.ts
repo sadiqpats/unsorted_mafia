@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkWin, hostEliminate, nightOptions, sendMafiaChat, submitNightAction, voteWeight } from '../../src/shared/engine';
+import { checkWin, hostEliminate, nightOptions, sendMafiaChat, stealablePowers, submitNightAction, voteWeight } from '../../src/shared/engine';
 import { ROLES } from '../../src/shared/roles';
 import { buildView } from '../../src/server/views';
 import { setup } from './helpers';
@@ -335,14 +335,14 @@ describe('Thief (steals at Dawn, one round at a time)', () => {
     expect(g.P(4).alive).toBe(true);
   });
 
-  it('the power list never reveals who is alive (holder dead → attempt fails quietly)', () => {
+  it('every power stays on the list; if its owner is out, the Thief is told and the round is wasted', () => {
     const g = setup(['mafia', 'thief', 'detective', V, V, V]);
     g.P(2).alive = false;
     toPhase(g, 'prenight');
     expect(nightOptions(g.room, 'p1')[0].targets).toContain('investigate');
     submitNightAction(g.room, 'p1', { abilityId: 'steal', targetId: 'investigate', phaseSeq: g.seq() }, 1);
     g.advance();
-    expect(g.results(1).join()).toMatch(/Nobody could give up the Investigate power/);
+    expect(g.results(1).join()).toMatch(/Whoever had the Investigate power is no longer in the game/);
     expect(news(g, 'prenight')).toEqual(['Dawn passed quietly.']);
   });
 
@@ -491,19 +491,117 @@ describe('Bollywood Mafia Night', () => {
 });
 
 describe("the Mafia's chat", () => {
-  it('only the Mafia and the Godfather see it; the Godfather shows as "Godfather" with no name or photo', () => {
+  it('only the Mafia members see it — not the Godfather, not anyone else', () => {
     const g = setup(['mafia', 'mafia', 'godfather', 'villager', 'villager', 'villager', 'doctor', 'detective']);
     const me = (i: number) => buildView(g.room, { kind: 'player', playerId: g.id(i) }, new Set(), 1).me!;
     sendMafiaChat(g.room, 'p0', 'Who first?', 1);
-    sendMafiaChat(g.room, 'p2', 'The doctor.', 2);
+    sendMafiaChat(g.room, 'p1', 'The doctor.', 2);
+    expect(() => sendMafiaChat(g.room, 'p2', 'Me too', 3)).toThrow(); // the Godfather
     expect(() => sendMafiaChat(g.room, 'p3', 'hello?', 3)).toThrow();
-    for (const i of [0, 1, 2]) expect(me(i).mafiaChat).toHaveLength(2);
-    for (const i of [3, 6, 7]) expect(me(i).mafiaChat).toBeNull();
-    const [a, b] = me(1).mafiaChat!;
-    expect(a).toMatchObject({ name: 'P0', godfather: false, you: false, text: 'Who first?' });
-    expect(b).toMatchObject({ name: 'Godfather', godfather: true, photo: null, text: 'The doctor.' });
-    expect(JSON.stringify(buildView(g.room, { kind: 'player', playerId: 'p1' }, new Set(), 1).me!.mafiaChat)).not.toContain('P2');
+    for (const i of [0, 1]) expect(me(i).mafiaChat).toHaveLength(2);
+    for (const i of [2, 3, 6, 7]) expect(me(i).mafiaChat).toBeNull();
+    expect(me(1).mafiaChat![0]).toMatchObject({ name: 'P0', you: false, text: 'Who first?' });
     hostEliminate(g.room, 'p3', 4);
     expect(() => sendMafiaChat(g.room, 'p0', '   ', 5)).toThrow();
   });
+});
+
+describe("the Godfather's Superpower (Mahastra)", () => {
+  const roles = ['mafia', 'godfather', 'doctor', 'thief', 'villager', 'villager', 'villager', 'villager', 'villager'];
+  it('switched on at Dawn: that night he kills two (the Mafia sit out), the town sees it, and it is gone', () => {
+    const g = setup(roles);
+    toPhase(g, 'prenight');
+    const gfDawn = nightOptions(g.room, 'p1');
+    expect(gfDawn.map((o) => o.abilityId)).toEqual(['superpower']);
+    expect(gfDawn[0].targets).toEqual(['superpower']);
+    expect(stealablePowers(g.room, g.P(3))).not.toContain('superpower');
+    submitNightAction(g.room, 'p1', { abilityId: 'superpower', targetId: 'superpower', phaseSeq: g.seq() }, 1);
+    toPhase(g, 'night');
+    expect(nightOptions(g.room, 'p1').map((o) => o.abilityId).sort()).toEqual(['gf_strike', 'gf_strike_2', 'silence']);
+    const mafia = nightOptions(g.room, 'p0');
+    expect(mafia.map((o) => o.abilityId)).toEqual(['decoy']);
+    expect(mafia[0].prompt).toMatch(/Superpower/);
+    expect(buildView(g.room, { kind: 'player', playerId: 'p0' }, new Set(), 1).me!.hitPlan).toBeNull();
+    g.act(1, 'gf_strike', 4);
+    g.act(1, 'gf_strike_2', 5);
+    g.act(2, 'protect', 5);
+    toPhase(g, 'discussion');
+    expect(g.P(4).alive).toBe(false);
+    expect(g.P(5).alive).toBe(true);
+    expect(g.room.game!.lastMorning!.superpower).toBe(true);
+    expect(news(g, 'morning')[0]).toBe('The Godfather used his Superpower tonight!');
+    // Next round: back to normal — a dummy round at Dawn, the Mafia hit at night.
+    g.goToVoting();
+    toPhase(g, 'prenight');
+    expect(nightOptions(g.room, 'p1').map((o) => o.abilityId)).toEqual(['decoy']);
+    toPhase(g, 'night');
+    expect(nightOptions(g.room, 'p0').map((o) => o.abilityId)).toEqual(['mafia_kill']);
+    expect(nightOptions(g.room, 'p1').map((o) => o.abilityId)).toEqual(['silence']);
+  });
+  it('Bollywood: Mahastra', () => {
+    const g = setup(roles, { bollywood: true });
+    toPhase(g, 'prenight');
+    expect(nightOptions(g.room, 'p1')[0].prompt).toMatch(/Mahastra/);
+    submitNightAction(g.room, 'p1', { abilityId: 'superpower', targetId: 'superpower', phaseSeq: g.seq() }, 1);
+    toPhase(g, 'night');
+    g.act(1, 'gf_strike', 4);
+    g.act(1, 'gf_strike_2', 5);
+    toPhase(g, 'discussion');
+    expect(news(g, 'morning')[0]).toBe('Badde Sahab ne Mahastra ka istemaal kiya!');
+  });
+  it('can be switched off: no Superpower, and no Dawn just for it', () => {
+    const g = setup(['mafia', 'godfather', 'villager', 'villager', 'villager', 'villager', 'villager'], { godfatherSuperpower: false });
+    g.advance();
+    expect(g.room.game!.phase).not.toBe('prenight');
+  });
+});
+
+describe('no same person two nights in a row (Doctor and Godfather)', () => {
+  it('the Doctor can save A, then not A, then A again — himself included', () => {
+    const g = setup(['mafia', 'doctor', 'villager', 'villager', 'villager', 'villager', 'villager', 'villager']);
+    const targets = () => nightOptions(g.room, 'p1').find((o) => o.abilityId === 'protect')!.targets;
+    g.goToNight();
+    expect(targets()).toContain('p1');
+    g.act(1, 'protect', 2);
+    g.goToVoting();
+    g.advance();
+    g.goToNight();
+    expect(targets()).not.toContain('p2');
+    expect(nightOptions(g.room, 'p1').find((o) => o.abilityId === 'protect')!.prompt).toMatch(/Not P2/);
+    g.act(1, 'protect', 1); // himself
+    g.goToVoting();
+    g.advance();
+    g.goToNight();
+    expect(targets()).toContain('p2');
+    expect(targets()).not.toContain('p1');
+  });
+  it('the Godfather can silence anyone (the Mafia and himself too), never the same person two nights running', () => {
+    const g = setup(['mafia', 'godfather', 'villager', 'villager', 'villager', 'villager', 'villager', 'villager']);
+    const targets = () => nightOptions(g.room, 'p1').find((o) => o.abilityId === 'silence')!.targets;
+    g.goToNight();
+    expect(targets()).toEqual(expect.arrayContaining(['p0', 'p1', 'p2']));
+    g.act(1, 'silence', 1);
+    g.goToVoting();
+    g.advance();
+    g.goToNight();
+    expect(targets()).not.toContain('p1');
+    expect(targets()).toContain('p0');
+  });
+  it('house rules: both can be switched off', () => {
+    const g = setup(['mafia', 'godfather', 'villager', 'villager', 'villager', 'villager', 'villager', 'villager'], { noRepeatTargets: false, godfatherSilenceSelf: false });
+    const targets = () => nightOptions(g.room, 'p1').find((o) => o.abilityId === 'silence')!.targets;
+    g.goToNight();
+    expect(targets()).not.toContain('p1');
+    g.act(1, 'silence', 2);
+    g.goToVoting();
+    g.advance();
+    g.goToNight();
+    expect(targets()).toContain('p2');
+  });
+});
+
+it("the family chat can be switched off: nobody gets it, and messages are refused", () => {
+  const g = setup(['mafia', 'mafia', 'godfather', 'villager', 'villager', 'villager', 'villager', 'villager'], { mafiaChat: false });
+  expect(buildView(g.room, { kind: 'player', playerId: 'p0' }, new Set(), 1).me!.mafiaChat).toBeNull();
+  expect(() => sendMafiaChat(g.room, 'p0', 'hello', 1)).toThrow();
 });

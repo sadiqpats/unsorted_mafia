@@ -14,7 +14,7 @@ import { serverUrl } from '../lib/server';
 
 export type MomentKind = 'killed' | 'voted' | 'revived' | 'silenced';
 export type MomentCardData = { id: string; kind: MomentKind };
-export type Moment = { key: number; title: string; cards: MomentCardData[]; note: string | null; mafiaLeft: number | null; seconds: number };
+export type Moment = { key: number; title: string; cards: MomentCardData[]; note: string | null; mafiaLeft: number | null; seconds: number; superpower?: boolean };
 
 /** Watches the game for a new Day or a vote result and returns the moment to show (or null). */
 export function useMoments(view: ClientView | null, { startDelayMs = 1900, maxSeconds = 60 }: { startDelayMs?: number; maxSeconds?: number } = {}): Moment | null {
@@ -37,6 +37,15 @@ export function useMoments(view: ClientView | null, { startDelayMs = 1900, maxSe
       ];
       const saved = m.saved ? `${roleTitle('doctor', view.settings)} saved a life tonight.` : null;
       next = { title: 'Last night…', cards, note: cards.some((c) => c.kind === 'killed') ? saved : (saved ?? 'A quiet night — nobody died.'), mafiaLeft: null, seconds: 8 };
+      if (m.superpower) {
+        // The Godfather's Superpower (Mahastra): its own big reveal, a little longer.
+        const bw = !!view.settings.bollywood;
+        const n = m.deaths.length;
+        const note = bw
+          ? n >= 2 ? `${n} log maare gaye.` : n === 1 ? 'Ek ki jaan gayi — ek bach gaya.' : 'Lekin koi nahi mara!'
+          : n >= 2 ? `${n} people were killed.` : n === 1 ? 'One was killed — one survived.' : '…but nobody died!';
+        next = { title: bw ? 'Mahastra ka istemaal hua!' : 'The Godfather used his Superpower!', cards, note, mafiaLeft: null, seconds: 10, superpower: true };
+      }
     } else if (g.phase === 'night' && before.phase === 'prenight' && g.lastDawn && g.lastDawn.round === g.round && g.lastDawn.revived.length) {
       // Someone came back at Dawn: their card rises from the dead, for 5 seconds.
       next = { title: 'Back from the dead!', cards: g.lastDawn.revived.map((id) => ({ id, kind: 'revived' as const })), note: null, mafiaLeft: null, seconds: 8 };
@@ -172,8 +181,14 @@ export function MomentsOverlay({ moment, view, variant, clock, onClose }: { mome
           : 'min(28vw, 17vh)';
   const countDelay = 0.4 + n * 0.45 + (n ? 2.2 : 0.3);
   return (
-    <div className={`moments moments-${variant}`} role="status" aria-live="polite" data-testid={variant === 'tv' ? 'tv-spotlight' : 'phone-moment'} onClick={onClose}>
+    <div className={`moments moments-${variant} ${moment.superpower ? 'moments-super' : ''}`} role="status" aria-live="polite" data-testid={variant === 'tv' ? 'tv-spotlight' : 'phone-moment'} onClick={onClose}>
       {clock && <div className="moments-clock">{clock}</div>}
+      {moment.superpower && (
+        <span className="super-emblem" aria-hidden="true">
+          <span className="super-ring" />
+          ⚡
+        </span>
+      )}
       <p className="moments-title">{moment.title}</p>
       {n > 0 && (
         <div className="moments-cards">

@@ -40,6 +40,44 @@ export interface AbilityDef {
 }
 
 export const ABILITIES: Record<string, AbilityDef> = {
+  // ---- The Godfather's Superpower (Bollywood: Mahastra): once per game, chosen at Dawn ----
+  superpower: {
+    id: 'superpower',
+    name: 'Use my Superpower',
+    kind: 'night',
+    priority: 85,
+    preNight: true,
+    transferable: false,
+    target: 'self',
+    charges: () => 1,
+    prompt: 'Use your Superpower tonight? Once per game: tonight YOU kill two people, and the Mafia sit this night out. Skip to keep it for later.',
+    description: 'Once per game, at Dawn: that night you kill two people yourself, and the Mafia can’t use their powers. The Thief can’t steal it.',
+    usableWhenSilenced: true,
+  },
+  gf_strike: {
+    id: 'gf_strike',
+    name: 'Superpower: first kill',
+    kind: 'night',
+    priority: 50,
+    transferable: false,
+    target: 'alive-non-mafia',
+    charges: () => null,
+    prompt: 'Superpower — your FIRST target tonight:',
+    description: 'The first of the two kills.',
+    usableWhenSilenced: true,
+  },
+  gf_strike_2: {
+    id: 'gf_strike_2',
+    name: 'Superpower: second kill',
+    kind: 'night',
+    priority: 50,
+    transferable: false,
+    target: 'alive-non-mafia',
+    charges: () => null,
+    prompt: 'Superpower — your SECOND target tonight:',
+    description: 'The second of the two kills.',
+    usableWhenSilenced: true,
+  },
   mafia_kill: {
     id: 'mafia_kill',
     name: 'Mafia Hit',
@@ -220,10 +258,10 @@ export const ROLES: Record<string, RoleDef> = {
     unique: true,
     tagline: 'A whisper is louder than a gunshot.',
     description: 'The Mafia’s silent patron. You know exactly who the Mafia are — they have no idea who you are.',
-    abilityText: 'You privately know who the Mafia are. Each night, silence one player for the next day. Defend the Mafia in discussion.',
+    abilityText: 'You privately know who the Mafia are. Each night, silence one player for the next day. Once per game, at Dawn, you can use your Superpower: that night you kill two people yourself. Defend the Mafia in discussion.',
     howTo: 'Your role card lists the Mafia. At night, choose someone to silence — they cannot speak during the next day’s discussion (they can still vote) and never learn who did it. By day, protect the Mafia without giving yourself away.',
     winCondition: 'Evil: win when the Mafia win. You don’t count towards their takeover, and the Town wins once every Mafia member is dead, even if you are still alive.',
-    abilities: [{ id: 'silence' }],
+    abilities: [{ id: 'silence' }, { id: 'superpower', enabled: (s) => s.godfatherSuperpower !== false }],
     investigatesAs: (s) => (s.godfatherAppearsInnocent ? 'good' : 'mafia'),
     art: 'puppet',
   },
@@ -425,6 +463,7 @@ export function themeText(text: string, s?: Themed): string {
     [/\b(?:[Tt]he )?Imposter\b/g, BOLLYWOOD.imposter.name],
     [/\b(?:[Tt]he )?Joker\b/g, BOLLYWOOD.jester.name],
     [/\b(?:[Tt]he )?Villagers?\b/g, BOLLYWOOD.villager.name],
+    [/\bSuperpower\b/g, 'Mahastra'],
   ];
   let out = text;
   for (const [re, name] of map) out = out.replace(re, name);

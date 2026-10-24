@@ -996,3 +996,21 @@ p { text-wrap: pretty; }
   .gold-dust span { animation-iteration-count: 2; }
   .anim-flicker, .anim-drift, .card-back-shine::after { animation-iteration-count: 3; }
 }
+
+/* ---------- The Godfather's Superpower (Mahastra) morning: TV animated, phones still ---------- */
+.moments-super { background: radial-gradient(ellipse at 50% 35%, rgba(110, 10, 16, 0.97), rgba(8, 4, 5, 0.99) 70%); }
+.moments-super .moments-title { color: #ffd9a8; text-shadow: 0 0 24px rgba(255, 60, 40, 0.75), 0 0 60px rgba(224, 71, 63, 0.5); }
+.moments-super .moments-note { font-size: clamp(1.2rem, 3.6vh, 2rem); font-weight: 800; color: #ff9b92; }
+.super-emblem { position: relative; display: grid; place-items: center; width: clamp(4rem, 13vh, 8rem); aspect-ratio: 1; border-radius: 50%; font-size: clamp(2.2rem, 7vh, 4.4rem); background: radial-gradient(circle, #ffcf6b, #e0473f 55%, #5a0a0e); box-shadow: 0 0 40px rgba(255, 80, 40, 0.7); }
+.super-ring { position: absolute; inset: -6%; border-radius: 50%; border: 3px solid rgba(255, 190, 120, 0.8); opacity: 0; }
+/* TV: the emblem bursts in, a shockwave rolls out twice, the title slams. */
+.moments-tv .super-emblem { animation: super-burst 0.8s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.moments-tv .super-ring { animation: super-wave 1.4s ease-out 0.5s 2 both; }
+.moments-tv.moments-super .moments-title { animation: super-slam 0.7s cubic-bezier(0.2, 1.3, 0.35, 1) 0.35s both; }
+.moments-tv.moments-super::before { content: ''; position: absolute; inset: 0; background: #ff3b2f; opacity: 0; animation: super-flash 0.9s ease-out both; pointer-events: none; }
+@keyframes super-burst { 0% { opacity: 0; transform: scale(0.2) rotate(-30deg); } 70% { opacity: 1; transform: scale(1.12) rotate(4deg); } 100% { opacity: 1; transform: none; } }
+@keyframes super-wave { 0% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(2.4); } }
+@keyframes super-slam { 0% { opacity: 0; transform: scale(1.6); } 60% { opacity: 1; transform: scale(0.96); } 100% { opacity: 1; transform: none; } }
+@keyframes super-flash { 0% { opacity: 0.55; } 100% { opacity: 0; } }
+/* Phones: the same look, standing still (battery). */
+.moments-phone .super-emblem { width: 4.5rem; font-size: 2.4rem; }

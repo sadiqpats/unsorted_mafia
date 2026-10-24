@@ -21,6 +21,7 @@ export const PLAYLIST = 'play my playlist dramatic suspense mix on spotify';
 export const MUSIC = { reveal: true, dawn: true, night: true, vote: true };
 /** Alexa built-in sound effects (only IDs from Amazon's own library play on an Echo). */
 export const SFX = {
+  superpower: 'halloween_crows', // the Godfather's Superpower: a storm of crows
   kill: 'halloween_wolf', // a howl in the night
   voteout: 'horror_10', // a creaking door shuts
   removed: 'horror_10',

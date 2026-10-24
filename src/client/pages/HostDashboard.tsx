@@ -359,7 +359,10 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
         <Group title="Mafia & Godfather">
           <Select label="Mafia kill decision" value={s.mafiaDecision} options={[['plurality', 'Most picks'], ['leader', 'First-seated Mafia decides']]} onChange={(v) => patch({ mafiaDecision: v })} />
           <Select label="Mafia win when Mafia members" value={s.mafiaWin} options={[['parity', 'equal the rest (Godfather not counted)'], ['majority', 'outnumber the rest']]} onChange={(v) => patch({ mafiaWin: v })} />
+          <Toggle label="Family chat for the Mafia" hint="A secret chat on the Mafia members’ phones (not the Godfather’s). Off: no chat at all." checked={s.mafiaChat} onChange={(v) => patch({ mafiaChat: v })} />
           <Toggle label="Godfather appears innocent to the Detective" checked={s.godfatherAppearsInnocent} onChange={(v) => patch({ godfatherAppearsInnocent: v })} />
+          <Toggle label="Godfather’s Superpower (Mahastra)" hint="Once per game, at Dawn, he can choose to kill two people that night himself; the Mafia sit that night out. The Thief can’t steal it." checked={s.godfatherSuperpower} onChange={(v) => patch({ godfatherSuperpower: v })} />
+          <Toggle label="Godfather can silence anyone, himself included" hint="Off: anyone except himself." checked={s.godfatherSilenceSelf} onChange={(v) => patch({ godfatherSilenceSelf: v })} />
           <Toggle label="Godfather takes over when every Mafia member is dead" hint="He makes the night kill himself, and the game goes on until he is caught." checked={s.godfatherTakesOver} onChange={(v) => patch({ godfatherTakesOver: v })} />
         </Group>
         <Group title="Doctor">
@@ -369,6 +372,7 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
             options={[['alternate', 'Allowed, not two rounds in a row'], ['always', 'Always allowed'], ['never', 'Never']]}
             onChange={(v) => patch({ doctorSelfProtect: v })}
           />
+          <Toggle label="No same person two nights in a row" hint="The Doctor can't save, and the Godfather can't silence, the same person on two nights running — every other night is fine." checked={s.noRepeatTargets} onChange={(v) => patch({ noRepeatTargets: v })} />
         </Group>
         <Group title="Revivals (Imposter)">
           <Toggle label="Revived players keep their role" checked={s.revivedKeepRole} onChange={(v) => patch({ revivedKeepRole: v })} />

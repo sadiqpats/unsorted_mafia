@@ -701,7 +701,7 @@ function NightOptionCard({ view, option, submitted, send, pick, setPick }: { vie
               onClick={() => choose(t)}
               className={`choice-tile min-h-12 rounded-xl border px-3 py-2 text-sm font-medium ${selected ? 'border-gold bg-gold/15 text-bone' : 'border-line bg-black/30 text-bone/90 hover:border-gold/50'}`}
             >
-              {ABILITIES[t]?.name ?? t}
+              {themeText(ABILITIES[t]?.name ?? t, view.settings)}
             </button>
           );
         })}

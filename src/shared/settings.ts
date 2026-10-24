@@ -83,6 +83,14 @@ export const SettingsSchema = z.object({
   godfatherAppearsInnocent: z.boolean(),
   /** When every Mafia member is dead, a living Godfather takes over the nightly hit (and the game plays on). */
   godfatherTakesOver: z.boolean(),
+  /** The Godfather may silence anyone alive — the Mafia and himself included. */
+  godfatherSilenceSelf: z.boolean(),
+  /** The Doctor and the Godfather can't pick the same person two nights in a row (every other night is fine). */
+  noRepeatTargets: z.boolean(),
+  /** The Mafia's secret family chat (Mafia members + the Godfather). */
+  mafiaChat: z.boolean(),
+  /** The Godfather's once-per-game Superpower (Mahastra): at Dawn he chooses to kill two people that night himself. */
+  godfatherSuperpower: z.boolean(),
 
   // ---- Mafia ----
   mafiaDecision: z.enum(['plurality', 'leader']),
@@ -173,6 +181,10 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     detectiveResult: 'binary',
     godfatherAppearsInnocent: false,
     godfatherTakesOver: false,
+    godfatherSilenceSelf: true,
+    noRepeatTargets: true,
+    mafiaChat: true,
+    godfatherSuperpower: true,
     mafiaDecision: 'plurality',
     mafiaWin: 'parity',
     doctorSelfProtect: 'alternate',

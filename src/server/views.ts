@@ -168,7 +168,7 @@ function buildMe(room: Room, playerId: string, now: number): MeView | null {
   if (g && g.phase === 'night' && p.alive) {
     const voters = hitVoters(room);
     const youVote = voters.some((v) => v.id === p.id);
-    if (youVote || isKiller(p, s)) {
+    if (voters.length > 0 && (youVote || isKiller(p, s))) {
       // Shuffled per night (stable within it) so a slot number never maps to a seat. The server-only
       // secret in the key stops anyone recomputing the order from the (public) player ids.
       const key = (id: string) => slotHash(`${room.hostTokenHash}:${g.phaseSeq}:${id}`);
@@ -185,7 +185,7 @@ function buildMe(room: Room, playerId: string, now: number): MeView | null {
     }
   }
   const mafiaChat =
-    inGame && inMafiaChat(p, s)
+    inGame && s.mafiaChat !== false && inMafiaChat(p, s)
       ? (g!.mafiaChat ?? []).map((m) => {
           const from = room.players.find((x) => x.id === m.from);
           const gf = from?.roleId === 'godfather';

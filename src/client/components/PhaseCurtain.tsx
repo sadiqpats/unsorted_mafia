@@ -95,6 +95,7 @@ const TITLE_BW: Record<Scene, string> = {
 /** A full-screen flash that lands with each big news line (public events only — never a secret). */
 type Flash = 'blood' | 'heal' | 'gold' | 'hush' | 'shadow' | 'joker';
 const FLASH: Partial<Record<EventTag, Flash>> = {
+  superpower: 'blood',
   kill: 'blood',
   voteout: 'blood',
   removed: 'blood',
@@ -112,6 +113,7 @@ const FX_EVENT = 'unsorted-fx';
 const fxFlash = (kind: Flash) => window.dispatchEvent(new CustomEvent(FX_EVENT, { detail: kind }));
 
 const CUE: Partial<Record<EventTag, Parameters<ReturnType<typeof useFx>['play']>[0]>> = {
+  superpower: 'dramaticReveal',
   kill: 'kill',
   quiet: 'relief',
   saved: 'saved',

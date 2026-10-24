@@ -1,7 +1,7 @@
 import type { EventTag } from '../../shared/types';
 
 /** Events big enough to deserve a tension build before they are revealed. */
-const DRAMATIC = new Set<EventTag>(['kill', 'revive', 'voteout', 'joker', 'win-town', 'win-mafia', 'win-other', 'removed']);
+const DRAMATIC = new Set<EventTag>(['superpower', 'kill', 'revive', 'voteout', 'joker', 'win-town', 'win-mafia', 'win-other', 'removed']);
 
 /**
  * When each news line of a fresh phase appears (seconds after the phase starts).

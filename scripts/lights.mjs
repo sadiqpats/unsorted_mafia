@@ -58,6 +58,8 @@ const SCENES = {
 /** One-off effects for the big moments, then the room returns to the current scene. */
 const OFF = { r: 0, g: 0, b: 0, dimming: 10 }; // as dark as a bulb goes while staying "on"
 const EFFECTS = {
+  // The Godfather's Superpower (Mahastra): a long red storm, double the kill strobe.
+  superpower: [[{ ...RED, dimming: 100 }, 140], [OFF, 100], [{ ...RED, dimming: 100 }, 140], [OFF, 100], [{ ...RED, dimming: 100 }, 140], [OFF, 400], [{ ...RED, dimming: 100 }, 140], [OFF, 100], [{ ...RED, dimming: 100 }, 140], [OFF, 100], [{ ...RED, dimming: 100 }, 220], [OFF, 1000]],
   // Killed: a red strobe, a beat of darkness.
   kill: [[{ ...RED, dimming: 85 }, 120], [OFF, 110], [{ ...RED, dimming: 85 }, 120], [OFF, 110], [{ ...RED, dimming: 85 }, 160], [OFF, 900]],
   voteout: [[{ ...RED, dimming: 85 }, 260], [OFF, 300], [{ ...RED, dimming: 85 }, 260], [OFF, 300], [{ ...RED, dimming: 60 }, 700]],

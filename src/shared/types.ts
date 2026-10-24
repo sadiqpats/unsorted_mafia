@@ -64,6 +64,8 @@ export interface Player {
   /** Thief: last power taken and when (the same power can't be taken two rounds in a row). */
   lastStolenAbility?: string | null;
   lastStealRound?: number | null;
+  /** Doctor / Godfather: who they protected or silenced, and in which round (no same person two nights running). */
+  lastTargets?: Record<string, { round: number; targetId: string }>;
   revivedCount: number;
   lateJoiner: boolean;
   /** The Godfather who took over the hit after the last Mafia member died (godfatherTakesOver). */
@@ -99,6 +101,7 @@ export interface LogEntry {
 }
 
 export type EventTag =
+  | 'superpower'
   | 'kill'
   | 'quiet'
   | 'saved'
@@ -152,6 +155,8 @@ export interface MorningReport {
   revived: string[];
   silenced: string[];
   saved: boolean;
+  /** The Godfather used his Superpower last night (public: the town sees it). */
+  superpower?: boolean;
 }
 
 export interface Game {
@@ -177,6 +182,8 @@ export interface Game {
   lastDawn?: { round: number; revived: string[] } | null;
   /** The Mafia's secret chat (Mafia members + the Godfather). */
   mafiaChat?: { seq: number; at: number; from: string; text: string }[];
+  /** The Godfather's Superpower: switched on at this round's Dawn, by this player. */
+  superpower?: { round: number; by: string } | null;
   /** Who is typing in the Mafia's chat, until when. */
   mafiaTyping?: Record<string, number>;
   winner: WinResult | null;

@@ -15,10 +15,9 @@ const initials = (name: string) =>
     .toUpperCase();
 
 /**
- * The Mafia's secret chat, for the Mafia members and the Godfather, open from the role reveal.
- * Closed it is one quiet bar: no unread count, no blinking, no sound or vibration — nothing that
- * could give a Mafia phone away across the room. Members show with their name and photo; the
- * Godfather shows only as "Godfather" (the Mafia never learn who he is).
+ * The Mafia's secret chat, for the Mafia members only (never the Godfather), open from the role
+ * reveal. Closed it is one quiet bar: no unread count, no blinking, no sound or vibration —
+ * nothing that could give a Mafia phone away across the room. Members show with name and photo.
  */
 export function MafiaChat({ view, send }: { view: ClientView; send: Send }) {
   const chat = view.me?.mafiaChat ?? [];
