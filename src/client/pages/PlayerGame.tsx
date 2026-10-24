@@ -479,6 +479,7 @@ function NightPanel({ view, send, serverNow }: { view: ClientView; send: Send; s
   const g = view.game!;
   const toOpen = useCountdown(g.phaseOpensAt, serverNow, g.pausedRemainingMs);
   const waiting = toOpen !== null && toOpen > 0 && g.pausedRemainingMs === null;
+  const picks = useNightPicks(view, send, !waiting && g.pausedRemainingMs === null);
   if (!night || night.options.length === 0) {
     // Nothing to do (e.g. eliminated): still see what just happened.
     return (
@@ -516,7 +517,7 @@ function NightPanel({ view, send, serverNow }: { view: ClientView; send: Send; s
           {me.hitPlan && !pre && <MafiaVotes view={view} />}
           {me.knownMafia && !pre && <GodfatherKnows view={view} />}
           {night.options.map((o) => (
-            <NightOptionCard key={o.abilityId} view={view} option={o} submitted={night.submitted} send={send} />
+            <NightOptionCard key={o.abilityId} view={view} option={o} submitted={night.submitted} send={send} pick={picks.get(o.abilityId)} setPick={(t) => picks.set(o.abilityId, t)} />
           ))}
         </div>
       </PrivacyShield>
@@ -590,10 +591,74 @@ function PrivateNotes({ view }: { view: ClientView }) {
   );
 }
 
-function NightOptionCard({ view, option, submitted, send }: { view: ClientView; option: NightOption; submitted: Record<string, string | null>; send: Send }) {
+/** The Mafia hit can be changed all night, so a tap locks it in straight away. */
+const isInstant = (o: NightOption) => o.abilityId === 'mafia_kill' && o.changeable;
+
+/**
+ * Tonight's picks, kept by the whole night panel — so a pick survives the panel hiding itself
+ * (it closes after 15 s) — and made to reach the server:
+ *  - the Mafia hit is sent as soon as it is tapped, and sent again if a tap was missed (a second
+ *    tap while the first was on its way, a tap during a pause) until the server has that pick;
+ *  - any pick that was tapped but never locked in is sent just before the clock runs out.
+ */
+function useNightPicks(view: ClientView, send: Send, open: boolean) {
+  const night = view.me!.night;
+  const submitted = night?.submitted ?? {};
+  const options = night?.options ?? [];
+  const [picks, setPicks] = useState<Record<string, string | null>>(() => ({ ...submitted }));
+  const inFlight = useRef<Record<string, string | null>>({});
+  const tried = useRef<Record<string, string | null>>({});
+  const phaseSeq = view.game!.phaseSeq;
+  const failures = useRef<Record<string, number>>({});
+  const push = (abilityId: string, targetId: string | null) => {
+    inFlight.current[abilityId] = targetId;
+    tried.current[abilityId] = targetId;
+    send({ type: 'night_action', abilityId, targetId, phaseSeq })
+      .catch(() => null)
+      .then((a) => {
+        delete inFlight.current[abilityId];
+        if (!a?.ok && (failures.current[abilityId] = (failures.current[abilityId] ?? 0) + 1) <= 3) {
+          // Refused (e.g. a flaky connection): try again shortly, a few times.
+          setTimeout(() => {
+            delete tried.current[abilityId];
+            setPicks((p) => ({ ...p }));
+          }, 1200);
+        }
+        setPicks((p) => ({ ...p })); // look again: the pick may have changed meanwhile
+      });
+  };
+  // A pause or the opening break ending: try again what didn't stick.
+  useEffect(() => {
+    if (!open) return;
+    tried.current = {};
+    failures.current = {};
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    for (const o of options) {
+      const want = picks[o.abilityId];
+      if (!isInstant(o) || want == null || submitted[o.abilityId] === want) continue;
+      if (o.abilityId in inFlight.current || tried.current[o.abilityId] === want) continue;
+      push(o.abilityId, want);
+    }
+  });
+  const pending = () => options.filter((o) => {
+    const want = picks[o.abilityId];
+    if (want == null) return false;
+    return !(o.abilityId in submitted) || (o.changeable && submitted[o.abilityId] !== want);
+  });
+  useLastSecondLock(view, pending().length > 0, () => {
+    for (const o of pending()) push(o.abilityId, picks[o.abilityId] ?? null);
+  });
+  return {
+    get: (abilityId: string) => picks[abilityId] ?? null,
+    set: (abilityId: string, t: string | null) => setPicks((p) => ({ ...p, [abilityId]: t })),
+  };
+}
+
+function NightOptionCard({ view, option, submitted, send, pick, setPick }: { view: ClientView; option: NightOption; submitted: Record<string, string | null>; send: Send; pick: string | null; setPick: (t: string | null) => void }) {
   const { act, busy } = useAct(send);
   const done = option.abilityId in submitted;
-  const [pick, setPick] = useState<string | null>(done ? submitted[option.abilityId] : null);
   const locked = done && !option.changeable;
   // Mafia hit: which (anonymous) members picked each target, so the family lines up without talking.
   const familyOn: Record<string, string[]> = {};
@@ -603,14 +668,10 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
   }
   const submit = (target: string | null) =>
     act({ type: 'night_action', abilityId: option.abilityId, targetId: target, phaseSeq: view.game!.phaseSeq });
-  // The Mafia hit can be changed all night, so a tap locks it in straight away.
-  const instant = option.abilityId === 'mafia_kill' && option.changeable;
-  const choose = (t: string) => {
-    setPick(t);
-    if (instant && !busy && submitted[option.abilityId] !== t) submit(t);
-  };
-  // A pick that was never locked in still counts: it is sent just before the clock runs out.
-  useLastSecondLock(view, !done && pick !== null && !locked, () => pick !== null && submit(pick));
+  // The Mafia hit locks in on the tap itself (NightPanel sends it, and re-sends until it sticks).
+  const instant = isInstant(option);
+  const choose = (t: string) => setPick(t);
+  const sending = instant && pick !== null && submitted[option.abilityId] !== pick;
   return (
     <div data-option={option.abilityId}>
       {option.source === 'decoy' && (
@@ -645,6 +706,11 @@ function NightOptionCard({ view, option, submitted, send }: { view: ClientView; 
           );
         })}
       </div>
+      {sending && (
+        <p className="mt-2 text-center text-xs text-gold" role="status">
+          Locking in…
+        </p>
+      )}
       <div className="mt-3 flex gap-2">
         <button className="btn btn-primary flex-1" disabled={locked || busy || !pick || (done && submitted[option.abilityId] === pick)} onClick={() => submit(pick)}>
           {done ? (locked || (instant && submitted[option.abilityId] === pick) ? `✓ Locked: ${submitted[option.abilityId] === null ? 'skipped' : option.targetKind === 'power' ? ABILITIES[submitted[option.abilityId]!]?.name : nameOf(view, submitted[option.abilityId])}` : 'Change pick') : 'Lock in'}
@@ -753,7 +819,9 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
   const { act, busy } = useAct(send);
   const [pick, setPick] = useState<string | null | undefined>(v?.myVote);
   const [rally, setRally] = useState(false);
-  useLastSecondLock(view, !!v && !v.myVote && v.myVote !== null && pick !== undefined, () => pick !== undefined && act({ type: 'vote', targetId: pick ?? null, rally, phaseSeq: view.game!.phaseSeq }));
+  // A vote tapped but not sent (or changed but not re-sent) still counts: it goes just before the clock ends.
+  const unsent = !!v && pick !== undefined && (v.myVote === undefined || (view.settings.allowVoteChange && pick !== v.myVote));
+  useLastSecondLock(view, unsent, () => pick !== undefined && act({ type: 'vote', targetId: pick ?? null, rally, phaseSeq: view.game!.phaseSeq }));
   const runoff = view.game!.runoff;
   const voted = v?.myVote !== undefined;
   const canChange = view.settings.allowVoteChange;
@@ -849,7 +917,7 @@ function Tally({ view }: { view: ClientView }) {
           </ul>
         </details>
       )}
-      <p className="pt-1 text-[0.7rem] text-mute">Weighted totals (the Judge’s vote counts extra).</p>
+      <p className="pt-1 text-[0.7rem] text-mute">{themeText('Weighted totals (the Judge’s vote counts extra).', view.settings)}</p>
     </div>
   );
 }

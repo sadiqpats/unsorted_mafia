@@ -106,10 +106,15 @@ export function useCountdown(endsAt: number | null, serverNow: () => number, pau
       setLeft(null);
       return;
     }
-    const update = () => setLeft(Math.max(0, endsAt - serverNow()));
+    // Wakes once per second, just after the second changes (not several times a second: battery).
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const update = () => {
+      const l = Math.max(0, endsAt - serverNow());
+      setLeft(l);
+      if (l > 0) t = setTimeout(update, (l % 1000 || 1000) + 20);
+    };
     update();
-    const t = setInterval(update, 250);
-    return () => clearInterval(t);
+    return () => clearTimeout(t);
   }, [endsAt, pausedMs, serverNow]);
   return left;
 }

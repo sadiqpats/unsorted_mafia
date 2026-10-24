@@ -91,7 +91,12 @@ export function useRoom(code: string, auth: { token?: string; display?: boolean 
     return attempt().then((a) => (a.error?.code === 'timeout' ? attempt() : a));
   }, []);
 
-  useWakeLock(!!auth && status !== 'denied' && status !== 'ended');
+  // The TV and the host keep their screens on. A player's phone stays awake only while there is
+  // something to do on it (role card, Dawn, Night, the vote): during the lobby, the discussion and
+  // after the game it may sleep, which saves a lot of battery (it reconnects by itself on waking).
+  const phase = view?.game?.phase;
+  const needsScreen = !!auth?.display || !!view?.host || (view?.status === 'active' && (phase === 'reveal' || phase === 'prenight' || phase === 'night' || phase === 'voting'));
+  useWakeLock(!!auth && status !== 'denied' && status !== 'ended' && needsScreen);
 
   const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
 

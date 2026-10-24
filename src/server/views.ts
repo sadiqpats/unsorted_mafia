@@ -24,7 +24,7 @@ import {
   voteTargets,
   voteWeight,
 } from '../shared/engine';
-import { ROLES, isKiller, isMafiaTeam, roleAlignment, roleTitle } from '../shared/roles';
+import { ROLES, isKiller, isMafiaTeam, roleAlignment, roleShort } from '../shared/roles';
 import type { Alignment, Room } from '../shared/types';
 import type { ClientView, HostPanel, MeView, PublicGame, PublicPlayer, PublicView } from '../shared/view-types';
 
@@ -193,7 +193,7 @@ function buildMe(room: Room, playerId: string, now: number): MeView | null {
             seq: m.seq,
             at: m.at,
             text: m.text,
-            name: gf ? roleTitle('godfather', s) : (from?.name ?? '?'),
+            name: gf ? roleShort('godfather', s) : (from?.name ?? '?'),
             photo: !gf && from?.photoVersion ? `/api/rooms/${room.code}/photos/${from.id}?v=${from.photoVersion}` : null,
             godfather: gf,
             you: m.from === p.id,
@@ -203,7 +203,7 @@ function buildMe(room: Room, playerId: string, now: number): MeView | null {
   const nameInChat = (id: string) => {
     const from = room.players.find((x) => x.id === id);
     const gf = from?.roleId === 'godfather';
-    return { gf, name: gf ? roleTitle('godfather', s) : (from?.name ?? '?'), from };
+    return { gf, name: gf ? roleShort('godfather', s) : (from?.name ?? '?'), from };
   };
   const mafiaTyping =
     mafiaChat === null

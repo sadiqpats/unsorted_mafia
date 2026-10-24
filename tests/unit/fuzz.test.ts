@@ -10,6 +10,7 @@ import {
   GameError,
   hostEliminate,
   hostRestore,
+  mafiaDecision,
   nightOptions,
   pauseGame,
   resolveTie,
@@ -77,6 +78,7 @@ function randomGame(seed: number) {
     deadCanSeeRoles: chance(0.5),
     detectiveResult: pick(['alignment', 'binary'] as const),
     godfatherAppearsInnocent: chance(0.5),
+    godfatherTakesOver: chance(0.4),
     mafiaDecision: pick(['plurality', 'leader'] as const),
     mafiaWin: pick(['parity', 'majority'] as const),
     doctorSelfProtect: pick(['never', 'alternate', 'always'] as const),
@@ -181,7 +183,7 @@ function playOne(seed: number) {
       if (!tick(room, now, rng)) step('advance', () => advancePhase(room, now, rng, 'host'));
     } else if (phase === 'prenight' || phase === 'night') {
       // During the opening break nobody can act.
-      if (g().phaseOpensAt && now < g().phaseOpensAt!) {
+      if (g().phaseOpensAt && now < g().phaseOpensAt! - 1000) {
         const p = room.players.find((x) => nightOptions(room, x.id).length);
         if (p) {
           const o = nightOptions(room, p.id)[0];
@@ -204,11 +206,17 @@ function playOne(seed: number) {
           step(`night ${o.abilityId}`, () => submitNightAction(room, p.id, { abilityId: o.abilityId, targetId: target, phaseSeq: g().phaseSeq }, now));
         }
       }
+      // The Mafia's pick must die unless somebody protected them.
+      const hit = phase === 'night' ? mafiaDecision(room) : null;
+      const shielded = hit !== null && Object.values(g().night.actions).some((a) => a.targetId === hit && ['protect', 'v_shield'].includes(a.abilityId));
       if (!tick(room, now, rng)) {
         if (chance(0.5)) {
           now = (g().phaseEndsAt ?? now) + 1; // clock runs out
           if (!tick(room, now, rng) && g().phase === phase) step('advance', () => advancePhase(room, now, rng, 'host'));
         } else step('advance', () => advancePhase(room, now, rng, 'host'));
+      }
+      if (hit && !shielded && g().phase !== phase) {
+        expect(room.players.find((x) => x.id === hit)!.alive, `${where}: the Mafia's pick survived with no protection`).toBe(false);
       }
     } else if (phase === 'discussion' || phase === 'morning') {
       now += 60000;

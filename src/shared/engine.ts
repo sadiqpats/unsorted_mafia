@@ -747,7 +747,8 @@ export function submitNightAction(
   now: number,
 ) {
   const g = requirePhase(room, room.game?.phase === 'prenight' ? 'prenight' : 'night', input.phaseSeq);
-  if (!phaseOpen(room, now)) fail('not_open', 'Hold on — it opens in a moment.');
+  // A second of grace before the opening: phone clocks are never exactly in step with the server.
+  if (!phaseOpen(room, now + 1000)) fail('not_open', 'Hold on — it opens in a moment.');
   const opt = nightOptions(room, playerId).find((o) => o.abilityId === input.abilityId);
   if (!opt) fail('not_eligible', 'You cannot use that ability right now.');
   if (input.targetId !== null && !opt!.targets.includes(input.targetId)) fail('invalid_target', 'That target is not allowed.');
