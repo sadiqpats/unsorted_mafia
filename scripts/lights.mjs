@@ -223,6 +223,7 @@ async function refreshBulbs(roomId) {
     for (const f of found) merged.set(f.mac, f);
     bulbs = [...merged.values()];
     if (bulbs.map((b) => b.mac).sort().join() !== was) console.log(`💡 Found ${bulbs.length} light(s) in the living room: ${bulbs.map((b) => b.ip).join(', ')}`);
+    if (bulbs.length > (config.bulbCount ?? 0)) { config.bulbCount = bulbs.length; saveConfig(config); }
   }
   return bulbs;
 }
@@ -235,9 +236,16 @@ async function snapshot() {
   }
 }
 
-async function setAll(params, label) {
+/**
+ * Every light at once, without waiting for answers: a flash step must last exactly its few
+ * hundred milliseconds even if one bulb is slow or asleep (waiting for replies made strobes crawl
+ * and drift from the Echo). Each command goes out twice, a moment apart, in case Wi-Fi drops one.
+ */
+function setAll(params, label) {
   if (DRY) return console.log(`   [dry-run] ${label}`, JSON.stringify(params));
-  await Promise.all(bulbs.map((b) => send(b.ip, 'setPilot', { state: true, ...params })));
+  const payload = Buffer.from(JSON.stringify({ method: 'setPilot', params: { state: true, ...params } }));
+  for (const b of bulbs) sock.send(payload, WIZ_PORT, b.ip);
+  setTimeout(() => { for (const b of bulbs) sock.send(payload, WIZ_PORT, b.ip); }, 70);
 }
 
 // Everything the lights do runs as one "show" at a time; starting a new one stops the old.
@@ -496,6 +504,7 @@ async function follow(config) {
     room = { code, socket, view: null, seq: undefined, overAt: 0 };
     console.log(`🎮 Following room ${code}`);
     if (alexa) alexa.warm();
+    refreshBulbs(config.wizRoomId).catch(() => {}); // a game is starting: make sure every light is found
     socket.on('state', (v) => onView(v).catch((e) => console.error(e)));
     socket.on('connect_error', (e) => {
       if (e.message === 'no_room') leave();
@@ -539,7 +548,8 @@ async function follow(config) {
   // Bulbs can change address (the Wi-Fi hands them out); look often until we have them, then every 2 minutes.
   let lastLook = Date.now();
   setInterval(() => {
-    const every = bulbs.length ? 120_000 : 15_000;
+    // Look every 15 s until every light the room has ever had is back, then every 2 minutes.
+    const every = bulbs.length && bulbs.length >= (config.bulbCount ?? 0) ? 120_000 : 15_000;
     if (Date.now() - lastLook < every) return;
     lastLook = Date.now();
     refreshBulbs(config.wizRoomId).catch(() => {});
