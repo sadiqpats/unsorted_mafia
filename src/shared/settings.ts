@@ -184,7 +184,7 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     godfatherSilenceSelf: true,
     noRepeatTargets: true,
     mafiaChat: true,
-    godfatherSuperpower: true,
+    godfatherSuperpower: false,
     mafiaDecision: 'plurality',
     mafiaWin: 'parity',
     doctorSelfProtect: 'alternate',

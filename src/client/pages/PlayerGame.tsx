@@ -71,10 +71,10 @@ function PlayerChoice({ view, id, selected, tone = 'gold', disabled, onPick, chi
       aria-checked={selected}
       disabled={disabled}
       onClick={onPick}
-      className={`choice-tile relative flex min-h-[9.5rem] flex-col items-center justify-start gap-2 rounded-2xl border px-2 pb-3 pt-3 text-center ${selected ? on : 'border-line bg-black/30 hover:border-gold/50'}`}
+      className={`choice-tile relative flex min-h-[8rem] flex-col items-center justify-start gap-2 rounded-2xl border px-2 pb-3 pt-3 text-center ${selected ? on : 'border-line bg-black/30 hover:border-gold/50'}`}
     >
-      <span aria-hidden="true" className={`block rounded-[18%] transition-transform ${selected ? 'scale-105' : ''}`}>
-        <Avatar name={p?.name ?? '?'} photo={p?.photo ?? null} size={84} />
+      <span aria-hidden="true" className={`block w-full max-w-[84px] rounded-[18%] transition-transform ${selected ? 'scale-105' : ''}`}>
+        <Avatar name={p?.name ?? '?'} photo={p?.photo ?? null} size={84} className="!h-auto aspect-square !w-[min(84px,100%)]" />
       </span>
       {selected && (
         <span aria-hidden="true" className={`absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full text-sm font-bold ${tone === 'crimson' ? 'bg-crimson text-white' : 'bg-gold text-ink'}`}>
@@ -682,7 +682,7 @@ function NightOptionCard({ view, option, submitted, send, pick, setPick }: { vie
       )}
       <p className="text-base text-bone">{option.prompt}</p>
       {option.charges !== null && option.source !== 'decoy' && <p className="text-xs text-mute">{option.charges} use(s) left</p>}
-      <div className={`mt-3 grid grid-cols-2 ${option.targetKind === 'player' ? 'gap-3' : 'gap-2 sm:grid-cols-3'}`} role="radiogroup" aria-label={option.prompt}>
+      <div className={`mt-3 grid ${option.targetKind === 'player' ? `${option.targets.length > 8 ? 'grid-cols-3 gap-2' : 'grid-cols-2 gap-3'}` : 'grid-cols-2 gap-2 sm:grid-cols-3'}`} role="radiogroup" aria-label={option.prompt}>
         {option.targets.map((t) => {
           const selected = pick === t;
           if (option.targetKind === 'player') {
@@ -847,7 +847,7 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
       <PrivacyShield label={voted ? 'Review your vote' : 'Open your ballot'}>
         <div className="space-y-4 pt-11">
           <PrivateNotes view={view} />
-          <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Vote to eliminate">
+          <div className={`grid ${(v?.targets.length ?? 0) > 8 ? 'grid-cols-3 gap-2' : 'grid-cols-2 gap-3'}`} role="radiogroup" aria-label="Vote to eliminate">
             {v.targets.map((t) => (
               <PlayerChoice key={t} view={view} id={t} tone="crimson" selected={pick === t} disabled={busy || (voted && !canChange)} onPick={() => setPick(t)} />
             ))}

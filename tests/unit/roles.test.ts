@@ -508,8 +508,13 @@ describe("the Mafia's chat", () => {
 
 describe("the Godfather's Superpower (Mahastra)", () => {
   const roles = ['mafia', 'godfather', 'doctor', 'thief', 'villager', 'villager', 'villager', 'villager', 'villager'];
+  it('off by default: no Superpower, and no Dawn just for it', () => {
+    const g = setup(['mafia', 'godfather', 'villager', 'villager', 'villager', 'villager', 'villager']);
+    g.advance();
+    expect(g.room.game!.phase).not.toBe('prenight');
+  });
   it('switched on at Dawn: that night he kills two (the Mafia sit out), the town sees it, and it is gone', () => {
-    const g = setup(roles);
+    const g = setup(roles, { godfatherSuperpower: true });
     toPhase(g, 'prenight');
     const gfDawn = nightOptions(g.room, 'p1');
     expect(gfDawn.map((o) => o.abilityId)).toEqual(['superpower']);
@@ -539,7 +544,7 @@ describe("the Godfather's Superpower (Mahastra)", () => {
     expect(nightOptions(g.room, 'p1').map((o) => o.abilityId)).toEqual(['silence']);
   });
   it('Bollywood: Mahastra', () => {
-    const g = setup(roles, { bollywood: true });
+    const g = setup(roles, { bollywood: true, godfatherSuperpower: true });
     toPhase(g, 'prenight');
     expect(nightOptions(g.room, 'p1')[0].prompt).toMatch(/Mahastra/);
     submitNightAction(g.room, 'p1', { abilityId: 'superpower', targetId: 'superpower', phaseSeq: g.seq() }, 1);
@@ -548,11 +553,6 @@ describe("the Godfather's Superpower (Mahastra)", () => {
     g.act(1, 'gf_strike_2', 5);
     toPhase(g, 'discussion');
     expect(news(g, 'morning')[0]).toBe('Badde Sahab ne Mahastra ka istemaal kiya!');
-  });
-  it('can be switched off: no Superpower, and no Dawn just for it', () => {
-    const g = setup(['mafia', 'godfather', 'villager', 'villager', 'villager', 'villager', 'villager'], { godfatherSuperpower: false });
-    g.advance();
-    expect(g.room.game!.phase).not.toBe('prenight');
   });
 });
 

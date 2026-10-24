@@ -9,10 +9,6 @@ test('big moments: knife-cut card on TV and phones, pause after the vote, Mafia-
     await pause.fill('8');
     await pause.press('Enter');
     await expect(pause).toHaveValue('8');
-    // No Superpower Dawn in this test (it has its own).
-    await h.locator('summary', { hasText: 'Mafia & Godfather' }).click();
-    await h.getByText('Godfather’s Superpower (Mahastra)', { exact: true }).click();
-    await expect(h.getByLabel('Godfather’s Superpower (Mahastra)')).not.toBeChecked();
   });
   const tv = await newPhone(browser);
   await tv.setViewportSize({ width: 1280, height: 720 });

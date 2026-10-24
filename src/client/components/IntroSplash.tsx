@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFx, usePrefs } from '../lib/prefs';
 import { sounds } from '../lib/sound';
+import { RoleArt } from './RoleArt';
 import { LOGO } from './ui';
 
 const SEEN_KEY = 'mafia-night:intro-seen';
@@ -17,11 +18,17 @@ function shouldShow() {
   }
 }
 
-/** Act two names the game the guest is walking into. */
+/** Act two names the game the guest is walking into (and what the three cards turn over to show). */
 function gateFor(path: string) {
-  if (path.startsWith('/charades')) return { title: 'Dumb Charades', whisper: 'Lights. Camera. Action!', label: 'Welcome to Bollywood Dumb Charades' };
-  if (path === '/') return { title: 'Game Night', whisper: 'Two games. One unforgettable night…', label: 'Welcome to Unsorted' };
-  return { title: 'Mafia Night', whisper: 'The night is waiting for you…', label: 'Welcome to Mafia Night' };
+  if (path.startsWith('/charades')) return { title: 'Dumb Charades', whisper: 'Lights. Camera. Action!', label: 'Welcome to Bollywood Dumb Charades', faces: ['🎭', '🎥', '🎬'] };
+  if (path === '/') return { title: 'Game Night', whisper: 'Two games. One unforgettable night…', label: 'Welcome to Unsorted', faces: ['lens', '🎬', 'fedora'] };
+  return { title: 'Mafia Night', whisper: 'Trust no one. The night is waiting…', label: 'Welcome to Mafia Night', faces: ['lens', 'cross', 'fedora'] };
+}
+
+/** One card's face: a character illustration, or an emoji for Dumb Charades. */
+function CardFace({ face, center }: { face: string; center: boolean }) {
+  if (/^[a-z]+$/.test(face)) return <RoleArt art={face} alignment={center ? 'mafia' : 'good'} size={52} />;
+  return <span className="in-card-emoji">{face}</span>;
 }
 
 type Stage = 'brand' | 'gate' | 'open' | 'gone';
@@ -29,7 +36,9 @@ type Stage = 'brand' | 'gate' | 'open' | 'gone';
 /**
  * The welcome, in three beats:
  *  1. Unsorted: the yellow ring spins in on a warm glow and the wordmark opens out of it.
- *  2. A cross-fade to the gate ("Game Night" / "Mafia Night" / "Dumb Charades") — candle, title, "Tap to enter".
+ *  2. The gate: a spotlight falls, three cards rise and fan out, then turn over one by one —
+ *     the Detective, the Doctor, and last, in red, the Mafia — and the title lands under them
+ *     with a red slash ("Game Night" / "Mafia Night" / "Dumb Charades"), then "Tap to enter".
  *  3. Enter: the doors slide apart on a burst of light and the site is revealed.
  *
  * Smoothness rules: every layer is mounted from the start (no pop-in), and only
@@ -130,12 +139,23 @@ export function IntroSplash() {
 
       {/* Beat 2: the gate */}
       <div className="in-layer in-gate" aria-hidden={stage === 'brand'}>
-        <div className="in-candle" aria-hidden="true">
-          <div className="in-flame" />
-          <div className="in-wax" />
+        <div className="in-cards" aria-hidden="true">
+          <span className="in-spot" />
+          {(['l', 'r', 'c'] as const).map((side, i) => (
+            <div key={side} className={`in-card in-card-${side}`}>
+              <div className="in-card-back">
+                <img src={LOGO.mark} alt="" draggable={false} />
+              </div>
+              <div className="in-card-face">
+                <CardFace face={gate.faces[side === 'l' ? 0 : side === 'r' ? 1 : 2]} center={side === 'c'} />
+              </div>
+              {i === 2 && <span className="in-card-burst" />}
+            </div>
+          ))}
         </div>
         <p className="in-kicker">Unsorted Plans presents</p>
         <h1 className="in-title">{gate.title}</h1>
+        <span className="in-slash" aria-hidden="true" />
         <p className="in-whisper">{gate.whisper}</p>
         <button className="in-enter" onClick={enter} tabIndex={stage === 'gate' ? 0 : -1}>
           <span className="in-enter-ring" aria-hidden="true" />

@@ -79,6 +79,7 @@ function randomGame(seed: number) {
     detectiveResult: pick(['alignment', 'binary'] as const),
     godfatherAppearsInnocent: chance(0.5),
     godfatherTakesOver: chance(0.4),
+    godfatherSuperpower: chance(0.5),
     godfatherSilenceSelf: chance(0.7),
     noRepeatTargets: chance(0.7),
     mafiaDecision: pick(['plurality', 'leader'] as const),
