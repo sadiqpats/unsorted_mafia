@@ -23,6 +23,7 @@ const CharadesHost = lazy(() => import('./charades/pages/HostCreate'));
 const CharadesJoin = lazy(() => import('./charades/pages/Join'));
 const CharadesRoom = lazy(() => import('./charades/pages/Room'));
 const CharadesTV = lazy(() => import('./charades/pages/TV'));
+const DrawImposter = lazy(() => import('./draw/DrawImposter'));
 
 function NotFound() {
   return (
@@ -62,6 +63,7 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="/charades/join/:code" element={<CharadesJoin />} />
                 <Route path="/c/:code" element={<CharadesRoom />} />
                 <Route path="/ctv/:code" element={<CharadesTV />} />
+                <Route path="/draw" element={<DrawImposter />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

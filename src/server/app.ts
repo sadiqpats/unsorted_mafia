@@ -188,6 +188,14 @@ export function createApp(opts: AppOptions) {
     return { status: 403, code: 'bad_host_code', message: 'That host code is not correct.' };
   };
 
+  // Pass-and-play games (one phone, no room) only need to know the host code is right.
+  app.post('/api/host-check', limit, (req, res) => {
+    const given = typeof req.body?.hostCode === 'string' ? req.body.hostCode.trim() : '';
+    const denied = checkHostCode(req.ip ?? 'unknown', given);
+    if (denied) return res.status(denied.status).json({ error: { code: denied.code, message: denied.message } });
+    res.json({ ok: true });
+  });
+
   // The lights helper (a small program on a computer at home, on the same Wi-Fi as the lights)
   // asks which rooms want the home lights. Host code required, like opening a room.
   app.get('/api/lights/rooms', limit, (req, res) => {

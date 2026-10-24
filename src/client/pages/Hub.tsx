@@ -62,6 +62,24 @@ export default function Hub() {
             </ul>
             <span className="btn relative mt-6 w-full max-w-xs bg-gradient-to-b from-[#ff3d8b] to-[#c4105a] text-white shadow-[0_10px_30px_-10px_#e5196f]">Play Dumb Charades</span>
           </Link>
+
+          <Link
+            to="/draw"
+            className="hub-card anim-fade-up group card relative flex flex-col items-center overflow-hidden p-6 text-center focus-ring md:col-span-2"
+            style={{ animationDelay: '0.45s' }}
+          >
+            <span className="relative text-7xl transition-transform duration-500 group-hover:scale-105" aria-hidden="true">
+              🎨🕵️
+            </span>
+            <h2 className="brand-title relative mt-4 text-4xl font-black">Draw the Imposter</h2>
+            <p className="relative mt-2 font-[family-name:var(--font-serif)] text-xl italic text-mute">One phone. Draw on paper. Spot the faker.</p>
+            <ul className="relative mt-4 flex flex-wrap justify-center gap-2 text-xs">
+              <li className="chip">📱 Pass and play</li>
+              <li className="chip">✏️ Paper and pen</li>
+              <li className="chip">🎬 Bollywood or things</li>
+            </ul>
+            <span className="btn btn-primary relative mt-6 w-full max-w-xs">Play Draw the Imposter</span>
+          </Link>
         </section>
       </main>
 
