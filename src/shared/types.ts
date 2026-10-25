@@ -171,8 +171,9 @@ export interface Game {
   phaseOpensAt?: number;
   pausedRemainingMs: number | null;
   pausedAt?: number | null;
-  night: { actions: Record<string, NightAction> };
-  day: { votes: Record<string, Vote>; runoff: string[] | null; runoffUsed: boolean };
+  /** drafts: the last thing each player TAPPED without locking in. It counts when the phase ends. */
+  night: { actions: Record<string, NightAction>; drafts?: Record<string, NightAction> };
+  day: { votes: Record<string, Vote>; runoff: string[] | null; runoffUsed: boolean; drafts?: Record<string, Vote> };
   pendingTie: string[] | null;
   lastVerdict: Verdict | null;
   lastMorning: MorningReport | null;

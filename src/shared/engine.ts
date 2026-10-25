@@ -432,7 +432,7 @@ function beginNightCycle(room: Room, now: number) {
   const g = room.game!;
   for (const p of room.players) if (p.stolen) expireStolen(room, p);
   g.round += 1;
-  g.night.actions = {};
+  g.night = { actions: {}, drafts: {} };
   if (hasPreNight(g.settings)) {
     enterPhase(room, 'prenight', now);
     addLog(room, now, 'phase', `Dawn ${g.round} began.`, 'host');
@@ -443,7 +443,7 @@ function beginNightCycle(room: Room, now: number) {
 
 function startNight(room: Room, now: number) {
   const g = room.game!;
-  g.night.actions = {};
+  g.night = { actions: {}, drafts: {} };
   enterPhase(room, 'night', now);
   addLog(room, now, 'phase', `Night ${g.round} began.`, 'host');
 }
@@ -787,10 +787,11 @@ export function nightOptions(room: Room, playerId: string): NightOption[] {
 export function submitNightAction(
   room: Room,
   playerId: string,
-  input: { abilityId: string; targetId: string | null; phaseSeq: number },
+  input: { abilityId: string; targetId: string | null; phaseSeq: number; draft?: boolean },
   now: number,
 ) {
   const g = requirePhase(room, room.game?.phase === 'prenight' ? 'prenight' : 'night', input.phaseSeq);
+  if (input.draft) return saveNightDraft(room, playerId, input, now);
   // A second of grace before the opening: phone clocks are never exactly in step with the server.
   if (!phaseOpen(room, now + 1000)) fail('not_open', 'Hold on — it opens in a moment.');
   const opt = nightOptions(room, playerId).find((o) => o.abilityId === input.abilityId);
@@ -800,6 +801,33 @@ export function submitNightAction(
   if (g.night.actions[key] && !opt!.changeable) fail('already_submitted', 'You already locked in your choice tonight.');
   const action: NightAction = { actorId: playerId, abilityId: input.abilityId, targetId: input.targetId, at: now };
   g.night.actions[key] = action;
+}
+
+/**
+ * A tap without "Lock in": remembered (the newest tap wins) and used if the phase ends before the
+ * player locks in, whether the clock runs out or the host moves on. Never overrides a locked choice
+ * that can't be changed.
+ */
+function saveNightDraft(room: Room, playerId: string, input: { abilityId: string; targetId: string | null }, now: number) {
+  const g = room.game!;
+  if (input.targetId === null) return;
+  const opt = nightOptions(room, playerId).find((o) => o.abilityId === input.abilityId);
+  if (!opt || !opt.targets.includes(input.targetId)) return;
+  const key = `${playerId}:${input.abilityId}`;
+  if (g.night.actions[key] && !opt.changeable) return;
+  (g.night.drafts ??= {})[key] = { actorId: playerId, abilityId: input.abilityId, targetId: input.targetId, at: now };
+}
+
+/** The phase is ending: every tapped-but-not-locked choice becomes the player's choice. */
+function applyNightDrafts(room: Room) {
+  const g = room.game!;
+  for (const [key, d] of Object.entries(g.night.drafts ?? {})) {
+    const opt = nightOptions(room, d.actorId).find((o) => o.abilityId === d.abilityId);
+    if (!opt || d.targetId === null || !opt.targets.includes(d.targetId)) continue;
+    const locked = g.night.actions[key];
+    if (!locked || (opt.changeable && d.at > locked.at)) g.night.actions[key] = d;
+  }
+  g.night.drafts = {};
 }
 
 export function nightComplete(room: Room): boolean {
@@ -1043,6 +1071,7 @@ function doRevive(room: Room, ctx: NightCtx, a: NightAction, now: number, rng: R
  * (except the Thief, whose steal fails if they die).
  */
 export function resolveNight(room: Room, now: number, rng: Rng) {
+  applyNightDrafts(room);
   const g = room.game!;
   const s = g.settings;
   const ctx: NightCtx = newCtx();
@@ -1157,6 +1186,7 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
  * (a revived player is necessarily named — they are visibly back).
  */
 export function resolvePreNight(room: Room, now: number, rng: Rng) {
+  applyNightDrafts(room);
   const g = room.game!;
   const A = g.settings.announcements;
   const ctx = newCtx();
@@ -1216,13 +1246,21 @@ export function voteWeight(room: Room, p: Player, rally: boolean): number {
 export function submitVote(
   room: Room,
   playerId: string,
-  input: { targetId: string | null; rally?: boolean; phaseSeq: number },
+  input: { targetId: string | null; rally?: boolean; phaseSeq: number; draft?: boolean },
   now: number,
 ) {
   const g = requirePhase(room, 'voting', input.phaseSeq);
   const p = getPlayer(room, playerId);
   const elig = voteEligibility(room, p);
   if (!elig.ok) fail('not_eligible', elig.reason!);
+  if (input.draft) {
+    // A tapped name, not yet sent: counts if the vote closes first (never over a locked vote that can't change).
+    if (input.targetId === null || !voteTargets(room, p).includes(input.targetId)) return;
+    if (g.day.votes[playerId] && !g.settings.allowVoteChange) return;
+    const rally = !!input.rally && hasRally(room, p);
+    (g.day.drafts ??= {})[playerId] = { voterId: playerId, targetId: input.targetId, weight: voteWeight(room, p, rally), rally, at: now };
+    return;
+  }
   if (input.targetId === null) {
     if (!g.settings.allowAbstain) fail('invalid_target', 'Abstaining is not allowed in this game.');
   } else if (!voteTargets(room, p).includes(input.targetId)) {
@@ -1251,6 +1289,14 @@ export function votingComplete(room: Room): boolean {
 export function resolveVotes(room: Room, now: number) {
   const g = room.game!;
   const s = g.settings;
+  // Tapped-but-not-sent votes count, if the voter can still vote for that player.
+  for (const [voterId, d] of Object.entries(g.day.drafts ?? {})) {
+    const p = room.players.find((x) => x.id === voterId);
+    if (!p || !voteEligibility(room, p).ok || d.targetId === null || !voteTargets(room, p).includes(d.targetId)) continue;
+    const locked = g.day.votes[voterId];
+    if (!locked || (s.allowVoteChange && d.at > locked.at)) g.day.votes[voterId] = d;
+  }
+  g.day.drafts = {};
   const tally: Record<string, number> = {};
   const votes: Record<string, string | null> = {};
   let abstain = 0;

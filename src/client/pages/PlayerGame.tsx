@@ -652,7 +652,13 @@ function useNightPicks(view: ClientView, send: Send, open: boolean) {
   });
   return {
     get: (abilityId: string) => picks[abilityId] ?? null,
-    set: (abilityId: string, t: string | null) => setPicks((p) => ({ ...p, [abilityId]: t })),
+    set: (abilityId: string, t: string | null) => {
+      setPicks((p) => ({ ...p, [abilityId]: t }));
+      // Every tap is remembered by the server too: if the phase ends before "Lock in" (or this phone
+      // is locked or asleep at the end), the last tap still counts.
+      const o = options.find((x) => x.abilityId === abilityId);
+      if (t !== null && o && !isInstant(o)) send({ type: 'night_action', abilityId, targetId: t, phaseSeq, draft: true }).catch(() => null);
+    },
   };
 }
 
@@ -819,6 +825,11 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
   const { act, busy } = useAct(send);
   const [pick, setPick] = useState<string | null | undefined>(v?.myVote);
   const [rally, setRally] = useState(false);
+  // A tapped name is remembered by the server at once: it counts if the vote closes before "Vote".
+  const tapVote = (t: string) => {
+    setPick(t);
+    send({ type: 'vote', targetId: t, rally, phaseSeq: view.game!.phaseSeq, draft: true }).catch(() => null);
+  };
   // A vote tapped but not sent (or changed but not re-sent) still counts: it goes just before the clock ends.
   const unsent = !!v && pick !== undefined && (v.myVote === undefined || (view.settings.allowVoteChange && pick !== v.myVote));
   useLastSecondLock(view, unsent, () => pick !== undefined && act({ type: 'vote', targetId: pick ?? null, rally, phaseSeq: view.game!.phaseSeq }));
@@ -849,7 +860,7 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
           <PrivateNotes view={view} />
           <div className={`grid ${(v?.targets.length ?? 0) > 8 ? 'grid-cols-3 gap-2' : 'grid-cols-2 gap-3'}`} role="radiogroup" aria-label="Vote to eliminate">
             {v.targets.map((t) => (
-              <PlayerChoice key={t} view={view} id={t} tone="crimson" selected={pick === t} disabled={busy || (voted && !canChange)} onPick={() => setPick(t)} />
+              <PlayerChoice key={t} view={view} id={t} tone="crimson" selected={pick === t} disabled={busy || (voted && !canChange)} onPick={() => tapVote(t)} />
             ))}
             {view.settings.allowAbstain && (
               <button

@@ -15,6 +15,7 @@ import {
   resolveTie,
   resumeGame,
   submitNightAction,
+  submitVote,
   tick,
 } from '../../src/shared/engine';
 import { T0, setup } from './helpers';
@@ -452,5 +453,52 @@ describe('lobby rules', () => {
     const p = addPlayer(r, { id: 'a', name: '  <b>Al</b>  ', tokenHash: 'x', now: T0 });
     expect(p.name).toBe('bAl/b');
     expect(() => addPlayer(r, { id: 'b', name: '   ', tokenHash: 'y', now: T0 })).toThrow();
+  });
+});
+
+describe('a tapped choice counts even without "Lock in"', () => {
+  const draftNight = (g: ReturnType<typeof setup>, i: number, abilityId: string, t: number) =>
+    submitNightAction(g.room, g.id(i), { abilityId, targetId: g.id(t), phaseSeq: g.seq(), draft: true }, g.clock());
+  it('night: the clock runs out and the Doctor’s last tap protects', () => {
+    const g = setup(['mafia', 'doctor', V, V, V, V]);
+    g.goToNight();
+    g.act(0, 'mafia_kill', 3);
+    draftNight(g, 1, 'protect', 2);
+    draftNight(g, 1, 'protect', 3); // changed their mind: the newest tap wins
+    expect(nightComplete(g.room)).toBe(false); // a tap is not a lock
+    tick(g.room, g.room.game!.phaseEndsAt! + 1, g.rng);
+    expect(g.P(3).alive).toBe(true); // saved by the tapped protection
+  });
+  it('night: the host moves on, and the tapped choice still counts', () => {
+    const g = setup(['mafia', 'doctor', V, V, V, V]);
+    g.goToNight();
+    g.act(0, 'mafia_kill', 4);
+    draftNight(g, 1, 'protect', 4);
+    g.advance();
+    expect(g.P(4).alive).toBe(true);
+  });
+  it('night: a locked choice beats a later tap when it can’t be changed', () => {
+    const g = setup(['mafia', 'doctor', V, V, V, V]);
+    g.goToNight();
+    g.act(0, 'mafia_kill', 3);
+    g.act(1, 'protect', 2);
+    draftNight(g, 1, 'protect', 3);
+    g.advance();
+    expect(g.P(3).alive).toBe(false);
+  });
+  it('vote: tapped names count when the vote closes', () => {
+    const g = setup(['mafia', V, V, V, V]);
+    g.goToVoting();
+    for (const i of [1, 2, 3]) submitVote(g.room, g.id(i), { targetId: g.id(0), phaseSeq: g.seq(), draft: true }, g.clock());
+    g.vote(4, 1);
+    tick(g.room, g.room.game!.phaseEndsAt! + 1, g.rng);
+    expect(g.P(0).alive).toBe(false);
+  });
+  it('vote: a locked vote stays when changes are not allowed', () => {
+    const g = setup(['mafia', V, V, V, V], { allowVoteChange: false });
+    g.goToVoting();
+    g.vote(1, 2);
+    submitVote(g.room, g.id(1), { targetId: g.id(0), phaseSeq: g.seq(), draft: true }, g.clock());
+    expect(g.room.game!.day.votes[g.id(1)].targetId).toBe(g.id(2));
   });
 });
