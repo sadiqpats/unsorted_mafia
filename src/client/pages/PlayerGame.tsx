@@ -17,7 +17,7 @@ import { MafiaChat } from '../components/MafiaChat';
 import { finale } from '../lib/finale';
 import { uploadPhoto } from '../lib/photo';
 import { loadSession } from '../lib/session';
-import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, Section, Timer, useCountdown, useToast, winHeadline, Confetti } from '../components/ui';
+import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, Progress, Section, Timer, useCountdown, useToast, winHeadline, Confetti } from '../components/ui';
 
 type Send = (c: CommandInput) => Promise<Ack>;
 
@@ -166,12 +166,17 @@ function PhaseHeader({ view, serverNow }: { view: ClientView; serverNow: () => n
   const g = view.game!;
   const roundLabel = g.round > 0 && g.phase !== 'game_over' ? `Round ${g.round}` : '';
   return (
-    <div className="card flex items-center justify-between gap-3 p-4">
-      <div>
-        <div className="eyebrow">{roundLabel || (view.settings.bollywood ? 'Bollywood Mafia Night' : 'Mafia Night')}</div>
-        <h1 key={g.phase} className="phase-title-in font-[family-name:var(--font-display)] text-4xl text-bone">{PHASE_LABEL[g.phase]}</h1>
+    <div className={`card phase-card phase-${g.phase} p-4`}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="eyebrow">{roundLabel || (view.settings.bollywood ? 'Bollywood Mafia Night' : 'Mafia Night')}</div>
+          <h1 key={g.phase} className="phase-title-in font-[family-name:var(--font-display)] text-4xl text-bone">{PHASE_LABEL[g.phase]}</h1>
+        </div>
+        <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
       </div>
-      <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
+      {/* Counts only (the TV shows the same): everyone at the table sees how many are still choosing. */}
+      {g.nightProgress && g.nightProgress.total > 0 && <Progress className="mt-3" done={g.nightProgress.done} total={g.nightProgress.total} label="Locked in" />}
+      {g.votingProgress && g.votingProgress.total > 0 && <Progress className="mt-3" done={g.votingProgress.done} total={g.votingProgress.total} label="Votes in" />}
     </div>
   );
 }
@@ -221,9 +226,13 @@ function PlayerLobby({ view, send }: { view: ClientView; send: Send }) {
       <div className="card p-5 text-center">
         <p className="eyebrow">Room</p>
         <p className="mt-1 font-[family-name:var(--font-display)] text-4xl tracking-[0.3em] text-bone">{view.code}</p>
-        <p className="mt-2 text-sm text-mute">
-          Hosted by {view.hostName} · {view.players.length}/{view.settings.playerCount} players
-        </p>
+        <p className="mt-2 text-sm text-mute">Hosted by {view.hostName}</p>
+        <Progress
+          className="mx-auto mt-4 max-w-xs text-left"
+          done={view.players.length}
+          total={view.settings.playerCount}
+          label={view.players.length >= view.settings.playerCount ? 'Table full' : `Waiting for ${view.settings.playerCount - view.players.length} more`}
+        />
         <button
           className={`btn mt-5 w-full text-lg ${me.isHost ? 'btn-ghost' : view.players.find((p) => p.id === me.id)?.ready ? 'btn-ghost' : 'btn-primary'}`}
           disabled={busy || me.isHost}

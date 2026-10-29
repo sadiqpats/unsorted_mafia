@@ -186,6 +186,37 @@ export function ConnectionBadge({ status }: { status: ConnStatus }) {
   );
 }
 
+/** Room code and connection in one pill, the same height as the header buttons. */
+export function RoomPill({ code, status }: { code: string; status: ConnStatus }) {
+  const dot = status === 'online' ? 'bg-ok' : status === 'denied' || status === 'ended' ? 'bg-ember' : 'bg-gold animate-pulse';
+  const label = status === 'online' ? 'Live' : status === 'connecting' ? 'Connecting' : status === 'offline' ? 'Reconnecting…' : 'Offline';
+  return (
+    <span className="room-pill" role="status" aria-live="polite" aria-label={`Room ${code}, ${label}`}>
+      <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
+      <span className="font-[family-name:var(--font-display)] tracking-[0.2em] text-gold">{code}</span>
+      {status !== 'online' && <span className="text-xs text-mute">{label}</span>}
+    </span>
+  );
+}
+
+/** A slim bar for "x of y" (players joined, choices locked in, votes in). Counts only — never who. */
+export function Progress({ done, total, label, className = '' }: { done: number; total: number; label: ReactNode; className?: string }) {
+  const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  return (
+    <div className={className}>
+      <div className="flex items-baseline justify-between gap-2 text-xs text-mute">
+        <span>{label}</span>
+        <span className="tabular-nums">
+          <b className="text-bone">{done}</b> / {total}
+        </span>
+      </div>
+      <div className="progress mt-1.5" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
+        <span style={{ width: `${pct}%` }} className={done >= total && total > 0 ? 'is-full' : ''} />
+      </div>
+    </div>
+  );
+}
+
 export function OfflineBanner({ status }: { status: ConnStatus }) {
   // Only warn if the connection stays down for a few seconds; brief blips reconnect silently.
   const [show, setShow] = useState(false);
@@ -447,7 +478,7 @@ export function Feed({ entries, limit = 30, inGame = false }: { entries: LogEntr
     <ol className="space-y-2" aria-label="Game announcements">
       {list.map((e) => (
         <li key={e.seq} className={`rounded-lg border-l-2 px-3 py-1.5 text-sm ${e.kind === 'gameover' ? 'border-gold bg-gold/10' : e.kind === 'morning' || e.kind === 'verdict' ? 'border-crimson bg-white/[0.02]' : e.kind === 'correction' || e.kind === 'gm' ? 'border-gold/60 bg-white/[0.02]' : 'border-line'}`}>
-          <span className="mr-2 text-[0.65rem] uppercase tracking-wider text-mute">{e.round > 0 ? `R${e.round}` : ''}</span>
+          {e.round > 0 && <span className="mr-2 text-[0.65rem] uppercase tracking-wider text-mute">R{e.round}</span>}
           {e.text}
         </li>
       ))}

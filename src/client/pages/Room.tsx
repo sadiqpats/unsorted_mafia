@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ConnectionBadge, OfflineBanner, PHASE_LABEL, PrefsMenu, Shell } from '../components/ui';
+import { OfflineBanner, PHASE_LABEL, PrefsMenu, RoomPill, Shell } from '../components/ui';
 import { clearSession, loadSession } from '../lib/session';
 import { PhaseCurtain, usePhaseFx } from '../components/PhaseCurtain';
 import { useRoom } from '../lib/useRoom';
@@ -49,8 +49,7 @@ export default function Room() {
       wide={isHost}
       right={
         <>
-          <span className="chip font-[family-name:var(--font-display)] tracking-[0.2em] text-gold">{upper}</span>
-          <ConnectionBadge status={status} />
+          <RoomPill code={upper} status={status} />
           <PrefsMenu />
         </>
       }

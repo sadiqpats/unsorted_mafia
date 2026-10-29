@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Clapper } from '../charades/art';
+import { DrawMark } from '../draw/art';
 import { RoleArt } from '../components/RoleArt';
 import { BrandMark, LOGO, PrefsMenu, useTitle } from '../components/ui';
 
@@ -68,15 +69,15 @@ export default function Hub() {
             className="hub-card anim-fade-up group card relative flex flex-col items-center overflow-hidden p-6 text-center focus-ring md:col-span-2"
             style={{ animationDelay: '0.45s' }}
           >
-            <span className="relative text-7xl transition-transform duration-500 group-hover:scale-105" aria-hidden="true">
-              🎨🕵️
+            <span className="relative transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-105">
+              <DrawMark size={110} />
             </span>
             <h2 className="brand-title relative mt-4 text-4xl font-black">Draw the Imposter</h2>
             <p className="relative mt-2 font-[family-name:var(--font-serif)] text-xl italic text-mute">One phone. Draw on paper. Spot the faker.</p>
             <ul className="relative mt-4 flex flex-wrap justify-center gap-2 text-xs">
               <li className="chip">📱 Pass and play</li>
               <li className="chip">✏️ Paper and pen</li>
-              <li className="chip">🎬 Bollywood or things</li>
+              <li className="chip">🎬 Filmy or quirky</li>
             </ul>
             <span className="btn btn-primary relative mt-6 w-full max-w-xs">Play Draw the Imposter</span>
           </Link>

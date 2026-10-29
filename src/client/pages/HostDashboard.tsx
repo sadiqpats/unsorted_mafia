@@ -5,7 +5,7 @@ import type { Settings, SettingsPatch } from '../../shared/settings';
 import type { ClientView } from '../../shared/view-types';
 import { PlayerCountInput } from '../components/PlayerCountInput';
 import { RoleArt } from '../components/RoleArt';
-import { AlignmentBadge, Feed, Modal, PHASE_LABEL, PlayerRow, QR, Section, Timer, Toggle, useConfirm, useToast } from '../components/ui';
+import { AlignmentBadge, Feed, Modal, PHASE_LABEL, PlayerRow, Progress, QR, Section, Timer, Toggle, useConfirm, useToast } from '../components/ui';
 import { GameOverPanel, PlayerGame, useAct, type GameProps } from './PlayerGame';
 
 export function HostDashboard(props: GameProps) {
@@ -440,6 +440,8 @@ function HostGame({ view, send, serverNow }: GameProps) {
   const roleName = (id: string) => (h.roles ? roleTitle(h.roles[id], view.settings) : null);
   const nameOf = (id: string | null) => (id ? (view.players.find((p) => p.id === id)?.name ?? '?') : 'skip');
 
+  const progress = g.nightProgress ?? g.votingProgress ?? g.revealProgress;
+
   const playAgain = (
     <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
       <button className="btn btn-primary" disabled={busy} onClick={() => act({ type: 'restart' }, 'Back to the lobby.')}>
@@ -454,30 +456,35 @@ function HostGame({ view, send, serverNow }: GameProps) {
   return (
     <div className="space-y-4">
       {/* Control bar */}
-      <div className="card sticky top-16 z-30 flex flex-wrap items-center gap-3 p-3">
-        <div className="mr-auto">
-          <div className="eyebrow">{g.round ? `Round ${g.round}` : 'Start'}</div>
-          <div className="font-[family-name:var(--font-display)] text-xl" data-testid="host-phase">
-            {PHASE_LABEL[g.phase]}
+      <div className={`card phase-card phase-${g.phase} z-30 p-3 md:sticky md:top-16`}>
+        <div className="flex items-center gap-3">
+          <div className="mr-auto">
+            <div className="eyebrow">{g.round ? `Round ${g.round}` : 'Start'}</div>
+            <div className="font-[family-name:var(--font-display)] text-xl" data-testid="host-phase">
+              {PHASE_LABEL[g.phase]}
+            </div>
           </div>
+          <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
         </div>
-        <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
+        {progress && progress.total > 0 && (
+          <Progress className="mt-2" done={progress.done} total={progress.total} label={g.nightProgress ? 'Locked in' : g.votingProgress ? 'Votes in' : 'Seen their role'} />
+        )}
         {!over && (
-          <div className="flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-2 sm:flex-nowrap">
             {g.phaseEndsAt !== null && (
               <>
-                <button className="btn btn-ghost !min-h-10 text-sm" disabled={busy} onClick={() => act({ type: 'extend', seconds: -30 })} aria-label="Remove 30 seconds">
+                <button className="btn btn-ghost !min-h-11 flex-1 text-sm sm:flex-none" disabled={busy} onClick={() => act({ type: 'extend', seconds: -30 })} aria-label="Remove 30 seconds">
                   −30s
                 </button>
-                <button className="btn btn-ghost !min-h-10 text-sm" disabled={busy} onClick={() => act({ type: 'extend', seconds: 30 })} aria-label="Add 30 seconds">
+                <button className="btn btn-ghost !min-h-11 flex-1 text-sm sm:flex-none" disabled={busy} onClick={() => act({ type: 'extend', seconds: 30 })} aria-label="Add 30 seconds">
                   +30s
                 </button>
               </>
             )}
-            <button className="btn btn-ghost !min-h-10 text-sm" disabled={busy} onClick={() => act({ type: g.paused ? 'resume' : 'pause' })}>
+            <button className="btn btn-ghost !min-h-11 flex-1 text-sm sm:flex-none" disabled={busy} onClick={() => act({ type: g.paused ? 'resume' : 'pause' })}>
               {g.paused ? '▶ Resume' : '⏸ Pause'}
             </button>
-            <button className="btn btn-gold !min-h-10 text-sm" disabled={busy || !!g.pendingTie} onClick={() => act({ type: 'advance', phaseSeq: g.phaseSeq })}>
+            <button className="btn btn-gold !min-h-11 basis-full text-base sm:ml-auto sm:basis-auto sm:px-8" disabled={busy || !!g.pendingTie} onClick={() => act({ type: 'advance', phaseSeq: g.phaseSeq })}>
               {g.phase === 'discussion' ? '🗳️ Start voting' : 'Next phase ⏭'}
             </button>
           </div>

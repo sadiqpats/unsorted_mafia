@@ -27,7 +27,7 @@ test('TV fits one screen: a full 26-player lobby on 720p, 768p, 1080p and small 
   const tv = await newPhone(browser);
   await tv.goto(`/tv/${code}`);
   for (let i = 1; i <= 26; i++) await joinRoom(browser, code, `Player ${i}`);
-  await expect(tv.getByText('26 / 26 players')).toBeVisible();
+  await expect(tv.getByText('Everyone’s here')).toBeVisible();
   await check(tv, 'lobby26');
 });
 test('TV fits one screen through Night, Day and the game-over reveal (12 players, Bollywood)', async ({ browser }) => {

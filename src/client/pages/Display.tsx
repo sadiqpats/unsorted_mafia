@@ -7,7 +7,7 @@ import { MomentsOverlay, useMoments } from '../components/Moments';
 import { FinaleShow, useFinaleElapsed } from '../components/FinaleShow';
 import { Avatar } from '../components/Avatar';
 import type { PublicPlayer } from '../../shared/view-types';
-import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, QR, Timer, useTitle } from '../components/ui';
+import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, Progress, QR, Timer, useTitle } from '../components/ui';
 import { useRoom } from '../lib/useRoom';
 import { loadSession } from '../lib/session';
 import type { CommandInput } from '../../shared/protocol';
@@ -46,7 +46,7 @@ export default function Display() {
       )}
       {!soundOn && (
         <button
-          className="btn btn-ghost fixed bottom-5 left-5 z-50 !min-h-10 text-sm"
+          className="btn btn-ghost fixed left-1/2 top-5 z-50 !min-h-10 -translate-x-1/2 text-sm"
           onClick={() => {
             sounds.unlock();
             sounds.seal();
@@ -80,9 +80,12 @@ export default function Display() {
           </div>
           <div className="flex h-full min-h-0 min-w-0 flex-col justify-center">
             <img src={LOGO.full} alt="Unsorted — Plans worth showing up for." className="hidden h-auto w-80 max-w-full shrink-0 [@media(min-height:800px)]:block" />
-            <p className="mt-[2vh] shrink-0 text-xl">
-              {view.players.length} / {view.settings.playerCount} players
-            </p>
+            <Progress
+              className="tv-progress mt-[2vh] w-full max-w-md shrink-0"
+              done={view.players.length}
+              total={view.settings.playerCount}
+              label={view.players.length >= view.settings.playerCount ? 'Everyone’s here' : `Players · waiting for ${view.settings.playerCount - view.players.length} more`}
+            />
             <FitBox>{(box) => <PhotoWall players={view.players} lobby settings={view.settings} box={box} />}</FitBox>
           </div>
         </div>
@@ -141,7 +144,7 @@ function FitBox({ children }: { children: (box: Box | null) => React.ReactNode }
   const ref = useRef<HTMLDivElement>(null);
   const box = useBox(ref);
   return (
-    <div ref={ref} className="mt-[2vh] min-h-0 flex-1 overflow-hidden" data-testid="tv-wall">
+    <div ref={ref} className="mt-[2vh] flex min-h-0 flex-1 flex-col justify-center overflow-hidden" data-testid="tv-wall">
       {children(box)}
     </div>
   );
@@ -240,8 +243,9 @@ function TvGame({ view, serverNow, send }: { view: NonNullable<ReturnType<typeof
               </span>
             </div>
           )}
-          {g.nightProgress && <p className="text-[clamp(1rem,2.6vh,1.3rem)] text-mute">{g.nightProgress.done}/{g.nightProgress.total} locked in</p>}
-          {g.votingProgress && <p className="text-[clamp(1rem,2.6vh,1.3rem)] text-mute">{g.votingProgress.done}/{g.votingProgress.total} votes in</p>}
+          {g.nightProgress && <Progress className="tv-progress w-[clamp(10rem,22vw,16rem)]" done={g.nightProgress.done} total={g.nightProgress.total} label="locked in" />}
+          {g.votingProgress && <Progress className="tv-progress w-[clamp(10rem,22vw,16rem)]" done={g.votingProgress.done} total={g.votingProgress.total} label="votes in" />}
+          {g.revealProgress && <Progress className="tv-progress w-[clamp(10rem,22vw,16rem)]" done={g.revealProgress.done} total={g.revealProgress.total} label="have seen their role" />}
           <div className="tv-clock-slot">
             <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />
           </div>

@@ -178,11 +178,12 @@ export function PrivacyShield({ children, label = 'Open your secret panel', auto
   }, []);
   if (!open) {
     return (
-      <button className="card flex min-h-56 w-full flex-col items-center justify-center gap-3 border-dashed p-6 text-center focus-ring" onClick={() => setOpen(true)}>
-        <span className="text-4xl" aria-hidden="true">
+      <button className="card shield-closed flex min-h-56 w-full flex-col items-center justify-center gap-3 p-6 text-center focus-ring" onClick={() => setOpen(true)}>
+        <span className="shield-flame" aria-hidden="true">
           🕯️
         </span>
-        <span className="font-[family-name:var(--font-display)] text-lg tracking-wider text-gold">{label}</span>
+        <span className="relative font-[family-name:var(--font-display)] text-lg tracking-wider text-gold">{label}</span>
+        <span className="relative text-xs text-mute">Shield your screen, then tap · closes by itself after {autoHideSec}s</span>
       </button>
     );
   }
