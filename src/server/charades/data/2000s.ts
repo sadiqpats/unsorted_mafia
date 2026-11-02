@@ -6,11 +6,9 @@ Mohabbatein|2000|Romance, Musical|Shah Rukh Khan;Amitabh Bachchan;Aishwarya Rai|
 Mission Kashmir|2000|Action, Drama|Hrithik Roshan;Sanjay Dutt;Preity Zinta|2
 Josh|2000|Action, Romance|Shah Rukh Khan;Aishwarya Rai;Chandrachur Singh|2
 Dhadkan|2000|Romance, Drama|Akshay Kumar;Shilpa Shetty;Suniel Shetty|1
-Fiza|2000|Drama|Karisma Kapoor;Hrithik Roshan;Jaya Bachchan|3
 Refugee|2000|Romance, Drama|Abhishek Bachchan;Kareena Kapoor|2
 Kya Kehna|2000|Drama, Romance|Preity Zinta;Saif Ali Khan;Chandrachur Singh|2
 Badal|2000|Action|Bobby Deol;Rani Mukerji|3
-Kurukshetra|2000|Action, Crime|Sanjay Dutt;Mahima Chaudhry|3
 Phir Bhi Dil Hai Hindustani|2000|Comedy, Satire|Shah Rukh Khan;Juhi Chawla|2
 Raju Chacha|2000|Family, Comedy|Ajay Devgn;Kajol;Rishi Kapoor|3
 Champion|2000|Action|Sunny Deol;Manisha Koirala|3
@@ -31,15 +29,12 @@ Ajnabee|2001|Thriller|Akshay Kumar;Bobby Deol;Kareena Kapoor|2
 Rehnaa Hai Terre Dil Mein|2001|Romance|R. Madhavan;Dia Mirza;Saif Ali Khan|1
 Mujhe Kucch Kehna Hai|2001|Romance|Tusshar Kapoor;Kareena Kapoor|2
 Yaadein|2001|Family, Romance|Hrithik Roshan;Kareena Kapoor|3
-Ek Rishtaa|2001|Family, Drama|Amitabh Bachchan;Akshay Kumar|3
 Kuch Khatti Kuch Meethi|2001|Comedy, Family|Kajol;Rishi Kapoor;Sunil Shetty|3
 Indian|2001|Action, Patriotic|Sunny Deol;Shilpa Shetty|3
 Aks|2001|Thriller, Fantasy|Amitabh Bachchan;Manoj Bajpayee|3
-Chandni Bar|2001|Crime, Drama|Tabu;Atul Kulkarni|3
 Nayak|2001|Political, Drama|Anil Kapoor;Rani Mukerji|1
 Mujhse Shaadi Karogi|2004|Comedy, Romance|Salman Khan;Akshay Kumar;Priyanka Chopra|1
 Jodi No.1|2001|Comedy|Sanjay Dutt;Govinda|2
-Lajja|2001|Social, Drama|Manisha Koirala;Rekha;Madhuri Dixit|3
 Chupke Chupke|2006|Comedy|Shahid Kapoor;Kareena Kapoor;Neha Dhupia|3
 Devdas|2002|Romance, Period|Shah Rukh Khan;Aishwarya Rai;Madhuri Dixit|1
 Raaz|2002|Horror|Bipasha Basu;Dino Morea|1
@@ -51,15 +46,11 @@ Awara Paagal Deewana|2002|Comedy, Action|Akshay Kumar;Suniel Shetty;Paresh Rawal
 Mujhse Dosti Karoge|2002|Romance|Hrithik Roshan;Rani Mukerji;Kareena Kapoor|2
 Saathiya|2002|Romance, Drama|Vivek Oberoi;Rani Mukerji|1
 The Legend of Bhagat Singh|2002|Biopic, Patriotic|Ajay Devgn;Sushant Singh|2
-Na Tum Jaano Na Hum|2002|Romance|Hrithik Roshan;Esha Deol;Saif Ali Khan|3
 Hum Tumhare Hain Sanam|2002|Romance, Drama|Shah Rukh Khan;Salman Khan;Madhuri Dixit|3
 Shakti|2002|Action, Drama|Karisma Kapoor;Nana Patekar|3
 Kya Dil Ne Kaha|2002|Romance|Tusshar Kapoor;Esha Deol|3
-Haan Maine Bhi Pyaar Kiya|2002|Romance|Akshay Kumar;Karisma Kapoor;Abhishek Bachchan|3
-Jeena Sirf Merre Liye|2002|Romance|Tusshar Kapoor;Kareena Kapoor|3
 Deewangee|2002|Thriller|Ajay Devgn;Akshaye Khanna;Urmila Matondkar|3
 Road|2002|Thriller|Vivek Oberoi;Manoj Bajpayee;Antara Mali|3
-Hathyar|2002|Crime|Sanjay Dutt;Shilpa Shetty|3
 Koi Mil Gaya|2003|Sci-Fi, Family|Hrithik Roshan;Preity Zinta|1
 Kal Ho Naa Ho|2003|Romance, Drama|Shah Rukh Khan;Preity Zinta;Saif Ali Khan|1
 Munna Bhai M.B.B.S.|2003|Comedy, Drama|Sanjay Dutt;Arshad Warsi;Gracy Singh|1
@@ -79,7 +70,6 @@ Darna Mana Hai|2003|Horror|Saif Ali Khan;Vivek Oberoi|3
 Khakee|2004|Action, Crime|Amitabh Bachchan;Akshay Kumar;Ajay Devgn|2
 Calcutta Mail|2003|Thriller|Anil Kapoor;Rani Mukerji|3
 Jhankaar Beats|2003|Comedy, Musical|Sanjay Suri;Rahul Bose;Juhi Chawla|3
-Pinjar|2003|Period, Drama|Urmila Matondkar;Manoj Bajpayee|3
 Ab Tak Chhappan|2004|Crime, Action|Nana Patekar;Revathi|2
 Main Hoon Na|2004|Action, Comedy|Shah Rukh Khan;Sushmita Sen;Zayed Khan|1
 Veer-Zaara|2004|Romance, Drama|Shah Rukh Khan;Preity Zinta;Rani Mukerji|1
@@ -113,7 +103,6 @@ Kyaa Kool Hai Hum|2005|Comedy|Tusshar Kapoor;Riteish Deshmukh|2
 Maine Pyaar Kyun Kiya|2005|Comedy, Romance|Salman Khan;Katrina Kaif;Sushmita Sen|2
 Waqt|2005|Family, Drama|Amitabh Bachchan;Akshay Kumar|2
 Kaal|2005|Horror, Thriller|Ajay Devgn;John Abraham;Vivek Oberoi|3
-Zeher|2005|Thriller|Emraan Hashmi;Udita Goswami|3
 Kalyug|2005|Thriller, Drama|Kunal Khemu;Emraan Hashmi|3
 Aashiq Banaya Aapne|2005|Romance, Thriller|Emraan Hashmi;Tanushree Dutta|2
 Page 3|2005|Drama|Konkona Sen Sharma|3
@@ -121,9 +110,7 @@ Iqbal|2005|Sports, Drama|Shreyas Talpade;Naseeruddin Shah|2
 Dus|2005|Action, Thriller|Abhishek Bachchan;Sanjay Dutt;Shilpa Shetty|2
 Apaharan|2005|Crime, Drama|Ajay Devgn;Nana Patekar|3
 Mangal Pandey: The Rising|2005|Historical, War|Aamir Khan;Rani Mukerji|2
-Shabd|2005|Drama, Romance|Sanjay Dutt;Aishwarya Rai|3
 Bluffmaster!|2005|Comedy, Crime|Abhishek Bachchan;Priyanka Chopra;Riteish Deshmukh|2
-Ek Ajnabee|2005|Action, Thriller|Amitabh Bachchan;Arjun Rampal|3
 Fanaa|2006|Romance, Thriller|Aamir Khan;Kajol|1
 Don|2006|Action, Crime|Shah Rukh Khan;Priyanka Chopra|1
 Dhoom 2|2006|Action, Heist|Hrithik Roshan;Aishwarya Rai;Abhishek Bachchan|1
@@ -143,9 +130,7 @@ Khosla Ka Ghosla!|2006|Comedy|Anupam Kher;Boman Irani;Ranvir Shorey|2
 Taxi No. 9211|2006|Thriller, Comedy|Nana Patekar;John Abraham|3
 Pyaar Ke Side Effects|2006|Romance, Comedy|Rahul Bose;Mallika Sherawat|3
 Baabul|2006|Family, Drama|Amitabh Bachchan;Salman Khan;Rani Mukerji|3
-Aksar|2006|Thriller|Emraan Hashmi;Udita Goswami|3
 Jaan-E-Mann|2006|Romance, Comedy|Salman Khan;Akshay Kumar;Preity Zinta|2
-Dor|2006|Drama|Ayesha Takia;Gul Panag;Shreyas Talpade|3
 Om Shanti Om|2007|Romance, Fantasy|Shah Rukh Khan;Deepika Padukone|1
 Chak De! India|2007|Sports, Drama|Shah Rukh Khan;Vidya Malvade|1
 Jab We Met|2007|Romance, Comedy|Shahid Kapoor;Kareena Kapoor|1
@@ -165,11 +150,7 @@ Cash|2007|Action, Comedy|Ajay Devgn;Suniel Shetty;Esha Deol|3
 Shootout at Lokhandwala|2007|Crime, Action|Vivek Oberoi;Sanjay Dutt;Suniel Shetty|2
 Apne|2007|Sports, Family|Dharmendra;Sunny Deol;Bobby Deol|2
 Jhoom Barabar Jhoom|2007|Romance, Comedy|Abhishek Bachchan;Preity Zinta;Bobby Deol|3
-Nishabd|2007|Drama|Amitabh Bachchan;Jiah Khan|3
 Traffic Signal|2007|Drama|Kunal Khemu;Neetu Chandra|3
-Black Friday|2007|Crime, Drama|Kay Kay Menon;Pavan Malhotra|3
 Johnny Gaddaar|2007|Thriller|Neil Nitin Mukesh;Dharmendra|3
-Dharm|2007|Drama|Pankaj Kapur;Supriya Pathak|3
 Laaga Chunari Mein Daag|2007|Drama|Rani Mukerji;Konkona Sen Sharma|3
-Gandhi, My Father|2007|Biopic|Akshaye Khanna;Darshan Jariwala|3
 `;

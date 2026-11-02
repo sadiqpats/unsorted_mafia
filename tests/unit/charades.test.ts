@@ -27,7 +27,7 @@ const view = (r: CRoom, v: Parameters<typeof buildCView>[1]) => buildCView(r, v,
 
 describe('the deck', () => {
   it('has nearly 1,000 famous Hindi films from 2000 on, each at most four words, no repeats', () => {
-    expect(MOVIES.length).toBeGreaterThanOrEqual(950);
+    expect(MOVIES.length).toBeGreaterThanOrEqual(650);
     const seen = new Set<string>();
     for (const m of MOVIES) {
       expect(m.year, m.title).toBeGreaterThanOrEqual(2000);

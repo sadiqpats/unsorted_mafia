@@ -57,7 +57,7 @@ export default function Hub() {
             <h2 className="charades-title relative mt-4 text-4xl">Bollywood Dumb Charades</h2>
             <p className="relative mt-2 text-lg text-[#ffd98a]">Act it out. No words. Full drama.</p>
             <ul className="relative mt-4 flex flex-wrap justify-center gap-2 text-xs">
-              <li className="chip !border-[#ffb300]/50">🎬 970+ films</li>
+              <li className="chip !border-[#ffb300]/50">🎬 700 films</li>
               <li className="chip !border-[#ffb300]/50">⚔️ 2 teams</li>
               <li className="chip !border-[#ffb300]/50">📺 TV scoreboard</li>
             </ul>

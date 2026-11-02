@@ -38,7 +38,7 @@ export default function CharadesHome() {
           Act it out. No words. Full drama.
         </p>
         <p className="anim-fade-up mt-2 max-w-md text-sm text-white/70" style={{ animationDelay: '0.2s' }}>
-          972 famous Hindi films from 2000 onwards — none longer than four words. Two teams, one TV, endless overacting.
+          700 famous, fun-to-act Hindi films from 2000 onwards — none longer than four words. Two teams, one TV, endless overacting.
         </p>
         <div className="anim-fade-up mt-7 flex w-full max-w-md flex-col gap-3 sm:flex-row" style={{ animationDelay: '0.25s' }}>
           <Link to="/charades/host" className="btn btn-bolly flex-1 text-lg">

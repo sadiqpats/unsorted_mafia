@@ -4,7 +4,7 @@
 Party games for people in the same room, played on their own phones. The front page (`/`) lets you pick a game:
 
 - **Mafia Night** (`/mafia`): secret roles, Dawn → Night → Day, a TV photo wall. Details below.
-- **Bollywood Dumb Charades** (`/charades`): two teams, two captains' phones, 972 famous Hindi films, a TV scoreboard. See [docs/CHARADES.md](docs/CHARADES.md).
+- **Bollywood Dumb Charades** (`/charades`): two teams, two captains' phones, 700 famous, fun-to-act Hindi films, a TV scoreboard. See [docs/CHARADES.md](docs/CHARADES.md).
 
 ## Mafia Night
 

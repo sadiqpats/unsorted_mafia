@@ -68,7 +68,7 @@ describe('Draw the Imposter: how many imposters', () => {
 
   it('every card has a word and a hint, no duplicates, and the hint never gives the word away', () => {
     for (const deck of [BOLLYWOOD, OBJECTS]) {
-      expect(deck.length).toBeGreaterThanOrEqual(40);
+      expect(deck.length).toBe(100);
       expect(new Set(deck.map((c) => c.w)).size).toBe(deck.length);
       for (const c of deck) {
         expect(c.w.trim()).not.toBe('');

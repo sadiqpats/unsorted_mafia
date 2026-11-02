@@ -30,14 +30,10 @@ Atrangi Re|2021|Romance, Drama|Akshay Kumar;Sara Ali Khan;Dhanush|2
 Bell Bottom|2021|Spy, Thriller|Akshay Kumar;Vaani Kapoor;Lara Dutta|2
 Chandigarh Kare Aashiqui|2021|Romance, Drama|Ayushmann Khurrana;Vaani Kapoor|2
 Haseen Dillruba|2021|Thriller, Romance|Taapsee Pannu;Vikrant Massey|2
-Bhuj: The Pride of India|2021|War|Ajay Devgn;Sanjay Dutt|3
 Radhe|2021|Action|Salman Khan;Disha Patani|2
 Roohi|2021|Horror, Comedy|Rajkummar Rao;Janhvi Kapoor;Varun Sharma|2
-Thalaivii|2021|Biopic, Political|Kangana Ranaut;Arvind Swamy|3
 Bunty Aur Babli 2|2021|Comedy, Crime|Saif Ali Khan;Rani Mukerji|3
 Tadap|2021|Romance, Action|Ahan Shetty;Tara Sutaria|3
-Antim: The Final Truth|2021|Action, Crime|Salman Khan;Aayush Sharma|3
-Satyameva Jayate 2|2021|Action|John Abraham;Divya Khosla|3
 Hum Do Hamare Do|2021|Comedy, Family|Rajkummar Rao;Kriti Sanon|3
 Shiddat|2021|Romance|Sunny Kaushal;Radhika Madan|3
 The Kashmir Files|2022|Drama, Political|Anupam Kher;Mithun Chakraborty;Darshan Kumar|1
@@ -51,7 +47,6 @@ Laal Singh Chaddha|2022|Drama, Romance|Aamir Khan;Kareena Kapoor|2
 Badhaai Do|2022|Comedy, Drama|Rajkummar Rao;Bhumi Pednekar|2
 Jhund|2022|Sports, Drama|Amitabh Bachchan|2
 Bachchhan Paandey|2022|Action, Comedy|Akshay Kumar;Kriti Sanon;Arshad Warsi|3
-Samrat Prithviraj|2022|Historical|Akshay Kumar;Manushi Chhillar|3
 Raksha Bandhan|2022|Family, Drama|Akshay Kumar;Bhumi Pednekar|3
 Runway 34|2022|Thriller, Aviation|Ajay Devgn;Amitabh Bachchan;Rakul Preet Singh|2
 Heropanti 2|2022|Action|Tiger Shroff;Tara Sutaria|3
@@ -63,7 +58,6 @@ Doctor G|2022|Comedy, Drama|Ayushmann Khurrana;Rakul Preet Singh|2
 Phone Bhoot|2022|Horror, Comedy|Katrina Kaif;Ishaan Khatter;Siddhant Chaturvedi|3
 Govinda Naam Mera|2022|Comedy, Thriller|Vicky Kaushal;Kiara Advani;Bhumi Pednekar|3
 Cirkus|2022|Comedy|Ranveer Singh;Pooja Hegde;Jacqueline Fernandez|3
-Shamshera|2022|Action, Period|Ranbir Kapoor;Sanjay Dutt;Vaani Kapoor|3
 Jayeshbhai Jordaar|2022|Comedy, Social|Ranveer Singh;Shalini Pandey|3
 Pathaan|2023|Action, Spy|Shah Rukh Khan;Deepika Padukone;John Abraham|1
 Jawan|2023|Action, Thriller|Shah Rukh Khan;Nayanthara;Vijay Sethupathi|1
@@ -80,15 +74,9 @@ Satyaprem Ki Katha|2023|Romance, Drama|Kartik Aaryan;Kiara Advani|2
 Dream Girl 2|2023|Comedy|Ayushmann Khurrana;Ananya Panday|2
 Fukrey 3|2023|Comedy|Pulkit Samrat;Varun Sharma;Richa Chadha|2
 Sam Bahadur|2023|Biopic, War|Vicky Kaushal;Sanya Malhotra;Fatima Sana Shaikh|1
-Kisi Ka Bhai Kisi Ki Jaan|2023|Action, Family|Salman Khan;Pooja Hegde|3
-Adipurush|2023|Mythology, Action|Prabhas;Kriti Sanon;Saif Ali Khan|3
 Bholaa|2023|Action|Ajay Devgn;Tabu|2
 Selfiee|2023|Comedy, Drama|Akshay Kumar;Emraan Hashmi|3
-Bawaal|2023|Romance, Drama|Varun Dhawan;Janhvi Kapoor|3
 Shehzada|2023|Action, Comedy|Kartik Aaryan;Kriti Sanon|3
-Mrs. Chatterjee vs Norway|2023|Drama, Legal|Rani Mukerji|3
-Tejas|2023|Action, Aviation|Kangana Ranaut|3
-The Kerala Story|2023|Drama|Adah Sharma|3
 Ganapath|2023|Action, Sci-Fi|Tiger Shroff;Kriti Sanon|3
 Fighter|2024|Action, Aviation|Hrithik Roshan;Deepika Padukone;Anil Kapoor|1
 Stree 2|2024|Horror, Comedy|Shraddha Kapoor;Rajkummar Rao;Pankaj Tripathi|1
@@ -109,11 +97,7 @@ Amar Singh Chamkila|2024|Biopic, Musical|Diljit Dosanjh;Parineeti Chopra|2
 Srikanth|2024|Biopic|Rajkummar Rao;Alaya F|2
 Mr. & Mrs. Mahi|2024|Sports, Romance|Rajkummar Rao;Janhvi Kapoor|3
 Kill|2024|Action, Thriller|Lakshya;Raghav Juyal|2
-Vicky Vidya Ka Woh Wala Video|2024|Comedy|Rajkummar Rao;Triptii Dimri|3
 Khel Khel Mein|2024|Comedy, Drama|Akshay Kumar;Taapsee Pannu;Fardeen Khan|3
-Sarfira|2024|Drama, Aviation|Akshay Kumar;Radhika Madan|3
-Yodha|2024|Action, Thriller|Sidharth Malhotra;Raashii Khanna|3
-Auron Mein Kahan Dum Tha|2024|Romance, Drama|Ajay Devgn;Tabu|3
 Chhaava|2025|Historical, Action|Vicky Kaushal;Rashmika Mandanna;Akshaye Khanna|1
 Sky Force|2025|War, Aviation|Akshay Kumar;Veer Pahariya|2
 Housefull 5|2025|Comedy, Mystery|Akshay Kumar;Riteish Deshmukh;Abhishek Bachchan|1

@@ -28,7 +28,7 @@ Each round = one turn per team. After the last round the higher score wins; on a
 | Rounds | 3, 5, 7, 10, 15 | 5 |
 | Time per turn | 1:00, 1:30, 2:00, 2:30, 3:00 | 2:00 |
 | Who picks the movie | random card from the deck / the rival captain | deck |
-| Card difficulty | Easy (210 blockbusters) / Mixed (474) / Film buff (972) | Mixed |
+| Card difficulty | Easy (210 blockbusters) / Mixed (474) / Film buff (700) | Mixed |
 | New cards per turn | 0, 1, 2, 3, 5, 10 | 10 |
 | I'm playing too (hide the movie on the host's screen) | on / off | on |
 | Word blanks on the TV | on / off | on |

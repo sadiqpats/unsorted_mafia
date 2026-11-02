@@ -20,7 +20,6 @@ Jai Ho|2014|Action, Drama|Salman Khan;Daisy Shah|2
 Gunday|2014|Action, Crime|Ranveer Singh;Arjun Kapoor;Priyanka Chopra|2
 Finding Fanny|2014|Comedy, Road|Deepika Padukone;Arjun Kapoor;Naseeruddin Shah|2
 Khoobsurat|2014|Romance, Comedy|Sonam Kapoor;Fawad Khan|2
-Ankhon Dekhi|2014|Drama, Comedy|Sanjay Mishra|3
 Citylights|2014|Drama, Thriller|Rajkummar Rao;Patralekhaa|3
 Dedh Ishqiya|2014|Comedy, Crime|Madhuri Dixit;Naseeruddin Shah;Arshad Warsi|2
 Entertainment|2014|Comedy|Akshay Kumar;Tamannaah Bhatia|2
@@ -53,7 +52,6 @@ Detective Byomkesh Bakshy!|2015|Mystery|Sushant Singh Rajput|2
 Hero|2015|Action, Romance|Sooraj Pancholi;Athiya Shetty|3
 Kis Kisko Pyaar Karoon|2015|Comedy|Kapil Sharma;Elli AvrRam|2
 Pyaar Ka Punchnama 2|2015|Comedy, Romance|Kartik Aaryan;Nushrat Bharucha|1
-Hate Story 3|2015|Thriller|Zareen Khan;Sharman Joshi|3
 Shaandaar|2015|Romance, Comedy|Shahid Kapoor;Alia Bhatt|3
 Bombay Velvet|2015|Crime, Period|Ranbir Kapoor;Anushka Sharma|3
 Manjhi – The Mountain Man|2015|Biopic|Nawazuddin Siddiqui;Radhika Apte|2
@@ -101,7 +99,6 @@ Tubelight|2017|Drama, War|Salman Khan;Sohail Khan|2
 Jab Harry Met Sejal|2017|Romance, Comedy|Shah Rukh Khan;Anushka Sharma|2
 Half Girlfriend|2017|Romance|Arjun Kapoor;Shraddha Kapoor|2
 Tumhari Sulu|2017|Comedy, Drama|Vidya Balan;Manav Kaul|2
-Lipstick Under My Burkha|2017|Drama|Konkona Sen Sharma;Ratna Pathak Shah|3
 Mubarakan|2017|Comedy|Anil Kapoor;Arjun Kapoor;Ileana D'Cruz|2
 A Gentleman|2017|Action, Comedy|Sidharth Malhotra;Jacqueline Fernandez|3
 Munna Michael|2017|Dance, Action|Tiger Shroff;Nawazuddin Siddiqui|3
@@ -132,7 +129,6 @@ Hichki|2018|Drama|Rani Mukerji|2
 Housefull 4|2019|Comedy, Fantasy|Akshay Kumar;Riteish Deshmukh;Bobby Deol|1
 102 Not Out|2018|Comedy, Family|Amitabh Bachchan;Rishi Kapoor|2
 Tumbbad|2018|Horror, Fantasy|Sohum Shah|1
-Mulk|2018|Legal, Drama|Rishi Kapoor;Taapsee Pannu|3
 Manmarziyaan|2018|Romance, Drama|Abhishek Bachchan;Taapsee Pannu;Vicky Kaushal|2
 Bhavesh Joshi Superhero|2018|Superhero|Harshvardhan Kapoor|3
 Pataakha|2018|Comedy, Drama|Sanya Malhotra;Radhika Madan|3
@@ -158,8 +154,6 @@ Kalank|2019|Romance, Period|Varun Dhawan;Alia Bhatt;Aditya Roy Kapur|2
 Badla|2019|Thriller, Mystery|Amitabh Bachchan;Taapsee Pannu|2
 Manikarnika: The Queen of Jhansi|2019|Biopic, War|Kangana Ranaut|2
 Chhapaak|2020|Biopic, Social|Deepika Padukone;Vikrant Massey|2
-Student of the Year 2|2019|Romance, Coming-of-age|Tiger Shroff;Ananya Panday;Tara Sutaria|3
-Sonchiriya|2019|Crime, Drama|Sushant Singh Rajput;Bhumi Pednekar|3
 Made in China|2019|Comedy|Rajkummar Rao;Mouni Roy|3
 Panipat|2019|Historical, War|Arjun Kapoor;Sanjay Dutt;Kriti Sanon|2
 Marjaavaan|2019|Action, Romance|Sidharth Malhotra;Riteish Deshmukh;Tara Sutaria|3

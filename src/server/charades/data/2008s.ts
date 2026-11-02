@@ -16,7 +16,6 @@ Oye Lucky! Lucky Oye!|2008|Comedy, Crime|Abhay Deol;Paresh Rawal|2
 Sarkar Raj|2008|Political, Crime|Amitabh Bachchan;Abhishek Bachchan;Aishwarya Rai|2
 Welcome to Sajjanpur|2008|Comedy, Social|Shreyas Talpade;Amrita Rao|2
 Kismat Konnection|2008|Romance, Comedy|Shahid Kapoor;Vidya Balan|2
-Mumbai Meri Jaan|2008|Drama|R. Madhavan;Irrfan Khan;Kay Kay Menon|3
 Tashan|2008|Action, Comedy|Akshay Kumar;Saif Ali Khan;Kareena Kapoor|2
 Haal-e-Dil|2008|Romance|Adhyayan Suman;Amita Pathak|3
 1920|2008|Horror|Rajneesh Duggal;Adah Sharma|2
@@ -40,13 +39,9 @@ Wake Up Sid|2009|Coming-of-age|Ranbir Kapoor;Konkona Sen Sharma|2
 Paa|2009|Drama, Family|Amitabh Bachchan;Abhishek Bachchan;Vidya Balan|2
 De Dana Dan|2009|Comedy|Akshay Kumar;Suniel Shetty;Katrina Kaif|2
 Raaz: The Mystery Continues|2009|Horror|Emraan Hashmi;Kangana Ranaut|2
-Blue|2009|Action, Adventure|Akshay Kumar;Sanjay Dutt;Lara Dutta|3
-Kurbaan|2009|Thriller|Saif Ali Khan;Kareena Kapoor|3
-Rocket Singh: Salesman of the Year|2009|Comedy, Drama|Ranbir Kapoor|3
 Aa Dekhen Zara|2009|Sci-Fi, Thriller|Neil Nitin Mukesh;Bipasha Basu|3
 Luck by Chance|2009|Drama|Farhan Akhtar;Konkona Sen Sharma|3
 Chandni Chowk to China|2009|Comedy, Action|Akshay Kumar;Deepika Padukone|2
-Main Aurr Mrs Khanna|2009|Romance|Salman Khan;Kareena Kapoor|3
 Delhi-6|2009|Drama|Abhishek Bachchan;Sonam Kapoor|3
 Do Knot Disturb|2009|Comedy|Govinda;Riteish Deshmukh;Lara Dutta|3
 Dabangg|2010|Action, Comedy|Salman Khan;Sonakshi Sinha|1
@@ -71,7 +66,6 @@ Atithi Tum Kab Jaoge?|2010|Comedy, Family|Ajay Devgn;Paresh Rawal;Konkona Sen Sh
 Khatta Meetha|2010|Comedy|Akshay Kumar;Trisha|3
 No Problem|2010|Comedy|Anil Kapoor;Sanjay Dutt;Akshaye Khanna|3
 Dulha Mil Gaya|2010|Comedy, Romance|Fardeen Khan;Sushmita Sen|3
-Love Sex aur Dhokha|2010|Drama|Rajkummar Rao;Nushrat Bharucha|3
 Paathshaala|2010|Drama|Shahid Kapoor;Ayesha Takia|3
 Bodyguard|2011|Action, Romance|Salman Khan;Kareena Kapoor|1
 Ready|2011|Comedy, Action|Salman Khan;Asin|1
@@ -100,7 +94,6 @@ Thank You|2011|Comedy|Akshay Kumar;Bobby Deol;Sonam Kapoor|3
 Desi Boyz|2011|Comedy|Akshay Kumar;John Abraham;Deepika Padukone|2
 Mausam|2011|Romance, Drama|Shahid Kapoor;Sonam Kapoor|3
 Bbuddah... Hoga Terra Baap|2011|Action, Comedy|Amitabh Bachchan;Hema Malini|3
-Shor in the City|2011|Crime, Comedy|Tusshar Kapoor;Sendhil Ramamurthy|3
 Patiala House|2011|Sports, Drama|Akshay Kumar;Anushka Sharma|2
 Ek Tha Tiger|2012|Action, Spy|Salman Khan;Katrina Kaif|1
 Barfi!|2012|Romance, Comedy|Ranbir Kapoor;Priyanka Chopra;Ileana D'Cruz|1
@@ -121,13 +114,9 @@ Dabangg 2|2012|Action, Comedy|Salman Khan;Sonakshi Sinha|2
 Son of Sardaar|2012|Comedy, Action|Ajay Devgn;Sonakshi Sinha;Sanjay Dutt|2
 Jannat 2|2012|Crime, Romance|Emraan Hashmi;Esha Gupta|3
 Raaz 3|2012|Horror|Emraan Hashmi;Bipasha Basu|3
-Shanghai|2012|Political, Thriller|Abhay Deol;Emraan Hashmi|3
 Ishaqzaade|2012|Romance, Drama|Arjun Kapoor;Parineeti Chopra|2
 Khiladi 786|2012|Action, Comedy|Akshay Kumar;Asin|3
-Tere Naal Love Ho Gaya|2012|Romance, Comedy|Riteish Deshmukh;Genelia D'Souza|3
-Kya Super Kool Hain Hum|2012|Comedy|Tusshar Kapoor;Riteish Deshmukh|3
 Ferrari Ki Sawaari|2012|Family, Comedy|Sharman Joshi;Boman Irani|2
-Jism 2|2012|Thriller|Sunny Leone;Randeep Hooda|3
 Heroine|2012|Drama|Kareena Kapoor;Arjun Rampal|3
 Joker|2012|Comedy, Sci-Fi|Akshay Kumar;Sonakshi Sinha|3
 Chakravyuh|2012|Political, Action|Arjun Rampal;Abhay Deol|3
@@ -155,15 +144,11 @@ Shootout at Wadala|2013|Crime, Action|John Abraham;Anil Kapoor;Kangana Ranaut|2
 R... Rajkumar|2013|Action, Romance|Shahid Kapoor;Sonakshi Sinha|2
 Zanjeer|2013|Action|Ram Charan;Priyanka Chopra|3
 Himmatwala|2013|Action, Comedy|Ajay Devgn;Tamannaah Bhatia|3
-Satyagraha|2013|Political, Drama|Amitabh Bachchan;Ajay Devgn|3
 Go Goa Gone|2013|Horror, Comedy|Saif Ali Khan;Kunal Khemu;Vir Das|2
 Ek Thi Daayan|2013|Horror|Emraan Hashmi;Konkona Sen Sharma;Huma Qureshi|3
 Gori Tere Pyaar Mein|2013|Romance, Comedy|Imran Khan;Kareena Kapoor|3
 Bullett Raja|2013|Action, Crime|Saif Ali Khan;Sonakshi Sinha|3
 Boss|2013|Action, Comedy|Akshay Kumar;Aditi Rao Hydari|3
-Once Upon ay Time in Mumbai Dobaara!|2013|Crime|Akshay Kumar;Imran Khan|3
-Shahid|2013|Biopic, Legal|Rajkummar Rao|3
-Ship of Theseus|2013|Drama|Aida Elkashef|3
 Mere Dad Ki Maruti|2013|Comedy|Saqib Saleem;Ram Kapoor|3
 Phata Poster Nikhla Hero|2013|Comedy, Action|Shahid Kapoor;Ileana D'Cruz|3
 Besharam|2013|Comedy, Action|Ranbir Kapoor;Pallavi Sharda|3
