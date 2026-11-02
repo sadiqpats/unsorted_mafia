@@ -320,19 +320,40 @@ function brass(freq: number, start: number, dur: number, slideTo: number, gain =
   tone(freq / 2, start, dur, { type: 'triangle', gain: gain * 0.6, attack: 0.05, slideTo: slideTo / 2 });
 }
 
+/** The moment the curtains part: a deep boom, a cymbal-like splash and a short low swell. */
+function curtainHit(start: number) {
+  tone(49, start, 1.8, { type: 'sine', gain: 0.2, attack: 0.005, slideTo: 36 });
+  noiseBurst(start, 0.35, 0.12, 300);
+  sweep(start, 1.6, 0.05, 9000, 4000, { type: 'highpass', q: 0.7, attack: 0.01 });
+}
+
 export const sounds = {
   /**
-   * The welcome: haunted, then inviting. Wind, a creaking door, a distant bell,
-   * a dark choir chord that resolves into a warm major chord, and a sparkle.
+   * The welcome, on "Tap to enter": the curtains sweep open (a rising whoosh over a timpani
+   * roll), a big hit as they part, then a warm brass-and-strings chord with a sparkle of bells
+   * on top. Cinematic, not spooky — the night is a party.
    */
   welcome() {
-    wind(0, 3.2, 0.1);
-    tone(98, 0.05, 1.1, { type: 'sawtooth', gain: 0.035, attack: 0.15, slideTo: 64, filter: 650 });
-    bell(110, 0.25, 0.09, 3.5);
-    [220, 261.63, 329.63].forEach((f) => tone(f, 0.45, 2.1, { type: 'triangle', gain: 0.035, attack: 0.9 }));
-    tone(55, 0.45, 2.4, { type: 'sine', gain: 0.07, attack: 0.8 });
-    [220, 277.18, 329.63, 440].forEach((f) => tone(f, 1.95, 2.8, { type: 'triangle', gain: 0.04, attack: 0.45 }));
-    [1318.5, 1568, 2093, 2637].forEach((f, i) => bell(f, 2.15 + i * 0.09, 0.022, 1.6));
+    sweep(0, 1.1, 0.14, 260, 3200, { type: 'bandpass', q: 1.4, attack: 0.9 });
+    for (let i = 0; i < 16; i++) drum(i * 0.045, 72, 0.02 + i * 0.006, 0.01);
+    curtainHit(0.74);
+    // C major, voiced wide: low brass, strings above, a high fifth on top.
+    [65.41, 130.81, 196].forEach((f) => tone(f, 0.74, 2.6, { type: 'sawtooth', gain: 0.03, attack: 0.06, filter: 1100 }));
+    [261.63, 329.63, 392, 523.25].forEach((f) => tone(f, 0.78, 2.6, { type: 'triangle', gain: 0.034, attack: 0.18 }));
+    tone(783.99, 0.9, 2.2, { type: 'sine', gain: 0.02, attack: 0.4 });
+    [1046.5, 1318.5, 1568, 2093, 2637].forEach((f, i) => bell(f, 0.86 + i * 0.07, 0.02, 1.4));
+  },
+  /** The Dumb Charades welcome: the same curtain, then a dhol groove and a shehnai flourish. */
+  welcomeFilmy() {
+    sweep(0, 1.1, 0.14, 260, 3200, { type: 'bandpass', q: 1.4, attack: 0.9 });
+    for (let i = 0; i < 16; i++) drum(i * 0.045, 90, 0.02 + i * 0.006, 0.02);
+    curtainHit(0.74);
+    [0, 0.18, 0.27, 0.45, 0.63, 0.72].forEach((t, i) => drum(0.95 + t, i % 3 === 0 ? 80 : 170, i % 3 === 0 ? 0.24 : 0.14, 0.1));
+    reed(587.33, 0.9, 0.35, 0.05, 659.25);
+    reed(659.25, 1.25, 0.25, 0.05);
+    reed(783.99, 1.5, 0.9, 0.05, 880);
+    [261.63, 329.63, 392].forEach((f) => tone(f, 0.8, 2.2, { type: 'triangle', gain: 0.028, attack: 0.2 }));
+    [1568, 2093, 2637].forEach((f, i) => bell(f, 1.6 + i * 0.08, 0.018, 1.2));
   },
 
   /** Dawn: soft rising chimes. */
