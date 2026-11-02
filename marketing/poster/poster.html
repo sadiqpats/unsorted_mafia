@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mafia Night Poster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #0a0909;
+    --paper: #efe6d8;
+    --gold: #f2bf3a;
+    --red: #e0473f;
+    --mute: #a69c8e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #050404; }
+  body { display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+  .poster {
+    position: relative; width: 1080px; height: 1350px; overflow: hidden;
+    background: radial-gradient(120% 70% at 50% 0%, #2a0f0d 0%, #120807 45%, var(--ink) 75%);
+    color: var(--paper); font-family: Outfit, system-ui, sans-serif;
+  }
+  .grain { position: absolute; inset: 0; opacity: .14; mix-blend-mode: overlay; pointer-events: none; }
+  .spot { position: absolute; left: 50%; top: -120px; width: 900px; height: 900px; transform: translateX(-50%);
+    background: radial-gradient(closest-side, rgba(255,210,150,.16), transparent 70%); pointer-events: none; }
+
+  .top { position: absolute; top: 58px; left: 0; right: 0; text-align: center; z-index: 3; }
+  .top img { height: 54px; opacity: .95; }
+  .presents { margin-top: 10px; font-size: 15px; letter-spacing: .5em; text-transform: uppercase; color: var(--mute); }
+  .title { margin-top: 18px; font-family: Cinzel, serif; font-weight: 900; line-height: .86; letter-spacing: .04em;
+    text-shadow: 0 6px 40px rgba(0,0,0,.8); }
+  .title .m { display: block; font-size: 196px; color: var(--paper); }
+  .title .n { display: block; font-size: 92px; letter-spacing: .42em; padding-left: .42em; color: var(--gold); margin-top: 4px; }
+  .slash { width: 520px; height: 5px; margin: 22px auto 0; border-radius: 3px;
+    background: linear-gradient(90deg, transparent, var(--red) 18%, #ff8a70 50%, var(--red) 82%, transparent);
+    box-shadow: 0 0 22px rgba(224,71,63,.7); transform: rotate(-2deg); }
+  .whisper { margin-top: 22px; font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 34px; color: #e9dccb; }
+
+  .scene { position: absolute; left: 0; right: 0; bottom: 210px; height: 640px; z-index: 2; }
+  .scene svg { width: 100%; height: 100%; display: block; }
+
+  .bottom { position: absolute; left: 0; right: 0; bottom: 0; height: 232px; z-index: 4;
+    background: linear-gradient(180deg, rgba(10,9,9,0) 0%, rgba(10,9,9,.92) 22%, var(--ink) 40%);
+    display: flex; align-items: flex-end; padding: 0 64px 56px; gap: 40px; }
+  .info { flex: 1; }
+  .live { display: inline-flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 600; letter-spacing: .28em;
+    text-transform: uppercase; color: var(--gold); }
+  .live i { width: 11px; height: 11px; border-radius: 50%; background: var(--red); box-shadow: 0 0 12px var(--red); }
+  .headline { margin-top: 12px; font-size: 44px; font-weight: 600; line-height: 1.08; }
+  .facts { margin-top: 16px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .facts span { font-size: 18px; padding: 8px 16px; border: 1px solid rgba(239,230,216,.28); border-radius: 999px; color: #e6dccd; }
+  .qr { text-align: center; }
+  .qr .box { width: 156px; height: 156px; padding: 12px; background: var(--paper); border-radius: 14px;
+    box-shadow: 0 0 0 3px rgba(242,191,58,.6), 0 10px 40px rgba(0,0,0,.6); }
+  .qr .box img { width: 100%; height: 100%; display: block; }
+  .qr p { margin-top: 12px; font-size: 15px; letter-spacing: .18em; text-transform: uppercase; color: var(--mute); }
+  .qr b { display: block; margin-top: 4px; font-size: 16px; letter-spacing: .02em; text-transform: none; color: var(--paper); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="poster" id="poster">
+  <div class="spot"></div>
+
+  <div class="top">
+    <img src="../../public/brand/unsorted-logo-light.png" alt="Unsorted" />
+    <div class="presents">presents</div>
+    <h1 class="title"><span class="m">MAFIA</span><span class="n">NIGHT</span></h1>
+    <div class="slash"></div>
+    <p class="whisper">Trust no one. Not even your best friend.</p>
+  </div>
+
+  <div class="scene"><svg id="scene" viewBox="0 0 1080 640" preserveAspectRatio="xMidYMax slice"></svg></div>
+
+  <div class="bottom">
+    <div class="info">
+      <div class="live"><i></i>Now playing online</div>
+      <div class="headline">Grab your phone.<br />Find the Mafia before sunrise.</div>
+      <div class="facts"><span>5–26 players</span><span>No narrator needed</span><span>Free to play</span></div>
+    </div>
+    <div class="qr">
+      <div class="box"><img src="qr.svg" alt="QR code to unsortedmafia.vercel.app/mafia" /></div>
+      <p>Scan to play<b>unsortedmafia.vercel.app</b></p>
+    </div>
+  </div>
+
+  <svg class="grain" width="100%" height="100%"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>
+</div>
+
+<script>
+/* Five friends around a table at night, faces lit by their phones. */
+const S = document.getElementById('scene');
+const NS = 'http://www.w3.org/2000/svg';
+let defs = '';
+let body = '';
+const SIL = '#0b0807';
+
+function glowDefs(id, c) {
+  defs += `
+  <radialGradient id="face-${id}" cx="50%" cy="95%" r="85%">
+    <stop offset="0" stop-color="${c}" stop-opacity=".95"/>
+    <stop offset=".45" stop-color="${c}" stop-opacity=".45"/>
+    <stop offset="1" stop-color="${c}" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="halo-${id}" cx="50%" cy="50%" r="50%">
+    <stop offset="0" stop-color="${c}" stop-opacity=".55"/>
+    <stop offset="1" stop-color="${c}" stop-opacity="0"/>
+  </radialGradient>`;
+}
+
+/*
+ p: x, y (base of neck), s scale, tilt (deg), glow colour, hair style, face expr,
+ arms: [[elbowX, elbowY, handX, handY], ...] relative to shoulders, phone: index of hand holding phone
+*/
+function person(p) {
+  const id = p.id; glowDefs(id, p.glow);
+  const sw = 58 * p.s; // arm thickness
+  const shL = [-70, 18], shR = [70, 18];
+  let g = `<g transform="translate(${p.x} ${p.y}) scale(${p.s})">`;
+
+  // light spill behind the person
+  const ph = p.arms[p.phone];
+  const phX = (p.phone === 0 ? shL[0] : shR[0]) + ph[2], phY = shL[1] + ph[3];
+  g += `<ellipse cx="${phX}" cy="${phY - 40}" rx="190" ry="170" fill="url(#halo-${id})"/>`;
+
+  // torso
+  g += `<path d="M-30 -6 C-60 4 -96 10 -108 46 C-120 90 -124 200 -130 330 L130 330 C124 200 120 90 108 46 C96 10 60 4 30 -6 Z" fill="${SIL}"/>`;
+  // rim light on shoulders
+  g += `<path d="M-108 46 C-96 10 -60 4 -30 -6 M30 -6 C60 4 96 10 108 46" fill="none" stroke="${p.rim}" stroke-opacity=".45" stroke-width="3"/>`;
+  // neck
+  g += `<rect x="-20" y="-40" width="40" height="44" fill="${SIL}"/>`;
+
+  // head group (tilted)
+  g += `<g transform="translate(0 -86) rotate(${p.tilt})">`;
+  g += `<clipPath id="hc-${id}"><ellipse cx="0" cy="0" rx="46" ry="56"/></clipPath>`;
+  g += `<ellipse cx="0" cy="0" rx="46" ry="56" fill="${SIL}"/>`;
+  g += `<g clip-path="url(#hc-${id})"><rect x="-60" y="-70" width="120" height="140" fill="url(#face-${id})"/></g>`;
+  // ears
+  g += `<ellipse cx="-46" cy="4" rx="7" ry="13" fill="${SIL}"/><ellipse cx="46" cy="4" rx="7" ry="13" fill="${SIL}"/>`;
+  g += face(p.expr, p.glow);
+  g += hair(p.hair, p.rim);
+  g += `</g>`;
+
+  // arms (drawn over the torso)
+  p.arms.forEach((a, i) => {
+    const sh = i === 0 ? shL : shR;
+    const ex = sh[0] + a[0], ey = sh[1] + a[1], hx = sh[0] + a[2], hy = sh[1] + a[3];
+    g += `<path d="M${sh[0]} ${sh[1] + 30} L${ex} ${ey} L${hx} ${hy}" fill="none" stroke="${SIL}" stroke-width="${sw / p.s}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    if (a[4] === 'point') {
+      g += `<circle cx="${hx}" cy="${hy}" r="17" fill="${SIL}"/>`;
+      const dx = hx - ex, dy = hy - ey, L = Math.hypot(dx, dy);
+      g += `<line x1="${hx}" y1="${hy}" x2="${hx + dx / L * 34}" y2="${hy + dy / L * 34}" stroke="${SIL}" stroke-width="11" stroke-linecap="round"/>`;
+    } else {
+      g += `<circle cx="${hx}" cy="${hy}" r="20" fill="${SIL}"/>`;
+    }
+    if (i === p.phone) {
+      g += `<g transform="translate(${hx} ${hy - 6}) rotate(${p.phoneRot || 0})">
+        <rect x="-21" y="-38" width="42" height="74" rx="7" fill="#151212" stroke="#2a2422" stroke-width="2"/>
+        <rect x="-17" y="-33" width="34" height="62" rx="4" fill="${p.glow}" opacity=".95"/>
+        <rect x="-17" y="-33" width="34" height="62" rx="4" fill="url(#halo-${id})"/>
+        ${p.screen || ''}
+      </g>`;
+      // fingers wrapped around the phone
+      g += `<path d="M${hx - 22} ${hy + 4} q-6 14 6 24 M${hx + 22} ${hy + 4} q6 14 -6 24" stroke="${SIL}" stroke-width="12" fill="none" stroke-linecap="round"/>`;
+    }
+  });
+  g += `</g>`;
+  return g;
+}
+
+function face(expr, c) {
+  const dark = '#1a0f0b';
+  if (expr === 'laugh') return `
+    <path d="M-25 2 q9 -9 18 0 M7 2 q9 -9 18 0" stroke="${dark}" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M-20 22 Q0 52 20 22 Z" fill="${dark}"/><path d="M-15 25 Q0 30 15 25" stroke="#f4efe6" stroke-width="4" opacity=".7"/>
+    <path d="M-4 6 q4 8 -2 12" stroke="${dark}" stroke-width="3" fill="none" opacity=".6"/>`;
+  if (expr === 'smirk') return `
+    <ellipse cx="-16" cy="2" rx="6" ry="3.5" fill="${dark}"/><ellipse cx="16" cy="2" rx="6" ry="3.5" fill="${dark}"/>
+    <path d="M-26 -10 l16 4 M26 -12 l-16 5" stroke="${dark}" stroke-width="4" stroke-linecap="round"/>
+    <path d="M-12 30 Q6 36 18 24" stroke="${dark}" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M-4 6 q4 8 -2 12" stroke="${dark}" stroke-width="3" fill="none" opacity=".6"/>`;
+  if (expr === 'gasp') return `
+    <ellipse cx="-16" cy="0" rx="6" ry="7" fill="${dark}"/><ellipse cx="16" cy="0" rx="6" ry="7" fill="${dark}"/>
+    <path d="M-26 -16 q10 -6 18 -2 M26 -16 q-10 -6 -18 -2" stroke="${dark}" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <ellipse cx="0" cy="30" rx="10" ry="13" fill="${dark}"/>
+    <path d="M-4 8 q4 8 -2 12" stroke="${dark}" stroke-width="3" fill="none" opacity=".6"/>`;
+  if (expr === 'grin') return `
+    <path d="M-25 2 q9 -8 18 0 M7 2 q9 -8 18 0" stroke="${dark}" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M-22 22 Q0 44 22 22 Q0 30 -22 22 Z" fill="#f4efe6" stroke="${dark}" stroke-width="3"/>
+    <path d="M-4 6 q4 8 -2 12" stroke="${dark}" stroke-width="3" fill="none" opacity=".6"/>`;
+  return '';
+}
+
+function hair(style, rim) {
+  const r = `stroke="${rim}" stroke-opacity=".5" stroke-width="3"`;
+  if (style === 'fedora') return `
+    <path d="M-80 -30 Q0 -52 80 -30 Q60 -22 0 -26 Q-60 -22 -80 -30 Z" fill="${SIL}" ${r}/>
+    <path d="M-48 -32 C-50 -80 -30 -98 0 -92 C30 -98 50 -80 48 -32 Z" fill="${SIL}" ${r}/>
+    <path d="M-47 -42 Q0 -50 47 -42 L48 -32 Q0 -40 -48 -32 Z" fill="#7a1d18"/>`;
+  if (style === 'long') return `
+    <path d="M-52 60 C-66 10 -62 -58 -10 -64 C40 -70 64 -30 56 20 C54 50 58 70 62 92 C40 84 44 40 40 0 C30 -30 0 -40 -30 -24 C-40 0 -40 40 -52 60 Z" fill="${SIL}" ${r}/>`;
+  if (style === 'bun') return `
+    <circle cx="6" cy="-74" r="22" fill="${SIL}" ${r}/>
+    <path d="M-48 -4 C-52 -52 -20 -64 4 -62 C34 -62 54 -40 48 -4 C40 -36 10 -46 -10 -42 C-30 -38 -42 -24 -48 -4 Z" fill="${SIL}" ${r}/>`;
+  if (style === 'curly') return `
+    <g fill="${SIL}" ${r}>
+      <circle cx="-34" cy="-34" r="22"/><circle cx="-10" cy="-52" r="24"/><circle cx="18" cy="-50" r="24"/>
+      <circle cx="40" cy="-30" r="20"/><circle cx="-46" cy="-10" r="14"/><circle cx="48" cy="-8" r="13"/>
+    </g>`;
+  if (style === 'cap') return `
+    <path d="M-48 -18 C-50 -66 50 -66 48 -18 Z" fill="${SIL}" ${r}/>
+    <path d="M30 -24 Q70 -28 92 -14 Q70 -10 34 -14 Z" fill="${SIL}" ${r}/>`;
+  return '';
+}
+
+const tiny = (c) => `<rect x="-12" y="-24" width="24" height="5" rx="2" fill="#fff" opacity=".85"/>
+  <circle cx="0" cy="0" r="9" fill="none" stroke="#fff" stroke-width="2.5" opacity=".9"/>
+  <rect x="-12" y="16" width="24" height="7" rx="3" fill="${c}" opacity=".9"/>`;
+
+const people = [
+  // far left: laughing, holding phone up, cool blue light
+  { id: 'a', x: 150, y: 330, s: 1.0, tilt: -10, glow: '#7fb4ff', rim: '#9cc4ff', hair: 'long', expr: 'laugh',
+    arms: [[-20, 150, 40, 120], [-10, 150, -60, 40]], phone: 0, phoneRot: -8, screen: tiny('#e0473f') },
+  // center back, fedora, smirking: the Mafia?
+  { id: 'b', x: 540, y: 270, s: 0.92, tilt: 4, glow: '#ff6a55', rim: '#ff8a70', hair: 'fedora', expr: 'smirk',
+    arms: [[-10, 150, 60, 110], [10, 150, -50, 110]], phone: 0, phoneRot: 0, screen: tiny('#0a0909') },
+  // right of center: pointing, accusing, grinning
+  { id: 'c', x: 790, y: 320, s: 1.0, tilt: 8, glow: '#ffd27a', rim: '#ffcf6a', hair: 'curly', expr: 'grin',
+    arms: [[-90, 40, -190, -40, 'point'], [10, 150, -30, 110]], phone: 1, phoneRot: 6, screen: tiny('#f2bf3a') },
+  // far right: gasping at a reveal
+  { id: 'd', x: 985, y: 360, s: 0.98, tilt: -6, glow: '#b48cff', rim: '#c4a4ff', hair: 'bun', expr: 'gasp',
+    arms: [[-10, 150, 40, 110], [0, 120, -20, -10]], phone: 0, phoneRot: -4, screen: tiny('#b48cff') },
+  // front left-centre: back-lit, laughing hard
+  { id: 'e', x: 345, y: 390, s: 1.08, tilt: 12, glow: '#ffb070', rim: '#ffc08a', hair: 'cap', expr: 'laugh',
+    arms: [[0, 150, 70, 100], [20, 160, -40, 120]], phone: 1, phoneRot: 10, screen: tiny('#e0473f') },
+];
+
+// drawing order: back to front
+const order = ['b', 'd', 'a', 'c', 'e'];
+order.forEach(k => body += person(people.find(p => p.id === k)));
+
+// table edge and candle-ish glow
+const table = `
+  <defs><linearGradient id="tbl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a1f15"/><stop offset="1" stop-color="#0a0909"/></linearGradient>
+  <radialGradient id="pool" cx="50%" cy="0%" r="60%"><stop offset="0" stop-color="#ffb070" stop-opacity=".35"/><stop offset="1" stop-color="#ffb070" stop-opacity="0"/></radialGradient></defs>
+  <path d="M-20 590 Q540 548 1100 590 L1100 660 L-20 660 Z" fill="url(#tbl)"/>
+  <path d="M-20 590 Q540 548 1100 590" stroke="#f2bf3a" stroke-opacity=".35" stroke-width="2" fill="none"/>
+  <ellipse cx="540" cy="580" rx="520" ry="60" fill="url(#pool)"/>
+  <g transform="translate(470 560) rotate(-12)"><rect x="-34" y="-48" width="68" height="96" rx="6" fill="#efe6d8"/><rect x="-28" y="-42" width="56" height="84" rx="4" fill="none" stroke="#e0473f" stroke-width="2"/><text x="0" y="8" text-anchor="middle" font-family="Cinzel" font-weight="900" font-size="22" fill="#e0473f">M</text></g>
+  <g transform="translate(610 566) rotate(9)"><rect x="-34" y="-48" width="68" height="96" rx="6" fill="#efe6d8"/><rect x="-28" y="-42" width="56" height="84" rx="4" fill="none" stroke="#0a0909" stroke-width="2"/><text x="0" y="8" text-anchor="middle" font-family="Cinzel" font-weight="900" font-size="22" fill="#0a0909">?</text></g>`;
+
+S.innerHTML = `<defs>${defs}</defs>${body}${table}`;
+</script>
+</body>
+</html>
