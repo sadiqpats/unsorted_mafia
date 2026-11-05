@@ -124,14 +124,14 @@ export function fmt(ms: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export function Timer({ endsAt, opensAt = null, serverNow, pausedMs, large = false }: { endsAt: number | null; opensAt?: number | null; serverNow: () => number; pausedMs: number | null; large?: boolean }) {
+export function Timer({ endsAt, opensAt = null, serverNow, pausedMs, large = false, silent = false }: { endsAt: number | null; opensAt?: number | null; serverNow: () => number; pausedMs: number | null; large?: boolean; silent?: boolean }) {
   const left = useCountdown(endsAt, serverNow, pausedMs);
   const toOpen = useCountdown(opensAt, serverNow, pausedMs);
   const { play } = useFx();
   const secs = left === null ? null : Math.ceil(left / 1000);
   useEffect(() => {
     // Soft tick for the last 5 seconds — the clock is public, so every phone ticks together.
-    if (secs !== null && secs > 0 && secs <= 5 && pausedMs === null) play('tick');
+    if (!silent && secs !== null && secs > 0 && secs <= 5 && pausedMs === null) play('tick');
   }, [secs]);
   // The short break at the start of Dawn/Night: show when actions open instead of the full clock.
   if (toOpen !== null && toOpen > 0 && pausedMs === null) {

@@ -10,7 +10,7 @@ import { RoomService, type Identity } from './rooms';
 import { RateLimiter, hashToken, safeEqualHex, secureRng } from './security';
 import { mountCharades } from './charades/http';
 import { Store } from './store';
-import { buildView } from './views';
+import { buildPublic, buildView } from './views';
 
 export interface AppOptions {
   dbPath: string;
@@ -66,11 +66,12 @@ export function createApp(opts: AppOptions) {
     if (!room) return;
     const connected = service.connected(code);
     const now = Date.now();
+    const shared = buildPublic(room, connected, now);
     for (const sid of io.sockets.adapter.rooms.get(`room:${code}`) ?? []) {
       const s = io.sockets.sockets.get(sid);
       if (!s) continue;
       const data = s.data as SocketData;
-      s.emit('state', buildView(room, data.identity.viewer, connected, now));
+      s.emit('state', buildView(room, data.identity.viewer, connected, now, shared));
     }
   };
 

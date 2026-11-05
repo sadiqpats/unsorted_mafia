@@ -456,35 +456,38 @@ function HostGame({ view, send, serverNow }: GameProps) {
   return (
     <div className="space-y-4">
       {/* Control bar */}
-      <div className={`card phase-card phase-${g.phase} z-30 p-3 md:sticky md:top-16`}>
-        <div className="flex items-center gap-3">
-          <div className="mr-auto">
+      {/* One slim row on a laptop, so the bar can stay in view without covering the page. */}
+      <div className={`card host-bar phase-card phase-${g.phase} relative z-30 flex flex-col gap-3 p-3 md:sticky md:top-16 md:flex-row md:items-center`}>
+        <div className="flex items-center gap-3 md:shrink-0">
+          <div className="mr-auto md:min-w-28">
             <div className="eyebrow">{g.round ? `Round ${g.round}` : 'Start'}</div>
             <div className="font-[family-name:var(--font-display)] text-xl" data-testid="host-phase">
               {PHASE_LABEL[g.phase]}
             </div>
           </div>
-          <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
+          <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} silent={g.phase === 'verdict'} />
         </div>
-        {progress && progress.total > 0 && (
-          <Progress className="mt-2" done={progress.done} total={progress.total} label={g.nightProgress ? 'Locked in' : g.votingProgress ? 'Votes in' : 'Seen their role'} />
+        {progress && progress.total > 0 ? (
+          <Progress className="md:min-w-0 md:flex-1" done={progress.done} total={progress.total} label={g.nightProgress ? 'Locked in' : g.votingProgress ? 'Votes in' : 'Seen their role'} />
+        ) : (
+          <div className="hidden md:block md:flex-1" />
         )}
         {!over && (
-          <div className="mt-3 flex flex-wrap gap-2 sm:flex-nowrap">
+          <div className="flex flex-wrap gap-2 md:flex-nowrap">
             {g.phaseEndsAt !== null && (
               <>
-                <button className="btn btn-ghost !min-h-11 flex-1 text-sm sm:flex-none" disabled={busy} onClick={() => act({ type: 'extend', seconds: -30 })} aria-label="Remove 30 seconds">
+                <button className="btn btn-ghost !min-h-11 flex-1 text-sm md:flex-none" disabled={busy} onClick={() => act({ type: 'extend', seconds: -30 })} aria-label="Remove 30 seconds">
                   −30s
                 </button>
-                <button className="btn btn-ghost !min-h-11 flex-1 text-sm sm:flex-none" disabled={busy} onClick={() => act({ type: 'extend', seconds: 30 })} aria-label="Add 30 seconds">
+                <button className="btn btn-ghost !min-h-11 flex-1 text-sm md:flex-none" disabled={busy} onClick={() => act({ type: 'extend', seconds: 30 })} aria-label="Add 30 seconds">
                   +30s
                 </button>
               </>
             )}
-            <button className="btn btn-ghost !min-h-11 flex-1 text-sm sm:flex-none" disabled={busy} onClick={() => act({ type: g.paused ? 'resume' : 'pause' })}>
+            <button className="btn btn-ghost !min-h-11 flex-1 text-sm md:flex-none" disabled={busy} onClick={() => act({ type: g.paused ? 'resume' : 'pause' })}>
               {g.paused ? '▶ Resume' : '⏸ Pause'}
             </button>
-            <button className="btn btn-gold !min-h-11 basis-full text-base sm:ml-auto sm:basis-auto sm:px-8" disabled={busy || !!g.pendingTie} onClick={() => act({ type: 'advance', phaseSeq: g.phaseSeq })}>
+            <button className="btn btn-gold !min-h-11 basis-full text-base md:basis-auto md:px-6" disabled={busy || !!g.pendingTie} onClick={() => act({ type: 'advance', phaseSeq: g.phaseSeq })}>
               {g.phase === 'discussion' ? '🗳️ Start voting' : 'Next phase ⏭'}
             </button>
           </div>
@@ -570,6 +573,7 @@ function HostGame({ view, send, serverNow }: GameProps) {
                               Restore
                             </button>
                           )}
+                          {!p.isHost && (
                           <button
                             className="btn btn-ghost !min-h-9 !px-2 !py-1 text-xs"
                             title="Issue a rejoin code"
@@ -581,6 +585,7 @@ function HostGame({ view, send, serverNow }: GameProps) {
                           >
                             Rejoin
                           </button>
+                          )}
                         </div>
                       )
                     }

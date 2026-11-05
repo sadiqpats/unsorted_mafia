@@ -240,7 +240,7 @@ export function usePhaseFx(view: ClientView | null) {
         buzz(s === 'over' ? [80, 60, 80, 60, 160] : [60]);
         setScene({ scene: s, sub: s === 'over' || s === 'reveal' ? '' : `Round ${g.round}`, key, bw: !!view.settings.bollywood });
         later(2.2, () => setScene(null));
-      }
+      } else setScene(null); // the last curtain's own timer was just cancelled
     }
 
     // Game over: suspense first, the cards turn (a gong for each Mafia member), and the winner's

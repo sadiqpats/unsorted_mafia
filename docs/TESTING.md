@@ -1,6 +1,8 @@
 # Testing: what was run, and the results
 
-Latest full run: 2026-10-17 (macOS, Node 22.23, Chromium headless via Playwright 1.64), after the pre-party audit (fuzz test of 1,500 random Mafia games, visual walkthrough of every screen). Nothing below is reported as passing without having been run.
+Latest audit: 2026-11-06, all three games read line by line and every Mafia screen checked on a small phone, a big phone, a laptop and a TV. Unit + integration 232 / 232. End-to-end: 37 / 40 in the last full run, on a badly overloaded machine (load average 58 on 10 cores); the other 3 passed when re-run with 2 workers, and the server's audit log showed no refused commands. `tests/unit/audit.test.ts` holds the bugs found.
+
+Previous full run: 2026-10-17 (macOS, Node 22.23, Chromium headless via Playwright 1.64), after the pre-party audit (fuzz test of 1,500 random Mafia games, visual walkthrough of every screen). Nothing below is reported as passing without having been run.
 
 | Suite | Command | Result |
 |---|---|---|

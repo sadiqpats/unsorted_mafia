@@ -22,6 +22,6 @@ test("the Mafia's chat: a quiet bar from the role reveal, Mafia members only (no
   await expect(msgs.first()).toContainText(m1.name);
   if (process.env.SHOTS) await m2.page.screenshot({ path: `${process.env.SHOTS}/chat-open.png` });
   await m2.page.getByRole('button', { name: 'Close the chat' }).click();
-  await expect(m2.page.getByTestId('mafia-chat-bar')).toHaveText(/Family chat\s*tap to open/);
+  await expect(m2.page.getByTestId('mafia-chat-bar')).toHaveText(/Notes\s*tap to open/);
   await expect(gf.page.getByText('Doctor first?')).toHaveCount(0);
 });

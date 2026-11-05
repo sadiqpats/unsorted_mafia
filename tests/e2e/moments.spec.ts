@@ -28,6 +28,12 @@ test('big moments: knife-cut card on TV and phones, pause after the vote, Mafia-
   await expect(tv.getByTestId('tv-spotlight')).toContainText('Killed in the night');
   await expect(tv.getByTestId('moment-card')).toHaveAttribute('data-player', vills[0].name);
   await expect(det.page.getByTestId('phone-moment')).toContainText(vills[0].name);
+  // It stays until it's seen: well past its old 8 seconds, then a tap anywhere closes it.
+  await det.page.waitForTimeout(9000);
+  await expect(det.page.getByTestId('phone-moment')).toBeVisible();
+  await expect(det.page.getByText('Tap anywhere to continue')).toBeVisible();
+  await det.page.getByTestId('phone-moment').click({ position: { x: 20, y: 20 } });
+  await expect(det.page.getByTestId('phone-moment')).toHaveCount(0);
   await advanceTo(t, 'Vote');
   for (const s of await t.alive()) await vote(s, s === vills[1] ? doc.name : vills[1].name);
   // The pause on the result (odd round: no Mafia count).

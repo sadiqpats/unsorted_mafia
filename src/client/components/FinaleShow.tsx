@@ -67,7 +67,8 @@ export function finaleRoleLabel(p: PublicPlayer, settings: Settings): { main: st
 
 /** Card size: everyone fits on one screen, as big as the table allows. */
 function cardSize(n: number, variant: 'tv' | 'phone') {
-  if (variant === 'phone') return n <= 9 ? '20vw' : n <= 14 ? '18vw' : '16vw';
+  // "phone" is also the host's laptop: the height caps it there.
+  if (variant === 'phone') return n <= 9 ? 'min(20vw, 15vh)' : n <= 14 ? 'min(18vw, 13vh)' : 'min(16vw, 11vh)';
   return n <= 6 ? 'min(17vh, 13vw)' : n <= 9 ? 'min(15vh, 11vw)' : n <= 12 ? 'min(13vh, 9.5vw)' : n <= 16 ? 'min(11.5vh, 8vw)' : n <= 20 ? 'min(10vh, 7vw)' : 'min(9vh, 6vw)';
 }
 

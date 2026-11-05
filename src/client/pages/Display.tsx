@@ -42,7 +42,7 @@ export default function Display() {
       <PhaseCurtain scene={scene} />
       {g?.phase === 'game_over' && finaleElapsed !== null && <FinaleShow key={g.phaseSeq} view={view} variant="tv" elapsed={finaleElapsed} persist />}
       {spotlight && g && (
-        <MomentsOverlay key={spotlight.key} moment={spotlight} view={view} variant="tv" clock={<Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />} />
+        <MomentsOverlay key={spotlight.key} moment={spotlight} view={view} variant="tv" clock={g.phase === 'verdict' ? undefined : <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large silent />} />
       )}
       {!soundOn && (
         <button
@@ -247,7 +247,7 @@ function TvGame({ view, serverNow, send }: { view: NonNullable<ReturnType<typeof
           {g.votingProgress && <Progress className="tv-progress w-[clamp(10rem,22vw,16rem)]" done={g.votingProgress.done} total={g.votingProgress.total} label="votes in" />}
           {g.revealProgress && <Progress className="tv-progress w-[clamp(10rem,22vw,16rem)]" done={g.revealProgress.done} total={g.revealProgress.total} label="have seen their role" />}
           <div className="tv-clock-slot">
-            <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large />
+            <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} large silent={g.phase === 'verdict'} />
           </div>
           {send && <TvControls view={view} send={send} />}
         </div>

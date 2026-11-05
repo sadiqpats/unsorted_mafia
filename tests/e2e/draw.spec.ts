@@ -52,11 +52,20 @@ test('Draw the Imposter: host code, host picks the imposters, hint, pass the pho
   }
   await p.getByRole('button', { name: 'Reveal the imposter' }).click();
   await expect(p.getByTestId('draw-reveal')).toContainText('Everyone was the imposter!');
+  // Someone joining now wasn't in this round: the result must not change.
+  await p.getByLabel('New player’s name').fill('Kabir');
+  await p.getByRole('button', { name: '+ Add a player' }).click();
+  await expect(p.getByTestId('draw-reveal')).toContainText('Everyone was the imposter!');
+  await expect(p.getByText('👥 6')).toBeVisible();
+  await p.getByRole('radio', { name: '1', exact: true }).click();
   await p.getByRole('button', { name: 'Next round →' }).click();
   await expect(p.getByText('Round 3')).toBeVisible();
-  // A reload keeps the game going.
+  // A reload keeps the game going, and never reopens on someone's secret word.
+  await p.getByRole('button', { name: /show my word/ }).click();
+  await expect(p.getByTestId('draw-peek')).toBeVisible();
   await p.reload();
   await expect(p.getByText('Round 3')).toBeVisible();
+  await expect(p.getByTestId('draw-pass')).toBeVisible();
   await p.getByRole('button', { name: 'Stop game' }).click();
   await p.getByRole('dialog').getByRole('button', { name: 'Stop' }).click();
   await expect(p.getByRole('button', { name: 'Start round 1' })).toBeVisible();

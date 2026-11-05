@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { roleTitle } from '../../shared/roles';
 import type { ClientView, PublicPlayer } from '../../shared/view-types';
 import { serverUrl } from '../lib/server';
@@ -14,10 +15,10 @@ import { serverUrl } from '../lib/server';
 
 export type MomentKind = 'killed' | 'voted' | 'revived' | 'silenced';
 export type MomentCardData = { id: string; kind: MomentKind };
-export type Moment = { key: number; title: string; cards: MomentCardData[]; note: string | null; mafiaLeft: number | null; seconds: number; superpower?: boolean };
+export type Moment = { key: number; title: string; cards: MomentCardData[]; note: string | null; mafiaLeft: number | null; seconds: number; superpower?: boolean; sticky?: boolean };
 
 /** Watches the game for a new Day or a vote result and returns the moment to show (or null). */
-export function useMoments(view: ClientView | null, { startDelayMs = 1900, maxSeconds = 60 }: { startDelayMs?: number; maxSeconds?: number } = {}): Moment | null {
+export function useMoments(view: ClientView | null, { startDelayMs = 1900, maxSeconds = 60, sticky = false }: { startDelayMs?: number; maxSeconds?: number; sticky?: boolean } = {}): Moment | null {
   const [moment, setMoment] = useState<Moment | null>(null);
   const prev = useRef<{ phase: string; key: number } | null>(null);
   const g = view?.game ?? null;
@@ -42,14 +43,14 @@ export function useMoments(view: ClientView | null, { startDelayMs = 1900, maxSe
         const bw = !!view.settings.bollywood;
         const n = m.deaths.length;
         const note = bw
-          ? n >= 2 ? `${n} log maare gaye.` : n === 1 ? 'Ek ki jaan gayi — ek bach gaya.' : 'Lekin koi nahi mara!'
-          : n >= 2 ? `${n} people were killed.` : n === 1 ? 'One was killed — one survived.' : '…but nobody died!';
+          ? n >= 2 ? `${n} log maare gaye.` : n === 1 ? (m.saved ? 'Ek ki jaan gayi — ek bach gaya.' : 'Ek ki jaan gayi.') : 'Lekin koi nahi mara!'
+          : n >= 2 ? `${n} people were killed.` : n === 1 ? (m.saved ? 'One was killed — one survived.' : 'One person was killed.') : '…but nobody died!';
         next = { title: bw ? 'Mahastra ka istemaal hua!' : 'The Godfather used his Superpower!', cards, note, mafiaLeft: null, seconds: 10, superpower: true };
       }
     } else if (g.phase === 'night' && before.phase === 'prenight' && g.lastDawn && g.lastDawn.round === g.round && g.lastDawn.revived.length) {
       // Someone came back at Dawn: their card rises from the dead, for 5 seconds.
-      next = { title: 'Back from the dead!', cards: g.lastDawn.revived.map((id) => ({ id, kind: 'revived' as const })), note: null, mafiaLeft: null, seconds: 8 };
-    } else if (before.phase === 'voting' && g.lastVerdict && (g.phase === 'verdict' ? !g.pendingTie : g.phase === 'prenight' || g.phase === 'night')) {
+      next = { title: 'Back from the dead!', cards: g.lastDawn.revived.map((id) => ({ id, kind: 'revived' as const })), note: null, mafiaLeft: null, seconds: 5 };
+    } else if ((before.phase === 'voting' || (before.phase === 'verdict' && g.phase === 'verdict')) && g.lastVerdict && (g.phase === 'verdict' ? !g.pendingTie : g.phase === 'prenight' || g.phase === 'night')) {
       const v = g.lastVerdict;
       const left = g.mafiaLeft && g.mafiaLeft.round === v.round ? g.mafiaLeft.count : null;
       // Exactly as long as the pause on the result (8 s by default) — never longer.
@@ -57,10 +58,13 @@ export function useMoments(view: ClientView | null, { startDelayMs = 1900, maxSe
       next = { title: 'The town has spoken', cards: v.eliminatedId ? [{ id: v.eliminatedId, kind: 'voted' }] : [], note: v.eliminatedId ? null : 'Nobody was voted out.', mafiaLeft: left, seconds: secs };
     }
     if (!next) return;
-    const s = { ...next, seconds: Math.min(next.seconds, maxSeconds) };
+    // A phone keeps it up until it is tapped (or the phase moves on), but only in the phases with
+    // nothing to do. At Dawn and Night the clock is running: their panels must never stay covered.
+    const stay = sticky && (g.phase === 'discussion' || g.phase === 'verdict');
+    const s = { ...next, seconds: Math.min(next.seconds, maxSeconds), sticky: stay };
     const delay = g.phase === 'verdict' ? 0 : startDelayMs; // no curtain before the vote result
     const show = setTimeout(() => setMoment({ ...s, key }), delay);
-    const hide = setTimeout(() => setMoment((cur) => (cur?.key === key ? null : cur)), delay + s.seconds * 1000);
+    const hide = stay ? undefined : setTimeout(() => setMoment((cur) => (cur?.key === key ? null : cur)), delay + s.seconds * 1000);
     return () => {
       clearTimeout(show);
       clearTimeout(hide);
@@ -177,8 +181,8 @@ export function MomentsOverlay({ moment, view, variant, clock, onClose }: { mome
       : n <= 1
         ? moment.mafiaLeft !== null ? 'min(40vw, 20vh)' : 'min(52vw, 27vh)'
         : n === 2
-          ? 'min(40vw, 22vh)'
-          : 'min(28vw, 17vh)';
+          ? 'min(34vw, 22vh)'
+          : 'min(26vw, 17vh)';
   const countDelay = 0.4 + n * 0.45 + (n ? 2.2 : 0.3);
   return (
     <div className={`moments moments-${variant} ${moment.superpower ? 'moments-super' : ''}`} role="status" aria-live="polite" data-testid={variant === 'tv' ? 'tv-spotlight' : 'phone-moment'} onClick={onClose}>
@@ -199,19 +203,20 @@ export function MomentsOverlay({ moment, view, variant, clock, onClose }: { mome
       )}
       {moment.note && <p className="moments-note">{moment.note}</p>}
       {moment.mafiaLeft !== null && <MafiaCountCard count={moment.mafiaLeft} delay={countDelay} />}
-      {variant === 'phone' && <p className="moments-hint">Tap to close</p>}
-      <span className="moments-bar" style={{ ['--secs' as string]: `${moment.seconds}s` }} aria-hidden="true" />
+      {variant === 'phone' && <p className="moments-tap">👆 Tap anywhere to continue</p>}
+      {!moment.sticky && <span className="moments-bar" style={{ ['--secs' as string]: `${moment.seconds}s` }} aria-hidden="true" />}
       {moment.cards.some((c) => c.kind === 'revived') && <RiseSparks />}
     </div>
   );
 }
 
-/** On a phone: the same moment, shorter, and a tap closes it. */
+/** On a phone: the same moment. It stays until a tap anywhere closes it, so nobody misses it. */
 export function PhoneMoments({ view }: { view: ClientView }) {
-  const moment = useMoments(view, { maxSeconds: 8 });
+  const moment = useMoments(view, { maxSeconds: 8, sticky: true });
   const [closed, setClosed] = useState<number | null>(null);
   if (!moment || closed === moment.key) return null;
-  return <MomentsOverlay key={moment.key} moment={moment} view={view} variant="phone" onClose={() => setClosed(moment.key)} />;
+  // On <body>, over the header too: "tap anywhere" must never land on the Home button underneath.
+  return createPortal(<MomentsOverlay key={moment.key} moment={moment} view={view} variant="phone" onClose={() => setClosed(moment.key)} />, document.body);
 }
 
 /** Golden sparks drifting up behind a revival. */

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { useWakeLock, watchConnection } from '../lib/liveness';
 import type { CCommand, CView } from '../../shared/charades/types';
-import { SERVER_URL, serverUrl } from '../lib/server';
+import { SERVER_URL, serverUrl, steadyOffset } from '../lib/server';
 import type { ConnStatus } from '../lib/useRoom';
 
 export interface CSession {
@@ -55,7 +55,7 @@ export function useCharades(code: string, auth: { token?: string; display?: bool
   const [status, setStatus] = useState<ConnStatus>('connecting');
   const [endedReason, setEndedReason] = useState<string | null>(null);
   const sock = useRef<Socket | null>(null);
-  const offset = useRef(0);
+  const offset = useRef<number | null>(null);
 
   useEffect(() => {
     if (!auth) return;
@@ -83,7 +83,7 @@ export function useCharades(code: string, auth: { token?: string; display?: bool
       } else setStatus('offline');
     });
     s.on('state', (v: CView) => {
-      offset.current = v.serverNow - Date.now();
+      offset.current = steadyOffset(offset.current, v.serverNow - Date.now());
       setView(v);
     });
     s.on('session_ended', (e: { reason: string }) => {
@@ -115,7 +115,7 @@ export function useCharades(code: string, auth: { token?: string; display?: bool
 
   useWakeLock(!!auth && status !== 'denied' && status !== 'ended');
 
-  const serverNow = useCallback(() => Date.now() + offset.current, []);
+  const serverNow = useCallback(() => Date.now() + (offset.current ?? 0), []);
   return { view, status, endedReason, send, serverNow };
 }
 

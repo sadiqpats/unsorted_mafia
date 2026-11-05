@@ -114,6 +114,8 @@ export interface CRoom {
   /** Bumps on every change; commands quote it so stale taps are refused. */
   seq: number;
   recentActions: string[];
+  /** The rounds the host set, while "one more round" has added to them. */
+  plannedRounds?: number;
 }
 
 // ------------------------------------------------------------------ protocol

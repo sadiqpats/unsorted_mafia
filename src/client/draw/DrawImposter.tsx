@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { BrandMark, PrefsMenu, Toggle, useConfirm, useTitle } from '../components/ui';
+import { useFx } from '../lib/prefs';
 import { api, ApiError } from '../lib/api';
 import { DrawMark } from './art';
 import { autoPick, freshAuto, imposterCount, pickFits, pickLabel, PICKS, type Auto, type Pick } from './imposters';
@@ -19,7 +20,7 @@ import { BOLLYWOOD, OBJECTS, type Card } from './words';
 type Deck = 'bollywood' | 'objects' | 'mix';
 type Mode = 'auto' | 'choose';
 type Stage = 'pass' | 'peek' | 'draw' | 'reveal';
-type Round = { n: number; word: string; hint: string; deck: Exclude<Deck, 'mix'>; imposters: number[]; seen: number };
+type Round = { n: number; word: string; hint: string; deck: Exclude<Deck, 'mix'>; imposters: number[]; seen: number; size: number };
 type Game = {
   v: 2;
   players: string[];
@@ -38,7 +39,9 @@ const KEY = 'draw-imposter:game';
 const load = (): Game | null => {
   try {
     const g = JSON.parse(sessionStorage.getItem(KEY) ?? 'null');
-    return g?.v === 2 ? g : null; // a game saved by the older version just starts fresh
+    if (g?.v !== 2) return null; // a game saved by the older version just starts fresh
+    // Never reopen on someone's secret word: a reload must not show it to whoever is holding the phone.
+    return g.stage === 'peek' ? { ...g, stage: 'pass' } : g;
   } catch {
     return null;
   }
@@ -76,7 +79,7 @@ function newRound(g: Game): Game {
   const imposters = shuffle([...g.players.keys()])
     .slice(0, count)
     .sort((a, b) => a - b);
-  return { ...g, auto, round: { n, word: card.w, hint: card.hint, deck, imposters, seen: 0 }, used: [...g.used, card.w].slice(-80), stage: 'pass' };
+  return { ...g, auto, round: { n, word: card.w, hint: card.hint, deck, imposters, seen: 0, size: g.players.length }, used: [...g.used, card.w].slice(-80), stage: 'pass' };
 }
 
 export default function DrawImposter() {
@@ -307,7 +310,7 @@ function Setup({ onStart }: { onStart: (g: Game) => void }) {
           </p>
         ) : (
           <div className="mt-3 space-y-2">
-            <PickChips value={pick} players={count} onChange={setPick} />
+            <PickChips value={pickFits(pick, count) ? pick : 1} players={count} onChange={setPick} />
             <p className="text-sm text-mute">{pickExplain(pickFits(pick, count) ? pick : 1, count)} You can change it before every round.</p>
             {hostPlays && <p className="text-xs text-gold">You’re playing, so you’ll know how many — but not who.</p>}
           </div>
@@ -341,27 +344,44 @@ function HowTo() {
 
 /** A 60/90-second drawing clock, so the table doesn't wait forever for the slowest artist. */
 function DrawClock() {
+  const { play } = useFx();
+  const [endsAt, setEndsAt] = useState<number | null>(null);
   const [left, setLeft] = useState<number | null>(null);
+  const start = (s: number) => {
+    setEndsAt(Date.now() + s * 1000);
+    setLeft(s);
+  };
+  // Counted from the end time, so it stays right even if the phone was busy or the screen dimmed.
   useEffect(() => {
-    if (left === null || left <= 0) {
-      if (left === 0) navigator.vibrate?.([200, 100, 200]);
-      return;
-    }
-    const t = setTimeout(() => setLeft((l) => (l === null ? null : l - 1)), 1000);
-    return () => clearTimeout(t);
+    if (endsAt === null) return;
+    const id = setInterval(() => setLeft(Math.max(0, Math.ceil((endsAt - Date.now()) / 1000))), 250);
+    return () => clearInterval(id);
+  }, [endsAt]);
+  useEffect(() => {
+    if (left !== 0) return;
+    setEndsAt(null);
+    play('gong');
+    navigator.vibrate?.([200, 100, 200]);
   }, [left]);
   if (left === null)
     return (
       <div className="flex justify-center gap-2">
         {[60, 90].map((s) => (
-          <button key={s} className="btn btn-ghost !min-h-10 text-sm" onClick={() => setLeft(s)}>
+          <button key={s} className="btn btn-ghost !min-h-10 text-sm" onClick={() => start(s)}>
             ⏱ {s}s timer
           </button>
         ))}
       </div>
     );
   return (
-    <button className={`draw-clock ${left <= 10 ? 'is-urgent' : ''}`} onClick={() => setLeft(null)} aria-label="Stop the timer">
+    <button
+      className={`draw-clock ${left <= 10 ? 'is-urgent' : ''}`}
+      onClick={() => {
+        setEndsAt(null);
+        setLeft(null);
+      }}
+      aria-label="Stop the timer"
+    >
       {left > 0 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : 'Pens down! ✋'}
     </button>
   );
@@ -374,10 +394,11 @@ function Play({ game, setGame }: { game: Game; setGame: (g: Game | null) => void
   const total = game.players.length;
   const who = game.players[r.seen];
   const isImp = r.imposters.includes(r.seen);
-  const everyone = r.imposters.length === total;
-  const lonely = !everyone && r.imposters.length === total - 1 && total > 2 ? game.players.find((_, i) => !r.imposters.includes(i)) : null;
+  // Counted against the players in THIS round: someone added on the reveal screen wasn't in it.
+  const everyone = r.imposters.length === r.size;
+  const lonely = !everyone && r.imposters.length === r.size - 1 && r.size > 2 ? game.players.slice(0, r.size).find((_, i) => !r.imposters.includes(i)) : null;
   const set = (patch: Partial<Game>) => setGame({ ...game, ...patch });
-  const nextPlayer = () => (r.seen + 1 >= total ? set({ stage: 'draw' }) : set({ stage: 'pass', round: { ...r, seen: r.seen + 1 } }));
+  const nextPlayer = () => (r.seen + 1 >= r.size ? set({ stage: 'draw' }) : set({ stage: 'pass', round: { ...r, seen: r.seen + 1 } }));
   const stop = async () => {
     if (await confirm({ title: 'Stop the game?', body: 'This ends the game for everyone.', confirm: 'Stop' })) setGame(null);
   };
@@ -391,20 +412,21 @@ function Play({ game, setGame }: { game: Game; setGame: (g: Game | null) => void
     <div className="space-y-4 pt-2">
       <div className="flex items-center justify-between gap-2">
         <span className="chip">Round {r.n}</span>
-        <span className="chip">{r.deck === 'bollywood' ? '🎬 Filmy' : '🤪 Quirky'}</span>
+        {/* In a Mix game the category is itself a clue: it stays hidden until the reveal. */}
+        <span className="chip">{game.deck === 'mix' && game.stage !== 'reveal' ? '🎲 Mix' : r.deck === 'bollywood' ? '🎬 Filmy' : '🤪 Quirky'}</span>
         <span className="chip">👥 {total}</span>
       </div>
 
       {game.stage === 'pass' && (
         <div className="card flex min-h-[60dvh] flex-col items-center justify-center gap-5 p-6 text-center" data-testid="draw-pass">
           <ol className="flex flex-wrap justify-center gap-1.5" aria-label="Who has looked">
-            {game.players.map((p, i) => (
+            {game.players.slice(0, r.size).map((p, i) => (
               <li key={i} className={`h-2 w-2 rounded-full ${i < r.seen ? 'bg-gold' : i === r.seen ? 'bg-bone ring-2 ring-gold/50' : 'bg-white/15'}`} title={p} />
             ))}
           </ol>
           <p className="eyebrow">Pass the phone to</p>
           <div className="draw-avatar" aria-hidden="true">
-            {who.slice(0, 1).toUpperCase()}
+            {Array.from(who)[0]?.toUpperCase()}
           </div>
           <p className="brand-title break-words text-5xl font-black">{who}</p>
           <p className="text-mute">Everyone else — look away! 🙈</p>
@@ -412,7 +434,7 @@ function Play({ game, setGame }: { game: Game; setGame: (g: Game | null) => void
             I’m {who}, show my word
           </button>
           <p className="text-xs text-mute">
-            {r.seen + 1} of {total}
+            {r.seen + 1} of {r.size}
           </p>
         </div>
       )}
@@ -420,16 +442,14 @@ function Play({ game, setGame }: { game: Game; setGame: (g: Game | null) => void
       {game.stage === 'peek' && (
         <div className="flex min-h-[60dvh] flex-col items-center justify-center gap-5 text-center" data-testid="draw-peek">
           {isImp ? (
-            <div className="imposter-card anim-pop w-full p-6">
-              <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border-2 border-ember/70 bg-black/40 text-6xl" aria-hidden="true">
-                🕵️
-              </div>
-              <p className="mt-4 text-sm uppercase tracking-[0.3em] text-ember">Shh…</p>
-              <p className="brand-title mt-1 text-5xl font-black !text-[#ffb4ac]">You are the IMPOSTER</p>
-              <p className="mt-3 text-mute">You don’t know the word. Watch the others and fake your drawing!</p>
+            // ANTI-CHEAT: the same paper as the word, so nobody across the table can tell from the colour.
+            <div className="paper anim-pop w-full px-6 pb-8 pt-6">
+              <p className="paper-eyebrow">Shh…</p>
+              <p className="paper-word">You are the IMPOSTER</p>
+              <p className="mt-4 text-sm text-[#6b5d4c]">You don’t know the word. Watch the others and fake your drawing!</p>
               {game.hints && (
-                <p className="mt-4 inline-block rounded-full border border-gold/50 bg-gold/10 px-4 py-1.5 text-sm" data-testid="draw-hint">
-                  💡 Hint: <b className="text-gold">{r.hint}</b>
+                <p className="relative mt-3 text-sm text-[#2b241d]" data-testid="draw-hint">
+                  Hint: <b>{r.hint}</b>
                 </p>
               )}
             </div>

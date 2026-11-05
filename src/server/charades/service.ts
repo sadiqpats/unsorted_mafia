@@ -199,7 +199,7 @@ export class CharadesService {
     const p = CCaptainCommandSchema.safeParse(raw);
     if (!p.success) throw new CharadesError('bad_command', 'That command isn’t valid.');
     const c = p.data;
-    if ('seq' in c) E.checkSeq(room, c.seq);
+    if ('seq' in c && c.type !== 'got_it') E.checkSeq(room, c.seq); // a ✅ must not bounce off a card swap or the buzzer
     switch (c.type) {
       case 'show_card':
         return E.showCard(room, id.team, c.index, ctx.now);

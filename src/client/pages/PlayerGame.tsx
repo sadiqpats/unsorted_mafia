@@ -166,13 +166,13 @@ function PhaseHeader({ view, serverNow }: { view: ClientView; serverNow: () => n
   const g = view.game!;
   const roundLabel = g.round > 0 && g.phase !== 'game_over' ? `Round ${g.round}` : '';
   return (
-    <div className={`card phase-card phase-${g.phase} p-4`}>
+    <div className={`card phase-card phase-${g.phase} relative p-4`}>
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="eyebrow">{roundLabel || (view.settings.bollywood ? 'Bollywood Mafia Night' : 'Mafia Night')}</div>
           <h1 key={g.phase} className="phase-title-in font-[family-name:var(--font-display)] text-4xl text-bone">{PHASE_LABEL[g.phase]}</h1>
         </div>
-        <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />
+        {g.phase !== 'verdict' && <Timer endsAt={g.phaseEndsAt} opensAt={g.phaseOpensAt} serverNow={serverNow} pausedMs={g.pausedRemainingMs} />}
       </div>
       {/* Counts only (the TV shows the same): everyone at the table sees how many are still choosing. */}
       {g.nightProgress && g.nightProgress.total > 0 && <Progress className="mt-3" done={g.nightProgress.done} total={g.nightProgress.total} label="Locked in" />}
@@ -726,7 +726,7 @@ function NightOptionCard({ view, option, submitted, send, pick, setPick }: { vie
           Locking in…
         </p>
       )}
-      <div className="mt-3 flex gap-2">
+      <div className="action-bar flex gap-2">
         <button className="btn btn-primary flex-1" disabled={locked || busy || !pick || (done && submitted[option.abilityId] === pick)} onClick={() => submit(pick)}>
           {done ? (locked || (instant && submitted[option.abilityId] === pick) ? `✓ Locked: ${submitted[option.abilityId] === null ? 'skipped' : option.targetKind === 'power' ? ABILITIES[submitted[option.abilityId]!]?.name : nameOf(view, submitted[option.abilityId])}` : 'Change pick') : 'Lock in'}
         </button>
@@ -876,7 +876,10 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
                 role="radio"
                 aria-checked={pick === null}
                 disabled={busy || (voted && !canChange)}
-                onClick={() => setPick(null)}
+                onClick={() => {
+                  setPick(null);
+                  send({ type: 'vote', targetId: null, phaseSeq: view.game!.phaseSeq, draft: true }).catch(() => null);
+                }}
                 className={`choice-tile min-h-[9.5rem] rounded-2xl border px-3 py-2 text-base ${pick === null ? 'border-gold bg-gold/15 ring-2 ring-gold/60' : 'border-dashed border-line text-mute'}`}
               >
                 No one (abstain)
@@ -889,13 +892,15 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
               Use Rally (once per game): this vote counts double
             </label>
           )}
-          <button
-            className="btn btn-primary mt-4 w-full"
-            disabled={busy || pick === undefined || (voted && (!canChange || pick === v.myVote))}
-            onClick={() => act({ type: 'vote', targetId: pick ?? null, rally, phaseSeq: view.game!.phaseSeq })}
-          >
-            {voted ? (canChange ? 'Change vote' : `✓ Voted: ${pick === null ? 'abstain' : nameOf(view, v.myVote)}`) : pick === undefined ? 'Choose a player' : `Vote ${pick === null ? 'to abstain' : `for ${nameOf(view, pick)}`}`}
-          </button>
+          <div className="action-bar">
+            <button
+              className="btn btn-primary w-full"
+              disabled={busy || pick === undefined || (voted && (!canChange || pick === v.myVote))}
+              onClick={() => act({ type: 'vote', targetId: pick ?? null, rally, phaseSeq: view.game!.phaseSeq })}
+            >
+              {voted ? (canChange ? 'Change vote' : `✓ Voted: ${pick === null ? 'abstain' : nameOf(view, v.myVote)}`) : pick === undefined ? 'Choose a player' : `Vote ${pick === null ? 'to abstain' : `for ${nameOf(view, pick)}`}`}
+            </button>
+          </div>
         </div>
       </PrivacyShield>
       {voted && (

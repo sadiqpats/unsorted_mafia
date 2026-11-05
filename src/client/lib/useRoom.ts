@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { useWakeLock, watchConnection } from './liveness';
-import { SERVER_URL, serverUrl } from './server';
+import { SERVER_URL, serverUrl, steadyOffset } from './server';
 import type { Ack, CommandInput } from '../../shared/protocol';
 import type { ClientView } from '../../shared/view-types';
 
@@ -23,7 +23,7 @@ export function useRoom(code: string, auth: { token?: string; display?: boolean 
   const [status, setStatus] = useState<ConnStatus>('connecting');
   const [endedReason, setEndedReason] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
-  const offsetRef = useRef(0);
+  const offsetRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!auth) return;
@@ -55,7 +55,7 @@ export function useRoom(code: string, auth: { token?: string; display?: boolean 
       } else setStatus('offline');
     });
     s.on('state', (v: ClientView) => {
-      offsetRef.current = v.serverNow - Date.now();
+      offsetRef.current = steadyOffset(offsetRef.current, v.serverNow - Date.now());
       setView(v);
     });
     s.on('session_ended', (e: { reason: string }) => {
@@ -98,7 +98,7 @@ export function useRoom(code: string, auth: { token?: string; display?: boolean 
   const needsScreen = !!auth?.display || !!view?.host || (view?.status === 'active' && (phase === 'reveal' || phase === 'prenight' || phase === 'night' || phase === 'voting'));
   useWakeLock(!!auth && status !== 'denied' && status !== 'ended' && needsScreen);
 
-  const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
+  const serverNow = useCallback(() => Date.now() + (offsetRef.current ?? 0), []);
 
   return { view, status, endedReason, send, serverNow };
 }

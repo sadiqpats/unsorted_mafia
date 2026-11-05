@@ -191,6 +191,7 @@ export class RoomService {
     let data: Record<string, unknown> | undefined;
     // Transaction: work on the live object, roll back to this snapshot if anything throws.
     const snapshot = structuredClone(room);
+    const seqBefore = room.game?.phaseSeq;
     try {
       const seatId = id.isHost ? room.hostPlayerId : id.playerId;
       if (!isHostCmd && !seatId) throw new GameError('forbidden', 'You are not seated in this game.');
@@ -279,6 +280,7 @@ export class RoomService {
         }
         case 'issue_rejoin': {
           const p = E.getPlayer(room, cmd.playerId);
+          if (p.isHost) throw new GameError('forbidden', 'The host’s seat moves with the host’s own link.');
           const rejoinCode = randomCode(6);
           p.rejoinCodeHash = hashToken(rejoinCode);
           E.addLog(room, now, 'host', `Rejoin code issued for ${p.name}.`, 'host');
@@ -297,7 +299,9 @@ export class RoomService {
       return err('server_error', 'Something went wrong on the server.');
     }
     room.recentActionIds[actor] = [...recent, cmd.actionId].slice(-50);
-    this.commit(room, actor, cmd.type, true, summarize(cmd));
+    // A tap not yet locked in changes nothing anyone can see: saved, but no need to refresh every phone.
+    const quiet = 'draft' in cmd && !!cmd.draft && room.game?.phaseSeq === seqBefore;
+    this.commit(room, actor, cmd.type, true, summarize(cmd), quiet);
     return { ok: true, data };
   }
 
@@ -335,12 +339,12 @@ export class RoomService {
     return room;
   }
 
-  private commit(room: Room, actor: string, action: string, ok: boolean, detail?: string) {
+  private commit(room: Room, actor: string, action: string, ok: boolean, detail?: string, quiet = false) {
     room.updatedAt = this.now();
     this.rooms.set(room.code, room);
     this.opts.store.save(room);
     this.opts.store.audit(room.code, room.updatedAt, actor, action, ok, detail);
-    this.opts.onChange(room.code);
+    if (!quiet) this.opts.onChange(room.code);
   }
 }
 

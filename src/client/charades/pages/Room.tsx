@@ -733,6 +733,8 @@ function CardBrowser({ cards, current, onShow }: { cards: CardView[]; current: n
     const t = setTimeout(() => setHidden(true), ms);
     return () => clearTimeout(t);
   }, [hidden, poke, current, cards.length]);
+  // A new card was asked for on purpose: show it, even if the cover was up.
+  useEffect(() => setHidden(false), [cards.length]);
   useEffect(() => {
     const onVis = () => document.visibilityState === 'visible' && setHidden(true);
     document.addEventListener('visibilitychange', onVis);

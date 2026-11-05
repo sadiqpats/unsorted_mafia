@@ -16,8 +16,8 @@ const initials = (name: string) =>
 
 /**
  * The Mafia's secret chat, for the Mafia members only (never the Godfather), open from the role
- * reveal. Closed it is one quiet bar: no unread count, no blinking, no sound or vibration —
- * nothing that could give a Mafia phone away across the room. Members show with name and photo.
+ * reveal. Closed it is one quiet bar with a plain label: no "Mafia" or "family", no unread count, no
+ * blinking, no sound or vibration — nothing that could give a Mafia phone away across the room. Members show with name and photo.
  */
 export function MafiaChat({ view, send }: { view: ClientView; send: Send }) {
   const chat = view.me?.mafiaChat ?? [];
@@ -67,7 +67,7 @@ export function MafiaChat({ view, send }: { view: ClientView; send: Send }) {
   if (!open)
     return (
       <button type="button" className="mchat-bar" onClick={() => setOpen(true)} data-testid="mafia-chat-bar">
-        <span aria-hidden="true">🔒</span> Family chat <span className="mchat-bar-hint">tap to open</span>
+        <span aria-hidden="true">🔒</span> Notes <span className="mchat-bar-hint">tap to open</span>
       </button>
     );
 

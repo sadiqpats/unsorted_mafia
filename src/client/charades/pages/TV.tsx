@@ -28,6 +28,7 @@ export default function CharadesTV() {
   }
   if (!view) return <div className="bolly grid min-h-dvh place-items-center text-white/70">Rolling the film…</div>;
   const t = view.turn;
+  const lobbyQr = Math.round(Math.min(220, window.innerHeight * 0.23));
 
   return (
     <div className="bolly relative min-h-dvh overflow-hidden px-6 py-5" data-testid="tv">
@@ -69,9 +70,9 @@ export default function CharadesTV() {
                 {view.teams.map((tm, i) => (
                   <div key={i} className="flex flex-col items-center gap-3">
                     {tm.captain ? (
-                      <div className={`score-tile team-${i} grid h-[220px] w-[220px] place-items-center text-2xl`}>✅ {tm.captain.name}</div>
+                      <div className={`score-tile team-${i} grid place-items-center text-2xl`} style={{ width: lobbyQr, height: lobbyQr }}>✅ {tm.captain.name}</div>
                     ) : (
-                      <QR text={`${origin}/charades/join/${view.code}?team=${i + 1}`} size={220} />
+                      <QR text={`${origin}/charades/join/${view.code}?team=${i + 1}`} size={lobbyQr} />
                     )}
                     <span className="charades-title text-2xl">{tm.name}</span>
                   </div>

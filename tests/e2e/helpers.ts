@@ -50,11 +50,11 @@ export async function createRoom(browser: Browser, count: number, { realClock = 
   // Long Night/Vote clocks so a slow, heavily loaded test machine never runs out the clock mid-test
   // (the real 60 s clock has its own test).
   if (!realClock) {
-    for (const label of [/^Night \(seconds\)/, /^Vote \(seconds\)/]) {
+    for (const [label, secs] of [[/^Dawn \(seconds\)/, '300'], [/^Night \(seconds\)/, '600'], [/^Vote \(seconds\)/, '600']] as const) {
       const box = host.getByLabel(label);
-      await box.fill('600');
+      await box.fill(secs);
       await box.press('Enter');
-      await expect(box).toHaveValue('600');
+      await expect(box).toHaveValue(secs);
     }
     // No discussion clock either: the host opens every vote, so a slow test never gets a surprise vote.
     await host.getByText('No timer for discussion', { exact: true }).click();
@@ -241,4 +241,11 @@ export async function nextIfStill(t: Table, phase: string) {
     await t.host.getByRole('button', { name: /Next phase|Start voting/ }).click();
     await expect(t.host.getByTestId('host-phase')).not.toHaveText(phase);
   }
+}
+
+/** The big reveal on a phone stays until it's tapped: tap it away (it appears just after the curtain). */
+export async function closeMoment(p: Page) {
+  const m = p.getByTestId('phone-moment');
+  await m.waitFor({ timeout: 6000 }).catch(() => undefined);
+  if (await m.isVisible()) await m.click({ position: { x: 20, y: 20 } });
 }

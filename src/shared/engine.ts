@@ -90,6 +90,15 @@ function cleanName(raw: string): string {
   return name;
 }
 
+/** Give a player their role's limited powers (a power with no entry here counts as unlimited). */
+function grantCharges(p: Player, s: Settings) {
+  p.charges = {};
+  for (const a of ROLES[p.roleId!].abilities) {
+    const c = ABILITIES[a.id].charges(s);
+    if (c !== null) p.charges[a.id] = c;
+  }
+}
+
 function freshPlayerState(): Omit<Player, 'id' | 'name' | 'seat' | 'tokenHash' | 'isHost' | 'joinedAt' | 'sessionVersion' | 'rejoinCodeHash' | 'photoVersion'> {
   return {
     ready: false,
@@ -187,6 +196,7 @@ export function addPlayer(room: Room, opts: { id: string; name: string; tokenHas
     // Late joiners always enter as Villagers so the secret distribution cannot be gamed.
     p.roleId = 'villager';
     p.originalRoleId = 'villager';
+    grantCharges(p, room.game!.settings);
     p.revealAck = true;
     p.lateJoiner = true;
     addLog(room, opts.now, 'join', `${name} joined the game late.`);
@@ -327,10 +337,7 @@ export function startGame(room: Room, now: number, rng: Rng, opts: { force?: boo
     Object.assign(p, freshPlayerState(), { ready: p.ready });
     p.roleId = shuffled[i];
     p.originalRoleId = shuffled[i];
-    for (const a of ROLES[p.roleId].abilities) {
-      const c = ABILITIES[a.id].charges(frozen);
-      if (c !== null) p.charges[a.id] = c;
-    }
+    grantCharges(p, frozen);
   });
 
   room.privateResults = [];
@@ -430,7 +437,10 @@ export function abilityPhase(abilityId: string, s: Settings): 'prenight' | 'nigh
  */
 function beginNightCycle(room: Room, now: number) {
   const g = room.game!;
-  for (const p of room.players) if (p.stolen) expireStolen(room, p);
+  // Stolen at Dawn: back at the next Dawn. With the Dawn round off the Thief steals last of all at
+  // night, so it stays for one more round: otherwise he could never use it.
+  const dawn = hasPreNight(g.settings);
+  for (const p of room.players) if (p.stolen && (dawn || (p.lastStealRound ?? 0) < g.round)) expireStolen(room, p);
   g.round += 1;
   g.night = { actions: {}, drafts: {} };
   if (hasPreNight(g.settings)) {
@@ -1017,14 +1027,15 @@ export const NIGHT_RESOLVERS: Record<string, Resolver> = {
     thief.stolen = { abilityId: powerId, fromId: victim.id, charges: h!.charges, mode: 'take', duration: 'oneUse' };
     victim.lostAbilities.push(powerId);
     ctx.stolen.push(victim.id);
-    addPrivate(room, rng, now, victim.id, 'stolen', `Your ${power.name} power has been stolen for this round. You can’t use it — just press the button on your screen. You get it back next Dawn.`);
+    const dawn = hasPreNight(s);
+    addPrivate(room, rng, now, victim.id, 'stolen', `Your ${power.name} power has been stolen for ${dawn ? 'this' : 'the next'} round. You can’t use it — just press the button on your screen. You get it back ${dawn ? 'next Dawn' : 'after that'}.`);
     const how =
       power.kind !== 'night'
         ? 'It applies automatically today.'
         : powerId === 'mafia_kill'
-          ? 'Tonight you vote with the Mafia on who gets hit, as an anonymous “Mafia” member. You won’t learn who they are, and they won’t learn who you are.'
-          : 'Use it in your night panel tonight.';
-    addPrivate(room, rng, now, thief.id, 'steal', `You stole the ${power.name} power for this round. You don’t know whose it was. ${how}`);
+          ? `${dawn ? 'Tonight' : 'Next night'} you vote with the Mafia on who gets hit, as an anonymous “Mafia” member. You won’t learn who they are, and they won’t learn who you are.`
+          : `Use it in your night panel ${dawn ? 'tonight' : 'next night'}.`;
+    addPrivate(room, rng, now, thief.id, 'steal', `You stole the ${power.name} power for ${dawn ? 'this' : 'the next'} round. You don’t know whose it was. ${how}`);
     addLog(room, now, 'night', `${thief.name} stole ${power.name} from ${victim.name} for round ${room.game!.round}.`, 'host');
   },
 };
@@ -1044,7 +1055,7 @@ function doRevive(room: Room, ctx: NightCtx, a: NightAction, now: number, rng: R
   t.revivedCount++;
   if (!s.revivedKeepRole) {
     t.roleId = 'villager';
-    t.charges = {};
+    grantCharges(t, s);
     t.stolen = null;
     t.lostAbilities = [];
   }
@@ -1255,7 +1266,11 @@ export function submitVote(
   if (!elig.ok) fail('not_eligible', elig.reason!);
   if (input.draft) {
     // A tapped name, not yet sent: counts if the vote closes first (never over a locked vote that can't change).
-    if (input.targetId === null || !voteTargets(room, p).includes(input.targetId)) return;
+    if (input.targetId === null) {
+      if (g.day.drafts) delete g.day.drafts[playerId]; // tapped "abstain" after a name: forget the name
+      return;
+    }
+    if (!voteTargets(room, p).includes(input.targetId)) return;
     if (g.day.votes[playerId] && !g.settings.allowVoteChange) return;
     const rally = !!input.rally && hasRally(room, p);
     (g.day.drafts ??= {})[playerId] = { voterId: playerId, targetId: input.targetId, weight: voteWeight(room, p, rally), rally, at: now };
@@ -1403,14 +1418,14 @@ function eliminateByVote(room: Room, targetId: string, verdict: Verdict, now: nu
 export function resolveTie(room: Room, targetId: string | null, now: number) {
   const g = requireGame(room);
   if (g.phase !== 'verdict' || !g.pendingTie) fail('wrong_phase', 'There is no tie to resolve.');
-  if (targetId !== null && !g.pendingTie!.includes(targetId)) fail('invalid_target', 'Pick one of the tied players.');
+  if (targetId !== null && (!g.pendingTie!.includes(targetId) || !getPlayer(room, targetId).alive)) fail('invalid_target', 'Pick one of the tied players.');
   g.pendingTie = null;
   const verdict = g.lastVerdict!;
   verdict.decidedByHost = true;
   addLog(room, now, 'host', `Game Master broke the tie: ${targetId ? getPlayer(room, targetId).name : 'nobody'}.`, 'host');
   if (targetId === null) {
     addLog(room, now, 'verdict', `The Game Master spared everyone. ${g.settings.announcements.noElimination}`, 'public', 'spared');
-    beginNightCycle(room, now);
+    afterVote(room, now);
     return;
   }
   eliminateByVote(room, targetId, verdict, now);
@@ -1516,8 +1531,12 @@ export function extendTimer(room: Room, seconds: number, now: number) {
   const g = requireGame(room);
   if (!Number.isFinite(seconds) || seconds < -600 || seconds > 1800) fail('bad_request', 'Invalid amount.');
   if (g.pausedRemainingMs !== null && g.pausedRemainingMs >= 0) g.pausedRemainingMs = Math.max(0, g.pausedRemainingMs + seconds * 1000);
-  else if (g.phaseEndsAt !== null) g.phaseEndsAt = Math.max(now, g.phaseEndsAt + seconds * 1000);
-  else g.phaseEndsAt = now + Math.max(0, seconds) * 1000;
+  else if (g.phaseEndsAt !== null) {
+    // During the opening break, keep a few seconds to act: "-30s" must not close the phase before it opens.
+    const floor = g.phaseOpensAt && g.phaseOpensAt > now ? g.phaseOpensAt + 5000 : now;
+    g.phaseEndsAt = Math.max(floor, g.phaseEndsAt + seconds * 1000);
+  } else if (g.pausedRemainingMs === null && seconds > 0) g.phaseEndsAt = now + seconds * 1000;
+  else return;
   addLog(room, now, 'host', `Timer adjusted by ${seconds}s.`, 'host');
 }
 
@@ -1527,9 +1546,15 @@ export function hostEliminate(room: Room, playerId: string, now: number) {
   if (!p.alive) fail('invalid_target', `${p.name} is already out.`);
   killPlayer(room, p, 'host');
   delete g.day.votes[p.id];
+  if (g.pendingTie) g.pendingTie = g.pendingTie.filter((id) => id !== p.id);
   addLog(room, now, 'correction', `Game Master correction: ${p.name} has been removed from play.` + (g.settings.revealRoleOnDeath ? ` They were ${roleTitle(p.roleId, g.settings)}.` : ''), 'public', 'removed');
   const win = settle(room, now);
-  if (win) endGame(room, win, now);
+  if (win) return endGame(room, win, now);
+  // Everyone in a tie is gone: there is nothing left to decide.
+  if (g.pendingTie?.length === 0) {
+    g.pendingTie = null;
+    afterVote(room, now);
+  }
 }
 
 export function hostRestore(room: Room, playerId: string, now: number) {

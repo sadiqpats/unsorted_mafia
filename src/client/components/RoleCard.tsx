@@ -97,6 +97,19 @@ function CardBack({ hint }: { hint: string }) {
 export function HoldToReveal({ children, hint = 'Press and hold to reveal — release to hide', minHeight = 560 }: { children: ReactNode; hint?: string; minHeight?: number | string }) {
   const [shown, setShown] = useState(false);
   const [tapMode, setTapMode] = useState(false);
+  // A finger held on the card can't scroll it, and on most phones the card is taller than the
+  // screen allows, so sliding the held finger moves the text instead.
+  const back = useRef<HTMLDivElement>(null);
+  const fingerY = useRef<number | null>(null);
+  const [more, setMore] = useState(false);
+  const checkMore = () => {
+    const el = back.current;
+    setMore(!!el && el.scrollTop + el.clientHeight < el.scrollHeight - 12);
+  };
+  useEffect(() => {
+    if (back.current) back.current.scrollTop = 0;
+    checkMore();
+  }, [shown]);
   useEffect(() => {
     const hide = () => setShown(false);
     document.addEventListener('visibilitychange', hide);
@@ -111,16 +124,27 @@ export function HoldToReveal({ children, hint = 'Press and hold to reveal — re
     const t = setTimeout(() => setShown(false), 8000);
     return () => clearTimeout(t);
   }, [shown, tapMode]);
+  const release = () => {
+    fingerY.current = null;
+    setShown(false);
+  };
   const holdProps = tapMode
     ? { onClick: () => setShown((s) => !s) }
     : {
         onPointerDown: (e: PointerEvent) => {
           (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+          fingerY.current = e.clientY;
           setShown(true);
         },
-        onPointerUp: () => setShown(false),
-        onPointerCancel: () => setShown(false),
-        onPointerLeave: () => setShown(false),
+        onPointerMove: (e: PointerEvent) => {
+          if (fingerY.current === null || !back.current) return;
+          back.current.scrollTop += (fingerY.current - e.clientY) * 1.8;
+          fingerY.current = e.clientY;
+          checkMore();
+        },
+        onPointerUp: release,
+        onPointerCancel: release,
+        onPointerLeave: release,
         onKeyDown: (e: KeyboardEvent) => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), setShown(true)),
         onKeyUp: () => setShown(false),
         onContextMenu: (e: MouseEvent) => e.preventDefault(),
@@ -140,7 +164,10 @@ export function HoldToReveal({ children, hint = 'Press and hold to reveal — re
           <div className="flip-face">
             <CardBack hint={tapMode ? 'Tap to reveal — tap again to hide' : hint} />
           </div>
-          <div className="flip-face flip-back overflow-y-auto rounded-[1.4rem] border border-gold/40 bg-coal p-5 scrollbar-thin">{shown && children}</div>
+          <div ref={back} onScroll={checkMore} className="flip-face flip-back overflow-y-auto rounded-[1.4rem] border border-gold/40 bg-coal p-5 scrollbar-thin">
+            {shown && children}
+            {shown && more && <span className="hold-more">{tapMode ? '↓ Scroll to read more' : '↕ Slide your finger up to read more'}</span>}
+          </div>
         </div>
       </div>
       <label className="mt-3 flex items-center justify-center gap-2 text-xs text-mute">

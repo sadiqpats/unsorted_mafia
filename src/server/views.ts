@@ -272,8 +272,9 @@ function buildHost(room: Room): HostPanel {
   };
 }
 
-export function buildView(room: Room, viewer: Viewer, connected: Set<string>, now: number): ClientView {
-  const base = buildPublic(room, connected, now);
+/** `shared`: the public part, built once when sending to a whole room (it is the same for everyone). */
+export function buildView(room: Room, viewer: Viewer, connected: Set<string>, now: number, shared?: PublicView): ClientView {
+  const base = shared ?? buildPublic(room, connected, now);
   if (viewer.kind === 'public') return { ...base, me: null, host: null };
   if (viewer.kind === 'player') return { ...base, kind: 'player', me: buildMe(room, viewer.playerId, now), host: null };
   const me = room.hostPlayerId ? buildMe(room, room.hostPlayerId, now) : null;

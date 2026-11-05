@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { advanceTo, nextIfStill, nightAct, revealAndAck, setupTable, skipRest, vote, waitPhase } from './helpers';
+import { advanceTo, nextIfStill, nightAct, revealAndAck, setupTable, skipRest, vote, waitPhase, closeMoment } from './helpers';
 
 test('5 players: full match — Mafia kill, Detective result, refresh, open discussion, timed vote, Town wins', async ({ browser }) => {
   const t = await setupTable(browser, 5, { mafia: 1, detective: 1, doctor: 1, villager: 2 });
@@ -31,6 +31,7 @@ test('5 players: full match — Mafia kill, Detective result, refresh, open disc
   expect(await other.page.locator('body').innerText()).not.toMatch(/They were the/);
 
   // The Detective's result is private (inside their ballot panel).
+  await closeMoment(det.page);
   await det.page.getByRole('button', { name: 'You have a private message' }).click();
   await expect(det.page.getByTestId('private-note')).toContainText(`${mafia.name} is SUSPICIOUS`);
   expect(await other.page.content()).not.toContain('SUSPICIOUS');
@@ -160,6 +161,7 @@ test('Dawn: the Thief steals a power for the round without learning whose; the r
   await nightAct(thief, 'investigate', mafia.name);
   await skipRest(t, new Set([thief.name]));
   await expect(t.host.getByTestId('host-phase')).toHaveText('Day');
+  await closeMoment(thief.page);
   await thief.page.getByRole('button', { name: 'You have a private message' }).click();
   await expect(thief.page.getByTestId('private-note').filter({ hasText: 'SUSPICIOUS' })).toContainText(`${mafia.name} is SUSPICIOUS`);
 });

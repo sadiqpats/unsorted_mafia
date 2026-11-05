@@ -460,7 +460,7 @@ body.phase-dawn .ambient { opacity: 0.55; }
 .curtain-vote .curtain-particles span, .curtain-runoff .curtain-particles span { border-radius: 1px; }
 @keyframes spark { 0% { opacity: 0; transform: translate(0, 20px) scale(0.4); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx, 0), -70px) scale(1); } }
 .curtain-inner { position: relative; text-align: center; animation: curtain-zoom 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-@keyframes curtain-zoom { 0% { opacity: 0; transform: scale(0.82); } 26% { opacity: 1; transform: scale(1.02); } 40% { transform: scale(1); } 100% { transform: scale(1.06); } }
+@keyframes curtain-zoom { 0% { opacity: 0; transform: scale(0.82); } 26% { opacity: 1; transform: scale(1.02); } 40% { transform: scale(1); } 62% { opacity: 1; } 74%, 100% { opacity: 0; transform: scale(1.06); } }
 .curtain-emblem { position: relative; margin: 0 auto; width: clamp(110px, 18vmin, 190px); height: auto; color: rgb(var(--c)); filter: drop-shadow(0 0 22px rgba(var(--c), 0.55)); }
 .curtain-emblem * { stroke-dasharray: 180; stroke-dashoffset: 180; animation: draw-in 1.1s ease 0.15s forwards; }
 @keyframes draw-in { to { stroke-dashoffset: 0; } }
@@ -597,7 +597,8 @@ body.fx-shake #root { position: relative; animation: fx-shake 0.55s cubic-bezier
   animation: spot-in 0.5s ease both;
 }
 @keyframes spot-in { from { opacity: 0; } to { opacity: 1; } }
-.moments-phone { padding: 70px 18px 40px; gap: 18px; background: radial-gradient(ellipse at 50% 35%, rgba(42,12,14,0.97), rgba(5,3,4,0.98) 75%); }
+.moments-phone { z-index: 66; padding: max(24px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom)); gap: 18px; justify-content: safe center; background: radial-gradient(ellipse at 50% 35%, #2a0c0e, #050304 75%); }
+.moments-phone .moments-cards { gap: 8vw; }
 .moments-clock { position: absolute; top: 3vh; right: 3vw; }
 .moments-clock .tv-timer { font-size: clamp(3rem, 10vh, 7rem); }
 .moments-clock .tv-timer.is-urgent { font-size: clamp(3.6rem, 13vh, 9rem); }
@@ -606,7 +607,10 @@ body.fx-shake #root { position: relative; animation: fx-shake 0.55s cubic-bezier
 .moments-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 3vw; }
 .moments-note { margin: 0; text-align: center; font-family: var(--font-serif); font-style: italic; font-size: clamp(1.3rem, 4vh, 2.4rem); color: #e8dcc6; animation: fade-up 0.8s ease 0.6s both; }
 .moments-phone .moments-note { font-size: 1.3rem; }
-.moments-hint { position: absolute; bottom: 18px; margin: 0; font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,244,226,0.45); }
+.moments-tap { margin: 0; padding: 0.7rem 1.4rem; border-radius: 999px; border: 1px solid rgba(226, 194, 125, 0.7); background: rgba(0, 0, 0, 0.55); color: #fff1cf; font-size: 1rem; font-weight: 600; animation: tap-pulse 1.6s ease-in-out infinite; }
+@keyframes tap-pulse { 0%, 100% { opacity: 0.8; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
+.reduce-motion .moments-tap { animation: none; }
+.moments-phone { cursor: pointer; overflow-y: auto; }
 
 /* A moment card: photo + name; the knife cuts it in two along a slanted line. */
 .mc { --w: 30vh; --d: 0s; display: flex; flex-direction: column; align-items: center; gap: calc(var(--w) * 0.2); animation: mc-in 0.6s cubic-bezier(0.2,1.2,0.3,1) var(--d) both; }
@@ -953,7 +957,7 @@ p { text-wrap: pretty; }
 .reduce-motion .shield-closed::before, .reduce-motion .shield-flame::after { animation: none; }
 
 /* Phase header on phones: a thin phase-coloured accent along the top. */
-.phase-card { position: relative; overflow: hidden; }
+.phase-card { overflow: hidden; }
 .phase-card::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 2px; background: linear-gradient(90deg, transparent, rgb(var(--phase, 201, 164, 92)), transparent); opacity: 0.8; }
 .phase-reveal { --phase: 201, 164, 92; }
 .phase-prenight { --phase: 240, 160, 90; }
@@ -1015,3 +1019,11 @@ p { text-wrap: pretty; }
 .stamp-drop { animation: stamp-drop 0.6s cubic-bezier(0.2, 1.3, 0.4, 1) 0.25s both; }
 @keyframes stamp-drop { from { opacity: 0; transform: scale(1.25) rotate(-3deg); } to { opacity: 1; transform: none; } }
 .draw-mark { filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.6)); }
+
+/* The role card: tells the holder there is more below (it sticks to the bottom of the card). */
+.hold-more { position: sticky; bottom: -1.25rem; display: block; margin: 0.75rem -1.25rem -1.25rem; padding: 1.4rem 0.5rem 0.6rem; text-align: center; font-size: 0.8rem; font-weight: 600; color: var(--color-gold); background: linear-gradient(180deg, transparent, var(--color-coal) 45%); pointer-events: none; }
+
+/* The host's bar: solid (it sits over the page while scrolling on a laptop). */
+.host-bar { background: #181415; }
+/* "Lock in" / "Vote" stay in reach however long the list of names is. */
+.action-bar { position: sticky; bottom: max(0.5rem, env(safe-area-inset-bottom)); z-index: 10; margin: 0.75rem -0.5rem 0; padding: 0.5rem; border-radius: 1rem; background: rgba(18, 16, 17, 0.94); box-shadow: 0 -8px 24px -8px #000; }

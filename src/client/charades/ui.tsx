@@ -146,7 +146,8 @@ export function Scoreboard({ view, big = false }: { view: CView; big?: boolean }
 }
 
 export function TimerRing({ left, total, paused, big = false }: { left: number; total: number; paused: boolean; big?: boolean }) {
-  const size = big ? 250 : 150;
+  // Scales with the screen's height, so a 768-pixel TV or a small phone still fits what's below it.
+  const size = Math.round(Math.min(big ? 250 : 150, window.innerHeight * (big ? 0.26 : 0.18)));
   const r = size / 2 - (big ? 14 : 9);
   const c = 2 * Math.PI * r;
   const frac = Math.max(0, Math.min(1, left / total));
@@ -167,7 +168,7 @@ export function TimerRing({ left, total, paused, big = false }: { left: number; 
         />
       </svg>
       <div className="timer-text">
-        <span className={big ? 'text-7xl' : 'text-4xl'}>{fmtClock(left)}</span>
+        <span className={big ? 'text-6xl [@media(min-height:900px)]:text-7xl' : 'text-3xl [@media(min-height:800px)]:text-4xl'}>{fmtClock(left)}</span>
         {paused && <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ffd98a]">Paused</span>}
       </div>
     </div>

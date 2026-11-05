@@ -26,8 +26,8 @@ function started(patch: Partial<CRoom['settings']> = {}) {
 const view = (r: CRoom, v: Parameters<typeof buildCView>[1]) => buildCView(r, v, new Set(), clock);
 
 describe('the deck', () => {
-  it('has nearly 1,000 famous Hindi films from 2000 on, each at most four words, no repeats', () => {
-    expect(MOVIES.length).toBeGreaterThanOrEqual(650);
+  it('has 700 fun famous Hindi films from 2000 on, each at most four words, no repeats', () => {
+    expect(MOVIES.length).toBe(700);
     const seen = new Set<string>();
     for (const m of MOVIES) {
       expect(m.year, m.title).toBeGreaterThanOrEqual(2000);

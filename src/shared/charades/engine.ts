@@ -279,9 +279,17 @@ export function showCard(room: CRoom, team: TeamIdx, index: number, now: number)
 
 /** The acting captain confirms the guess (for games where the host plays and can't see the movie). */
 export function captainGotIt(room: CRoom, team: TeamIdx, now: number) {
-  const t = requireTurn(room, 'acting');
+  const t = requireTurn(room, 'acting', 'done');
   if (team !== t.team) fail('not_your_turn', 'It’s the other team’s turn.');
+  if (t.stage === 'done') return lastSecondGuess(room, now);
   finish(room, 'correct', now);
+}
+
+/** A ✅ pressed as the buzzer went (it was on its way when the clock ran out) still counts. */
+function lastSecondGuess(room: CRoom, now: number) {
+  const t = room.turn!;
+  if (t.result !== 'timeout' || now - (t.endsAt ?? 0) > 2000) fail('wrong_stage', 'That turn is already over.');
+  fixResult(room, now);
 }
 
 function finish(room: CRoom, result: Result, now: number) {
@@ -302,7 +310,11 @@ export function giveUp(room: CRoom, team: TeamIdx, now: number) {
 }
 
 export function judge(room: CRoom, result: 'correct' | 'pass', now: number) {
-  requireTurn(room, 'acting');
+  const t = requireTurn(room, 'acting', 'done');
+  if (t.stage === 'done') {
+    if (result === 'correct') return lastSecondGuess(room, now);
+    return fail('wrong_stage', 'That turn is already over.');
+  }
   finish(room, result, now);
 }
 
@@ -384,6 +396,7 @@ export function oneMoreRound(room: CRoom, now: number) {
   const t = room.turn!;
   const first = firstTeamOf(room);
   const n = t.stage === 'done' ? t.n + 1 : t.n;
+  room.plannedRounds ??= room.settings.rounds;
   room.settings.rounds = Math.ceil(n / 2) + (n % 2 === 0 ? 1 : 0);
   room.status = 'playing';
   room.turn = newTurn(room, n, (n % 2 === 1 ? first : 1 - first) as TeamIdx);
@@ -396,6 +409,9 @@ export function playAgain(room: CRoom, now: number) {
   room.status = 'lobby';
   room.turn = null;
   room.history = [];
+  // Extra rounds were for that game only: the next one is as long as the host planned.
+  if (room.plannedRounds) room.settings.rounds = room.plannedRounds;
+  room.plannedRounds = undefined;
   room.teams.forEach((t) => (t.score = 0));
   touch(room, now);
 }
