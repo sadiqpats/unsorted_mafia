@@ -101,7 +101,7 @@ function PhotoWall({ players: all, lobby = false, settings, box }: { players: Pu
   // During the game the living come first and the dead move to the end.
   const players = lobby ? all : [...all.filter((p) => p.alive), ...all.filter((p) => !p.alive)];
   const n = players.length;
-  const { size, cols } = fitFaces(n, box);
+  const { size, cols, compact } = fitFaces(n, box);
   if (!n) return <p className="mt-6 text-xl text-mute">Waiting for the first guest…</p>;
   return (
     <ul className="grid gap-x-4 gap-y-3" style={wallGrid(size, cols)} aria-label="Players">
@@ -112,7 +112,7 @@ function PhotoWall({ players: all, lobby = false, settings, box }: { players: Pu
           <li key={p.id} className="flex min-w-0 flex-col items-center text-center" data-player={p.name} data-dead={!p.alive}>
             <Avatar name={p.name} photo={p.photo} dead={!p.alive} size={size} className={`${lobby && !p.ready ? 'opacity-50' : ''}`} />
             <div className={`mt-1 w-full truncate font-semibold leading-snug ${p.alive ? 'text-bone' : 'text-mute line-through decoration-ember/80'}`} style={{ fontSize: nameFont(size) }}>{p.name}</div>
-            <div className="min-h-4 text-xs leading-4 text-mute">
+            <div className={`text-xs leading-4 text-mute ${compact ? 'hidden' : 'min-h-4'}`}>
               {lobby ? (p.ready ? '✓ Ready' : 'Joining…') : !p.alive ? (
                 <span className={ALIGN_TEXT[a ?? ''] ?? 'text-good'}>☠ {r ? roleTitle(p.revealedRoleId, settings) : 'Eliminated'}</span>
               ) : p.silenced ? (
@@ -173,28 +173,38 @@ function useBox(ref: RefObject<HTMLElement | null>): Box | null {
   return box;
 }
 
-/** Name + role line under each face. */
+/** Name + role line under each face (compact: name only, for a crowded small TV). */
 const nameFont = (size: number) => Math.round(Math.max(12, Math.min(30, size * 0.17)));
-const labelHeight = (size: number) => Math.ceil(nameFont(size) * 1.375) + 4 + 16;
+const labelHeight = (size: number, compact = false) => Math.ceil(nameFont(size) * 1.375) + 4 + (compact ? 0 : 16);
 
 /** The biggest face size (and column count) that fits every player into the box, without scrolling. */
-function fitFaces(n: number, box: Box | null): { size: number; cols: number | null } {
-  if (!box || n === 0) return { size: n <= 8 ? 140 : n <= 12 ? 118 : n <= 16 ? 104 : n <= 20 ? 92 : 80, cols: null };
-  let best = { size: 32, cols: n };
-  for (let cols = 1; cols <= n; cols++) {
-    const rows = Math.ceil(n / cols);
-    const byWidth = (box.w - GAP_X * (cols - 1)) / cols - PAD;
-    let size = Math.min(byWidth, 280);
-    // Shrink until the rows (face + label) fit the height.
-    for (let guard = 0; guard < 4; guard++) {
-      const byHeight = (box.h - GAP_Y * (rows - 1)) / rows - labelHeight(size) - 8;
-      if (size <= byHeight) break;
-      size = byHeight;
+function fitFaces(n: number, box: Box | null): { size: number; cols: number | null; compact: boolean } {
+  if (!box || n === 0) return { size: n <= 8 ? 140 : n <= 12 ? 118 : n <= 16 ? 104 : n <= 20 ? 92 : n <= 26 ? 80 : 68, cols: null, compact: false };
+  const fit = (compact: boolean) => {
+    let best = { size: -Infinity, cols: 1 };
+    for (let cols = 1; cols <= n; cols++) {
+      const rows = Math.ceil(n / cols);
+      const byWidth = (box.w - GAP_X * (cols - 1)) / cols - PAD;
+      let size = Math.min(byWidth, 280);
+      // Shrink until the rows (face + label) fit the height.
+      for (let guard = 0; guard < 4; guard++) {
+        const byHeight = (box.h - GAP_Y * (rows - 1)) / rows - labelHeight(size, compact) - 8;
+        if (size <= byHeight) break;
+        size = byHeight;
+      }
+      size = Math.floor(size);
+      if (size > best.size) best = { size, cols };
     }
-    size = Math.floor(size);
-    if (size > best.size) best = { size, cols };
+    return best;
+  };
+  // Big tables on a small TV: drop the status line under each face before the faces get tiny.
+  let best = fit(false);
+  let compact = false;
+  if (best.size < 56) {
+    const tight = fit(true);
+    if (tight.size > best.size) { best = tight; compact = true; }
   }
-  return best;
+  return { size: Math.max(best.size, 16), cols: best.cols, compact };
 }
 
 function wallGrid(size: number, cols: number | null): React.CSSProperties {

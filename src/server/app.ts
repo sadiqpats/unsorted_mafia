@@ -143,7 +143,7 @@ export function createApp(opts: AppOptions) {
   app.use(express.json({ limit: '8kb' }));
 
   // Generous per-IP limit: at a venue, every guest's phone can share one public IP (NAT).
-  const httpLimiter = new RateLimiter(opts.httpBurst ?? 150, opts.httpPerSec ?? 3);
+  const httpLimiter = new RateLimiter(opts.httpBurst ?? 300, opts.httpPerSec ?? 5);
   const limit = (req: Request, res: Response, next: NextFunction) => {
     if (!httpLimiter.take(req.ip ?? 'unknown')) return res.status(429).json({ error: { code: 'rate_limited', message: 'Too many requests — slow down a little.' } });
     next();

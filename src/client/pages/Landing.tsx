@@ -58,7 +58,7 @@ export default function Landing() {
           <div className="divider-ornament mb-10 font-[family-name:var(--font-display)] text-xs tracking-[0.3em]">HOW IT WORKS</div>
           <ol className="grid gap-4 md:grid-cols-4">
             {[
-              ['I', 'Open a room', 'The host picks the player count (5–26) and the characters. A QR code and room code appear.'],
+              ['I', 'Open a room', 'The host picks the player count (5–32) and the characters. A QR code and room code appear.'],
               ['II', 'Everyone joins', 'Players scan the QR or type the code on their own phone, enter a name and tap Ready.'],
               ['III', 'Secret roles', 'Each phone privately shows one role. Press and hold to peek; release to hide.'],
               ['IV', 'Night & day', 'At night everyone taps a choice in secret. By day, argue, accuse and vote someone out.'],

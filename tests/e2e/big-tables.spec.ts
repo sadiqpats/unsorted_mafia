@@ -22,10 +22,10 @@ test('10-player game plays through to a Town victory', async ({ browser }) => {
   await playToTownWin(t);
 });
 
-test('26-player game (the maximum) plays through to a Town victory', async ({ browser }) => {
-  test.setTimeout(1_800_000); // 26 browsers on one machine
-  const t = await setupTable(browser, 26);
-  expect(t.seats.filter((s) => s.role === 'Mafia')).toHaveLength(6);
+test('32-player game (the maximum) plays through to a Town victory', async ({ browser }) => {
+  test.setTimeout(1_800_000); // 32 browsers on one machine
+  const t = await setupTable(browser, 32);
+  expect(t.seats.filter((s) => s.role === 'Mafia')).toHaveLength(7);
   expect(new Set(t.seats.map((s) => s.role)).size).toBe(9); // every character in play
   await playToTownWin(t);
 });

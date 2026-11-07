@@ -39,7 +39,7 @@ export default function Hub() {
             <h2 className="brand-title relative mt-4 text-4xl font-black">Mafia Night</h2>
             <p className="relative mt-2 font-[family-name:var(--font-serif)] text-xl italic text-mute">Trust no one. Not even your friends.</p>
             <ul className="relative mt-4 flex flex-wrap justify-center gap-2 text-xs">
-              <li className="chip">👥 5–26 players</li>
+              <li className="chip">👥 5–32 players</li>
               <li className="chip">🎭 Secret roles</li>
               <li className="chip">⏱ 20–45 min</li>
             </ul>

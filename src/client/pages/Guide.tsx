@@ -209,7 +209,7 @@ export default function Guide() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
             <Tile scene="phone" title="A phone each" text="Any browser. No app, no account." />
             <Tile scene="host" title="One host" text="Phone, tablet or laptop. Can also play." />
-            <Tile scene="crowd" title="5–26 players" text="8–16 is the sweet spot." />
+            <Tile scene="crowd" title="5–32 players" text="8–16 is the sweet spot." />
             <Tile scene="clock" title="20–45 min" text="Quick timed nights, 4 minutes of talk." />
             <div className="col-span-2 sm:col-span-1">
               <Tile scene="tv" title="A TV (optional)" text="Shows everyone’s photo. Eliminated? Your photo gets cut." />

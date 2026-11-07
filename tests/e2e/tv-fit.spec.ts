@@ -22,13 +22,13 @@ async function check(tv: Page, tag: string) {
   }
 }
 // The TV stays still all evening: every screen must fit one 16:9 screen — no scrolling, no face cut off.
-test('TV fits one screen: a full 26-player lobby on 720p, 768p, 1080p and small 960×540 TVs', async ({ browser }) => {
-  const { host, code } = await createRoom(browser, 26);
+test('TV fits one screen: a full 32-player lobby on 720p, 768p, 1080p and small 960×540 TVs', async ({ browser }) => {
+  const { host, code } = await createRoom(browser, 32);
   const tv = await newPhone(browser);
   await tv.goto(`/tv/${code}`);
-  for (let i = 1; i <= 26; i++) await joinRoom(browser, code, `Player ${i}`);
+  for (let i = 1; i <= 32; i++) await joinRoom(browser, code, `Player ${i}`);
   await expect(tv.getByText('Everyone’s here')).toBeVisible();
-  await check(tv, 'lobby26');
+  await check(tv, 'lobby32');
 });
 test('TV fits one screen through Night, Day and the game-over reveal (12 players, Bollywood)', async ({ browser }) => {
   const t = await setupTable(browser, 12, { mafia: 2, godfather: 1, doctor: 1, detective: 1, jester: 1, villager: 6 }, async (h) => { await h.getByLabel('Bollywood Mafia Night').click(); });
@@ -48,4 +48,17 @@ test('TV fits one screen through Night, Day and the game-over reveal (12 players
   await expect(tv.getByTestId('tv-finale')).toBeVisible({ timeout: 20_000 });
   await tv.waitForTimeout(14000);
   await check(tv, 'over12');
+});
+test('TV fits one screen: the game-over board with 32 players', async ({ browser }) => {
+  test.setTimeout(900_000); // 32 phones on one machine
+  const t = await setupTable(browser, 32);
+  const tv = await newPhone(browser);
+  await tv.goto(`/tv/${t.code}`);
+  for (const s of t.seats) await revealAndAck(s);
+  await t.host.getByRole('button', { name: 'End game' }).click();
+  const confirm = t.host.getByRole('button', { name: /End game|Yes/ }).last();
+  if (await confirm.isVisible()) await confirm.click();
+  await expect(tv.getByTestId('tv-finale')).toBeVisible({ timeout: 20_000 });
+  await tv.waitForTimeout(14000);
+  await check(tv, 'over32');
 });

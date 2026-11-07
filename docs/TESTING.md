@@ -22,7 +22,7 @@ Previous full run: 2026-10-17 (macOS, Node 22.23, Chromium headless via Playwrig
 - **Deck check — `npx tsx scripts/verify-movies.ts`:** looks up every card on Wikidata. Last run: 976 checked; the 4 real mistakes were removed. Remaining flags are Wikidata gaps (films missing a Hindi-language tag) or festival premiere dates a year before the cinema release.
 
 ## Unit — `tests/unit/`
-- **distribution:** a valid default game for every player count **5–26**; Mafia stay ~¼ of the table (6 at 25–26); exact role dealing for every count; invalid/unbalanced configs; new mix (2 Mafia from 7, Godfather from 8, no Priest/Bodyguard).
+- **distribution:** a valid default game for every player count **5–32**; Mafia stay ~¼ of the table (6 at 25–28, 7 at 29–32); exact role dealing for every count; invalid/unbalanced configs; new mix (2 Mafia from 7, Godfather from 8, no Priest/Bodyguard).
 - **roles (31):**
   - Mafia kill and team decision; deaths announced by name only.
   - **Godfather:** doesn't kill; silences; the Town wins once all Mafia are dead even with him alive; counts on the Mafia side for a takeover.
@@ -53,7 +53,7 @@ Previous full run: 2026-10-17 (macOS, Node 22.23, Chromium headless via Playwrig
 6. **Dawn:** the Thief steals *Investigate* for the round without learning whose; the robbed Detective is told; the Thief investigates that night.
 7. **Dawn:** the Imposter revives a dead player in round 2 and every phone is told.
 8. 10-player game to a Town victory.
-9. **26-player game (the maximum, every character)** to a Town victory.
+9. **32-player game (the maximum, every character)** to a Town victory.
 10. Players add photos; the TV wall cuts the eliminated player's photo.
 11. Unauthorized access: no session, forged token, TV shows no roles.
 12. Network-level privacy: WebSocket frames never carry another player's role.

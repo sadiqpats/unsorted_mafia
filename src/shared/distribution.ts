@@ -6,12 +6,13 @@ import type { Alignment } from './types';
  * DEFAULT ROLE DISTRIBUTION
  * -------------------------
  * Mafia (the killers) stay about a quarter of the table:
- *   1 up to 6 players, 2 from 7, 3 from 12, 4 from 17, 5 from 22, 6 from 25.
+ *   1 up to 6 players, 2 from 7, 3 from 12, 4 from 17, 5 from 22, 6 from 25, 7 from 29.
  * The Godfather (knows the Mafia, silences, does not kill) joins from 8 players.
  * Special roles join once the table reaches their threshold; everyone else is a
  * Villager. The host can edit every count before starting.
  */
 export function mafiaCountFor(n: number): number {
+  if (n >= 29) return 7;
   if (n >= 25) return 6;
   if (n >= 22) return 5;
   if (n >= 17) return 4;
