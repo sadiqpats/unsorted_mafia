@@ -216,6 +216,9 @@ export function PrivacyShield({ children, label = 'Open your secret panel', auto
   }
   return (
     <div className="card relative p-4" onPointerDown={arm} onKeyDown={arm}>
+      <span className="eyebrow pointer-events-none absolute left-4 top-[1.15rem] !text-[0.62rem]" aria-hidden="true">
+        🔒 For your eyes only
+      </span>
       <button className="btn btn-ghost absolute right-3 top-3 !min-h-9 !px-3 !py-1 text-xs" onClick={() => setOpen(false)}>
         Hide
       </button>

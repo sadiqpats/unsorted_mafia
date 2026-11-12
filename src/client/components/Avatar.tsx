@@ -20,7 +20,7 @@ export function Avatar({ name, photo, dead = false, size = 48, className = '' }:
   );
   return (
     <div
-      className={`cut-photo relative shrink-0 ${dead ? 'is-dead' : ''} ${className}`}
+      className={`cut-photo relative shrink-0 ${dead ? 'is-dead' : ''} ${photo ? '' : 'no-photo'} ${className}`}
       style={{ width: size, height: size }}
       role="img"
       aria-label={dead ? `${name} (eliminated)` : name}
