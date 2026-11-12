@@ -1088,3 +1088,11 @@ p { text-wrap: pretty; }
 .moments-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2vh 5vw; }
 .moments-row:empty { display: none; }
 .moments-phone .moments-row { flex-direction: column; gap: 18px; }
+/* TV: leave room at the top for the "Tap to enable sound" chip. */
+.moments-tv { padding-top: 9vh; }
+/* Phone: the voted-out card and the Mafia count side by side, so the count is seen without scrolling. */
+.moments-phone .moments-row { flex-direction: row; align-items: center; gap: 14px; }
+.moments-phone .mafia-count { padding: 12px 14px 14px; border-radius: 16px; max-width: 52vw; }
+.moments-phone .mafia-count-label { font-size: 0.72rem; letter-spacing: 0.1em; text-align: center; }
+.moments-phone .mafia-count-num { font-size: 4.6rem; }
+.moments-phone .mafia-count-sub { font-size: 0.85rem; text-align: center; }

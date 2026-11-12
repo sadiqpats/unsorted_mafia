@@ -187,7 +187,7 @@ export function MomentsOverlay({ moment, view, variant, clock, onClose }: { mome
             ? 'min(23vh, 19vw)'
             : 'min(18vh, 15vw)'
       : n <= 1
-        ? moment.mafiaLeft !== null ? 'min(40vw, 20vh)' : 'min(52vw, 27vh)'
+        ? moment.mafiaLeft !== null ? 'min(34vw, 19vh)' : 'min(52vw, 27vh)'
         : n === 2
           ? 'min(34vw, 22vh)'
           : 'min(26vw, 17vh)';
