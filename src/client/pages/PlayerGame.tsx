@@ -893,7 +893,7 @@ function DayPanel({ view, send }: { view: ClientView; send: Send }) {
   return (
     <div className="space-y-3">
       <PhaseNews view={view} />
-      <p className="text-center text-sm text-mute">{view.settings.timers === false ? 'Everyone votes — the result comes when all the votes are in.' : 'Vote before the clock runs out — a missing vote simply doesn’t count.'}</p>
+      <p className="text-center text-sm text-mute">{view.settings.offlineVoting ? 'Vote out loud with the table. No phones needed for this one.' : view.settings.timers === false ? 'Everyone votes — the result comes when all the votes are in.' : 'Vote before the clock runs out — a missing vote simply doesn’t count.'}</p>
       <VotingPanel view={view} send={send} />
     </div>
   );
