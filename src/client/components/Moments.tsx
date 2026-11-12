@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { roleTitle } from '../../shared/roles';
 import type { ClientView, PublicPlayer } from '../../shared/view-types';
@@ -195,9 +195,28 @@ export function MomentsOverlay({ moment, view, variant, clock, onClose }: { mome
   const pips = moment.tally?.reduce((s, r) => s + Math.min(r.weight, 12), 0) ?? 0;
   const tallyTime = moment.tally ? Math.min(2, 0.5 + pips * 0.14) : 0;
   const countDelay = tallyTime + 0.4 + n * 0.45 + (n ? 2.2 : 0.3);
+  // On the TV everything must fit one screen: shrink the whole moment until nothing is cut off.
+  const box = useRef<HTMLDivElement>(null);
+  const body = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const outer = box.current;
+    const inner = body.current;
+    if (!outer || !inner || variant !== 'tv') return;
+    const fit = () => {
+      inner.style.setProperty('--fit', '1');
+      const cs = getComputedStyle(outer);
+      const room = outer.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const need = inner.scrollHeight;
+      inner.style.setProperty('--fit', need > room ? (room / need).toFixed(3) : '1');
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [variant, moment.key]);
   return (
-    <div className={`moments moments-${variant} ${moment.superpower ? 'moments-super' : ''}`} role="status" aria-live="polite" data-testid={variant === 'tv' ? 'tv-spotlight' : 'phone-moment'} onClick={onClose}>
+    <div ref={box} className={`moments moments-${variant} ${moment.superpower ? 'moments-super' : ''}`} role="status" aria-live="polite" data-testid={variant === 'tv' ? 'tv-spotlight' : 'phone-moment'} onClick={onClose}>
       {clock && <div className="moments-clock">{clock}</div>}
+      <div ref={body} className="moments-body">
       {moment.superpower && (
         <span className="super-emblem" aria-hidden="true">
           <span className="super-ring" />
@@ -206,16 +225,20 @@ export function MomentsOverlay({ moment, view, variant, clock, onClose }: { mome
       )}
       <p className="moments-title">{moment.title}</p>
       {moment.tally && <VoteCount rows={moment.tally} view={view} step={tallyTime / Math.max(1, pips)} />}
-      {n > 0 && (
-        <div className="moments-cards">
-          {moment.cards.map((c, i) => (
-            <MomentCard key={c.id + c.kind} view={view} card={c} width={width} delay={tallyTime + 0.35 + i * 0.45} />
-          ))}
-        </div>
-      )}
+      {/* The voted-out card and the Mafia count sit side by side on a TV, stacked on a phone. */}
+      <div className="moments-row">
+        {n > 0 && (
+          <div className="moments-cards">
+            {moment.cards.map((c, i) => (
+              <MomentCard key={c.id + c.kind} view={view} card={c} width={width} delay={tallyTime + 0.35 + i * 0.45} />
+            ))}
+          </div>
+        )}
+        {moment.mafiaLeft !== null && <MafiaCountCard count={moment.mafiaLeft} delay={countDelay} />}
+      </div>
       {moment.note && <p className="moments-note">{moment.note}</p>}
-      {moment.mafiaLeft !== null && <MafiaCountCard count={moment.mafiaLeft} delay={countDelay} />}
       {variant === 'phone' && <p className="moments-tap">👆 Tap anywhere to continue</p>}
+      </div>
       {!moment.sticky && <span className="moments-bar" style={{ ['--secs' as string]: `${moment.seconds}s` }} aria-hidden="true" />}
       {moment.cards.some((c) => c.kind === 'revived') && <RiseSparks />}
     </div>
