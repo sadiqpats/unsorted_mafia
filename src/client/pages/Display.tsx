@@ -229,7 +229,7 @@ function TvGame({ view, serverNow, send }: { view: NonNullable<ReturnType<typeof
   const g = view.game!;
   const alive = view.players.filter((p) => p.alive).length;
   const roundFeed = view.feed.filter((e) => e.round === g.round && e.visibility !== 'host');
-  const tagline = g.phase === 'discussion' ? (g.phaseEndsAt !== null || (g.pausedRemainingMs ?? -1) >= 0 ? 'Discuss. Accuse. Defend. The vote opens when the clock runs out.' : 'Discuss. Accuse. Defend. The host opens the vote.') : (TAGLINE[g.phase] ?? '');
+  const tagline = g.phase === 'discussion' ? (g.phaseEndsAt !== null || (g.pausedRemainingMs ?? -1) >= 0 ? 'Discuss. Accuse. Defend. The vote opens when the clock runs out.' : 'Discuss. Accuse. Defend. The host opens the vote.') : g.phase === 'voting' && view.settings.offlineVoting ? 'Hands up! Vote out loud — the host records the result.' : (TAGLINE[g.phase] ?? '');
   return (
     <div className="mx-auto mt-[1.5vh] flex w-full max-w-[1900px] min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2">
@@ -262,13 +262,20 @@ function TvGame({ view, serverNow, send }: { view: NonNullable<ReturnType<typeof
           {send && <TvControls view={view} send={send} />}
         </div>
       </div>
-      <div className="mt-[1.5vh] grid min-h-0 flex-1 gap-5 tv:grid-cols-[minmax(0,1fr)_minmax(12rem,17rem)]">
-        <div className="flex min-h-0 min-w-0 flex-col">
-          <FitBox>{(box) => <PhotoWall players={view.players} settings={view.settings} box={box} />}</FitBox>
-        </div>
-        <aside className="card max-h-full min-h-0 self-end overflow-hidden p-3" data-testid="tv-news">
-          <h3 className="eyebrow mb-2 !text-[0.65rem]">Round {g.round} · announcements</h3>
-          {roundFeed.length ? <Feed entries={roundFeed} limit={6} inGame /> : <p className="text-sm text-mute">Nothing yet this round.</p>}
+      {/* The faces get the whole width; this round's news is a slim strip along the bottom. */}
+      <div className="mt-[1.5vh] flex min-h-0 flex-1 flex-col">
+        <FitBox>{(box) => <PhotoWall players={view.players} settings={view.settings} box={box} />}</FitBox>
+        <aside className="tv-strip" data-testid="tv-news" aria-label={`Round ${g.round} announcements`}>
+          <span className="eyebrow shrink-0 !text-[0.65rem]">Round {g.round}</span>
+          {roundFeed.length ? (
+            <ul>
+              {roundFeed.slice(-3).map((e) => (
+                <li key={e.seq}>{e.text}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>Nothing yet this round.</p>
+          )}
         </aside>
       </div>
     </div>
@@ -289,7 +296,7 @@ function TvControls({ view, send }: { view: NonNullable<ReturnType<typeof useRoo
   };
   return (
     <div className="flex flex-col gap-1.5" data-testid="tv-controls">
-      <button className="btn btn-gold !min-h-10 !px-4 !py-1.5 text-sm" disabled={busy || !!g.pendingTie} onClick={() => run({ type: 'advance', phaseSeq: g.phaseSeq })}>
+      <button className="btn btn-gold !min-h-10 !px-4 !py-1.5 text-sm" disabled={busy || !!g.pendingTie || (g.phase === 'voting' && !!view.settings.offlineVoting)} onClick={() => run({ type: 'advance', phaseSeq: g.phaseSeq })}>
         {g.phase === 'discussion' ? '🗳️ Start voting' : 'Next phase ⏭'}
       </button>
       <button className="btn btn-ghost !min-h-10 !px-4 !py-1.5 text-sm" disabled={busy} onClick={() => run({ type: g.paused ? 'resume' : 'pause' })}>

@@ -255,6 +255,9 @@ export class RoomService {
         case 'resolve_tie':
           E.resolveTie(room, cmd.targetId, now);
           break;
+        case 'host_verdict':
+          E.hostVerdict(room, cmd.targetId, now);
+          break;
         case 'end_game':
           E.hostEndGame(room, now);
           break;

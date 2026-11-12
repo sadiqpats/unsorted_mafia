@@ -148,6 +148,18 @@ export function FinaleShow({ view, variant, elapsed, persist = false }: { view: 
           <p>{win.reason}</p>
         </header>
       )}
+      {persist && g.awards?.length > 0 && (
+        <ul className="fs-awards" style={{ ['--at' as string]: at(fin.end + 0.8) }} data-testid="tv-awards">
+          {g.awards.map((a) => (
+            <li key={a.key}>
+              <span>
+                {a.emoji} {a.title}
+              </span>
+              <b>{view.players.find((p) => p.id === a.playerId)?.name}</b>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="fs-board">
         {mafia && (
           <section className="fs-panel fs-p-mafia" style={{ ['--at' as string]: at(mafia.start) }} aria-label="The Mafia">

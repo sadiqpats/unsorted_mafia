@@ -33,6 +33,7 @@ export const HostCommandSchema = z.discriminatedUnion('type', [
   z.object({ ...base, type: z.literal('eliminate'), playerId: id }),
   z.object({ ...base, type: z.literal('restore'), playerId: id }),
   z.object({ ...base, type: z.literal('resolve_tie'), targetId: id.nullable() }),
+  z.object({ ...base, type: z.literal('host_verdict'), targetId: id.nullable() }),
   z.object({ ...base, type: z.literal('end_game') }),
   z.object({ ...base, type: z.literal('restart') }),
   z.object({ ...base, type: z.literal('close_room') }),

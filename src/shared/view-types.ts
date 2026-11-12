@@ -1,3 +1,4 @@
+import type { Award } from './awards';
 import type { DistributionReport } from './distribution';
 import type { NightOption } from './engine';
 import type { Settings } from './settings';
@@ -43,6 +44,8 @@ export interface PublicGame {
   /** When the game ended (server time), so every screen plays the finale in step. */
   endedAt: number | null;
   stats: { suspicion: Record<string, number>; nightKills: number; saves: number; revives: number; voteEliminations: number; investigations: number } | null;
+  /** End-of-game awards (only once the game is over). */
+  awards: Award[];
   aliveCount: number;
   /** What every phone shows at the top of this phase: public announcements since the previous phase began. */
   news: LogEntry[];

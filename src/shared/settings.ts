@@ -70,6 +70,8 @@ export const SettingsSchema = z.object({
   allowAbstain: z.boolean(),
   /** On (default): a silenced player must stay quiet in discussion but can still vote. Off: they can't vote either. */
   silencedCanVote: z.boolean(),
+  /** On: no ballots on phones. The table votes by show of hands and the host enters who is out (or nobody). */
+  offlineVoting: z.boolean().optional(),
   tieRule: z.enum(['none', 'runoff', 'host']),
   /** outcome: only who was eliminated. tally: weighted totals per player. full: who voted for whom. */
   voteReveal: z.enum(['outcome', 'tally', 'full']),

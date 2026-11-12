@@ -15,7 +15,9 @@ import { serverUrl } from '../lib/server';
 
 export type MomentKind = 'killed' | 'voted' | 'revived' | 'silenced';
 export type MomentCardData = { id: string; kind: MomentKind };
-export type Moment = { key: number; title: string; cards: MomentCardData[]; note: string | null; mafiaLeft: number | null; seconds: number; superpower?: boolean; sticky?: boolean };
+export type Moment = { key: number; title: string; cards: MomentCardData[]; note: string | null; mafiaLeft: number | null; seconds: number; superpower?: boolean; sticky?: boolean; tally?: VoteRow[] };
+/** One row of the vote count: who got how many votes (and, when votes are public, from whom). */
+export type VoteRow = { id: string; weight: number; voters: string[] };
 
 /** Watches the game for a new Day or a vote result and returns the moment to show (or null). */
 export function useMoments(view: ClientView | null, { startDelayMs = 1900, maxSeconds = 60, sticky = false }: { startDelayMs?: number; maxSeconds?: number; sticky?: boolean } = {}): Moment | null {
@@ -55,7 +57,13 @@ export function useMoments(view: ClientView | null, { startDelayMs = 1900, maxSe
       const left = g.mafiaLeft && g.mafiaLeft.round === v.round ? g.mafiaLeft.count : null;
       // Exactly as long as the pause on the result (8 s by default) — never longer.
       const secs = Math.max(3, view.settings.verdictSeconds || 8);
-      next = { title: 'The town has spoken', cards: v.eliminatedId ? [{ id: v.eliminatedId, kind: 'voted' }] : [], note: v.eliminatedId ? null : 'Nobody was voted out.', mafiaLeft: left, seconds: secs };
+      // The count, when the house rules make it public: votes land one by one before the knife falls.
+      const tally: VoteRow[] = Object.entries(v.tally)
+        .filter(([, w]) => w > 0)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4)
+        .map(([id, weight]) => ({ id, weight, voters: Object.entries(v.votes).filter(([, t]) => (t ?? 'abstain') === id).map(([voter]) => voter) }));
+      next = { title: 'The town has spoken', cards: v.eliminatedId ? [{ id: v.eliminatedId, kind: 'voted' }] : [], note: v.eliminatedId ? null : 'Nobody was voted out.', mafiaLeft: left, seconds: secs, tally: tally.length ? tally : undefined };
     }
     if (!next) return;
     // A phone keeps it up until it is tapped (or the phase moves on), but only in the phases with
@@ -183,7 +191,10 @@ export function MomentsOverlay({ moment, view, variant, clock, onClose }: { mome
         : n === 2
           ? 'min(34vw, 22vh)'
           : 'min(26vw, 17vh)';
-  const countDelay = 0.4 + n * 0.45 + (n ? 2.2 : 0.3);
+  // The vote count plays first (a pip every 0.14 s, at most ~2 s), then the cards.
+  const pips = moment.tally?.reduce((s, r) => s + Math.min(r.weight, 12), 0) ?? 0;
+  const tallyTime = moment.tally ? Math.min(2, 0.5 + pips * 0.14) : 0;
+  const countDelay = tallyTime + 0.4 + n * 0.45 + (n ? 2.2 : 0.3);
   return (
     <div className={`moments moments-${variant} ${moment.superpower ? 'moments-super' : ''}`} role="status" aria-live="polite" data-testid={variant === 'tv' ? 'tv-spotlight' : 'phone-moment'} onClick={onClose}>
       {clock && <div className="moments-clock">{clock}</div>}
@@ -194,10 +205,11 @@ export function MomentsOverlay({ moment, view, variant, clock, onClose }: { mome
         </span>
       )}
       <p className="moments-title">{moment.title}</p>
+      {moment.tally && <VoteCount rows={moment.tally} view={view} step={tallyTime / Math.max(1, pips)} />}
       {n > 0 && (
         <div className="moments-cards">
           {moment.cards.map((c, i) => (
-            <MomentCard key={c.id + c.kind} view={view} card={c} width={width} delay={0.35 + i * 0.45} />
+            <MomentCard key={c.id + c.kind} view={view} card={c} width={width} delay={tallyTime + 0.35 + i * 0.45} />
           ))}
         </div>
       )}
@@ -207,6 +219,35 @@ export function MomentsOverlay({ moment, view, variant, clock, onClose }: { mome
       {!moment.sticky && <span className="moments-bar" style={{ ['--secs' as string]: `${moment.seconds}s` }} aria-hidden="true" />}
       {moment.cards.some((c) => c.kind === 'revived') && <RiseSparks />}
     </div>
+  );
+}
+
+/** The vote count: each row fills with its votes, one pip at a time, the leader last to finish. */
+function VoteCount({ rows, view, step }: { rows: VoteRow[]; view: ClientView; step: number }) {
+  let k = 0;
+  return (
+    <ul className="vc" data-testid="vote-count" aria-label="Vote count">
+      {rows.map((r) => {
+        const p = view.players.find((x) => x.id === r.id);
+        const count = Math.min(Math.round(r.weight), 12);
+        return (
+          <li key={r.id} className="vc-row">
+            <span className="vc-name">{p ? p.name : 'No one'}</span>
+            <span className="vc-pips">
+              {Array.from({ length: count }, (_, i) => {
+                const voter = view.players.find((x) => x.id === r.voters[i]);
+                return (
+                  <span key={i} className="vc-pip" style={{ animationDelay: `${(0.3 + k++ * step).toFixed(2)}s` }} title={voter?.name}>
+                    {voter ? initials(voter.name) : ''}
+                  </span>
+                );
+              })}
+            </span>
+            <span className="vc-num">{r.weight}</span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

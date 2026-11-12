@@ -243,12 +243,7 @@ function PlayerLobby({ view, send }: { view: ClientView; send: Send }) {
       </div>
       <LobbyPhoto view={view} />
       <Section title="While you wait">
-        <ol className="list-decimal space-y-1.5 pl-5 text-sm text-bone/90">
-          <li>Keep this page open. If it closes, just reopen the same link — your seat is saved on this phone.</li>
-          <li>When the game starts, find a private moment, then press and hold the card to see your role.</li>
-          <li>At night everyone taps a choice — even if you have no power. Shield your screen.</li>
-          <li>Never show your screen to anyone. Talking is the game; showing is cheating.</li>
-        </ol>
+        <HowToCards />
         <Link to="/guide" className="mt-3 inline-block text-sm text-gold underline underline-offset-4">
           Full rules & characters
         </Link>
@@ -274,6 +269,63 @@ function PlayerLobby({ view, send }: { view: ClientView; send: Send }) {
           ))}
         </ul>
       </Section>
+    </div>
+  );
+}
+
+const HOW_TO: [string, string, string][] = [
+  ['🃏', 'Get your secret role', 'When the game starts, find a private moment, then press and hold the card to see who you are.'],
+  ['🌙', 'Night: everyone taps', 'Open your panel and tap a choice — even if you have no power — so nobody can tell who does. Shield your screen.'],
+  ['🗣️', 'Day: talk it out', 'Someone may have died. Discuss, accuse, defend. The Mafia are lying to your face.'],
+  ['🗳️', 'Vote in secret', 'Pick who to eliminate on your phone. Most votes is out. Town wins when the Mafia are gone.'],
+  ['🤫', 'Two golden rules', 'Never show your screen to anyone. And keep this page open — if it closes, reopen the same link; your seat is saved.'],
+];
+
+/** How to play, as swipeable cards (it also moves on by itself until someone touches it). */
+function HowToCards() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState(0);
+  const touched = useRef(false);
+  const go = (i: number) => {
+    const el = ref.current;
+    if (el) el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
+  };
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!touched.current && document.visibilityState === 'visible') go((at + 1) % HOW_TO.length);
+    }, 4500);
+    return () => clearInterval(id);
+  }, [at]);
+  return (
+    <div data-testid="howto">
+      <div
+        ref={ref}
+        className="howto-track"
+        onPointerDown={() => (touched.current = true)}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+          if (i !== at) setAt(i);
+        }}
+      >
+        {HOW_TO.map(([icon, title, text], i) => (
+          <article key={title} className="howto-card" aria-label={`Step ${i + 1} of ${HOW_TO.length}`}>
+            <span className="howto-icon" aria-hidden="true">
+              {icon}
+            </span>
+            <p className="eyebrow !text-[0.62rem]">
+              Step {i + 1} / {HOW_TO.length}
+            </p>
+            <h4 className="mt-1 font-[family-name:var(--font-display)] text-lg text-gold">{title}</h4>
+            <p className="mt-1.5 text-sm leading-relaxed text-bone/90">{text}</p>
+          </article>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-center gap-1.5">
+        {HOW_TO.map(([, title], i) => (
+          <button key={title} aria-label={`Show step ${i + 1}`} aria-current={i === at} onClick={() => { touched.current = true; go(i); }} className={`h-2 rounded-full transition-all ${i === at ? 'w-6 bg-gold' : 'w-2 bg-line'}`} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -535,6 +587,25 @@ function NightPanel({ view, send, serverNow }: { view: ClientView; send: Send; s
           <CheckMark /> Locked in. Put your phone face down.
         </div>
       )}
+      <NightScene dawn={pre} />
+    </div>
+  );
+}
+
+/** A quiet scene under the panel — exactly the same on every phone, so it gives nothing away. */
+function NightScene({ dawn }: { dawn: boolean }) {
+  return (
+    <div className={`night-scene ${dawn ? 'is-dawn' : ''}`} aria-hidden="true">
+      <span className="ns-moon" />
+      {[12, 27, 44, 63, 78, 90].map((x, i) => (
+        <span key={x} className="ns-star" style={{ left: `${x}%`, top: `${12 + ((i * 23) % 38)}%`, animationDelay: `${(i * 0.7).toFixed(1)}s` }} />
+      ))}
+      <span className="ns-cloud ns-cloud-a" />
+      <span className="ns-cloud ns-cloud-b" />
+      <svg className="ns-town" viewBox="0 0 400 70" preserveAspectRatio="none">
+        <path d="M0 70V46h22V30l14-12 14 12v16h26V22h30v24h18V36l16-14 16 14v10h30V14h10V6h12v8h10v32h28V32h34v14h20V26l15-12 15 12v20h30V38h20v32z" />
+      </svg>
+      <p className="ns-line">{dawn ? 'The town stirs before dawn…' : 'The town sleeps. Someone doesn’t.'}</p>
     </div>
   );
 }
@@ -1049,6 +1120,28 @@ export function GameOverPanel({ view, serverNow, hostControls }: { view: ClientV
           ))}
         </div>
       </Section>
+      {g.awards?.length > 0 && (
+        <Section title="Tonight’s awards">
+          <ul className="grid gap-2 sm:grid-cols-2" data-testid="awards">
+            {g.awards.map((a, i) => {
+              const p = view.players.find((x) => x.id === a.playerId);
+              if (!p) return null;
+              return (
+                <li key={a.key} className="award-in flex items-center gap-3 rounded-xl border border-gold/35 bg-gold/5 p-2.5" style={{ animationDelay: `${afterShow + 0.6 + i * 0.25}s` }}>
+                  <Avatar name={p.name} photo={p.photo} size={48} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold tracking-[0.14em] text-gold uppercase">
+                      {a.emoji} {a.title}
+                    </div>
+                    <div className="truncate text-base font-bold leading-tight text-bone">{p.name}</div>
+                    <div className="truncate text-xs text-mute">{a.detail}</div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Section>
+      )}
       {stats && (
         <Section title="The night in numbers">
           <dl className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">

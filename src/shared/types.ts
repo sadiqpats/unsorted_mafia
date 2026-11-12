@@ -196,6 +196,9 @@ export interface Game {
     revives: number;
     voteEliminations: number;
     investigations: number;
+    /** Day votes each player received / votes each player cast against a Mafia member (for the end-of-game awards). */
+    votesAgainst?: Record<string, number>;
+    mafiaVotes?: Record<string, number>;
   };
   startedAt: number;
   endedAt: number | null;

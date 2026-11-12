@@ -9,6 +9,7 @@
  * Tests in tests/integration/privacy.test.ts verify that no other player's role
  * or action ever appears in a player's payload.
  */
+import { computeAwards } from '../shared/awards';
 import { analyzeDistribution } from '../shared/distribution';
 import {
   checkWin,
@@ -95,7 +96,7 @@ export function buildPublic(room: Room, connected: Set<string>, now: number): Pu
       paused: g.pausedRemainingMs !== null,
       pausedRemainingMs: g.pausedRemainingMs,
       nightProgress,
-      votingProgress: g.phase === 'voting' ? { done: voters.filter((p) => g.day.votes[p.id]).length, total: voters.length } : null,
+      votingProgress: g.phase === 'voting' && !settings.offlineVoting ? { done: voters.filter((p) => g.day.votes[p.id]).length, total: voters.length } : null,
       revealProgress: g.phase === 'reveal' ? { done: room.players.filter((p) => p.revealAck).length, total: room.players.length } : null,
       runoff: g.day.runoff,
       pendingTie: g.pendingTie,
@@ -106,6 +107,7 @@ export function buildPublic(room: Room, connected: Set<string>, now: number): Pu
       winner: g.winner,
       endedAt: g.endedAt,
       stats: over ? g.stats : null,
+      awards: over ? computeAwards(room) : [],
       aliveCount: room.players.filter((p) => p.alive).length,
       news: room.log.filter((l) => l.visibility === 'public' && NEWS_KINDS.has(l.kind) && l.seq > (g.newsFromSeq ?? 0)),
       newsFromAt: g.newsFromAt ?? 0,

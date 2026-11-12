@@ -1,10 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { suggestDistribution } from '../../shared/distribution';
 import { ABILITIES, ROLES, ROLE_ORDER, roleAlignment, roleArt, roleTitle } from '../../shared/roles';
-import type { Settings, SettingsPatch } from '../../shared/settings';
+import { defaultSettings, type Settings, type SettingsPatch } from '../../shared/settings';
 import type { ClientView } from '../../shared/view-types';
 import { PlayerCountInput } from '../components/PlayerCountInput';
 import { RoleArt } from '../components/RoleArt';
+import { Avatar } from '../components/Avatar';
 import { AlignmentBadge, Feed, Modal, PHASE_LABEL, PlayerRow, Progress, QR, Section, Timer, Toggle, useConfirm, useToast } from '../components/ui';
 import { GameOverPanel, PlayerGame, useAct, type GameProps } from './PlayerGame';
 
@@ -266,6 +267,19 @@ function Group({ title, children, open = false }: { title: string; children: Rea
   );
 }
 
+/** One-tap rule sets. Each starts from the standard rules; the table size, characters, where you play and wording stay as they are. */
+function presetPatch(kind: 'quick' | 'classic' | 'chaos', s: Settings): SettingsPatch {
+  const { playerCount: _n, hostPlays: _h, playMode: _m, bollywood: _b, homeLights: _l, musicVolume: _mv, sfxVolume: _sv, announcements: _a, ...base } = defaultSettings(s.playerCount) as Omit<Settings, 'roles'>;
+  if (kind === 'quick') return { ...base, preNightSeconds: 20, nightSeconds: 20, daySeconds: 120, voteSeconds: 20, verdictSeconds: 5 };
+  if (kind === 'chaos') return { ...base, tieRule: 'runoff', voteReveal: 'full', revealRoleOnDeath: true, godfatherSuperpower: true, villagerPowers: { hunch: true, shield: true, rally: false } };
+  return base;
+}
+const PRESETS = [
+  ['quick', '⚡ Quick', 'Short clocks: 20 s nights and votes, 2-minute discussion.'],
+  ['classic', '🎩 Classic', 'The standard rules. Resets every rule below.'],
+  ['chaos', '🌪 Chaos', 'Roles shown on death, open votes, runoff on ties, the Godfather’s Superpower, Villager powers.'],
+] as const;
+
 function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: SettingsPatch) => void; send: GameProps['send']; view: ClientView }) {
   const { act } = useAct(send);
   const vp = s.villagerPowers;
@@ -274,6 +288,17 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
   return (
     <Section title="House rules">
       <p className="mb-3 text-xs text-mute">Rules lock when the game starts, so they can never change mid-match.</p>
+      <div className="mb-4" role="group" aria-label="Quick presets">
+        <p className="mb-2 text-sm font-medium">Quick presets</p>
+        <div className="grid grid-cols-3 gap-2">
+          {PRESETS.map(([kind, label, hint]) => (
+            <button key={kind} title={hint} data-preset={kind} onClick={() => patch(presetPatch(kind, s))} className="rounded-xl border border-line bg-black/20 p-2.5 text-center text-sm font-semibold transition hover:border-gold/60 active:scale-[0.97]">
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1.5 text-xs text-mute">One tap sets the rules below — you can still change anything after. Players, characters and wording stay as they are.</p>
+      </div>
       <div className="mb-4" role="radiogroup" aria-label="Where are you playing?">
         <p className="mb-2 text-sm font-medium">Where are you playing?</p>
         <div className="grid grid-cols-2 gap-2">
@@ -341,6 +366,7 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           <Toggle label="Allow late joining" hint="Late joiners always become Villagers." checked={s.allowLateJoin} onChange={(v) => patch({ allowLateJoin: v })} />
         </Group>
         <Group title="Voting">
+          <Toggle label="Offline voting (show of hands)" hint="No ballots on phones. The table votes out loud; the vote clock is just a short countdown. Then you choose here who was voted out — or no one." checked={!!s.offlineVoting} onChange={(v) => patch({ offlineVoting: v })} />
           <Toggle label="Players may change their vote" hint="The vote then runs until its clock ends (or you press Next phase)." checked={s.allowVoteChange} onChange={(v) => patch({ allowVoteChange: v })} />
           <Toggle label="Allow voting for yourself" checked={s.allowSelfVote} onChange={(v) => patch({ allowSelfVote: v })} />
           <Toggle label="Allow abstaining" checked={s.allowAbstain} onChange={(v) => patch({ allowAbstain: v })} />
@@ -487,7 +513,7 @@ function HostGame({ view, send, serverNow }: GameProps) {
             <button className="btn btn-ghost !min-h-11 flex-1 text-sm md:flex-none" disabled={busy} onClick={() => act({ type: g.paused ? 'resume' : 'pause' })}>
               {g.paused ? '▶ Resume' : '⏸ Pause'}
             </button>
-            <button className="btn btn-gold !min-h-11 basis-full text-base md:basis-auto md:px-6" disabled={busy || !!g.pendingTie} onClick={() => act({ type: 'advance', phaseSeq: g.phaseSeq })}>
+            <button className="btn btn-gold !min-h-11 basis-full text-base md:basis-auto md:px-6" disabled={busy || !!g.pendingTie || (g.phase === 'voting' && !!view.settings.offlineVoting)} onClick={() => act({ type: 'advance', phaseSeq: g.phaseSeq })}>
               {g.phase === 'discussion' ? '🗳️ Start voting' : 'Next phase ⏭'}
             </button>
           </div>
@@ -504,6 +530,25 @@ function HostGame({ view, send, serverNow }: GameProps) {
         <div className="anim-pop rounded-xl border border-ok/50 bg-ok/10 p-3 text-center text-sm" role="status">
           ✅ All votes are in. Press <b>Next phase</b> to reveal the result (players can still change their vote until you do).
         </div>
+      )}
+
+      {g.phase === 'voting' && view.settings.offlineVoting && (
+        <Section title="Who was voted out?" className="border-gold/60">
+          <p className="mb-3 text-sm text-mute">Count the hands at the table, then tap the result. The game moves on as soon as you choose.</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4" data-testid="host-verdict">
+            {view.players
+              .filter((p) => p.alive)
+              .map((p) => (
+                <button key={p.id} className="btn btn-primary !justify-start gap-2 !px-3 text-left" disabled={busy} onClick={async () => (await confirm({ title: `Vote out ${p.name}?`, body: 'This ends the vote and cannot be undone from here.', confirm: `Yes, ${p.name} is out`, danger: true })) && act({ type: 'host_verdict', targetId: p.id })}>
+                  <Avatar name={p.name} photo={p.photo} size={32} />
+                  <span className="truncate">{p.name}</span>
+                </button>
+              ))}
+            <button className="btn btn-ghost" disabled={busy} onClick={() => act({ type: 'host_verdict', targetId: null })}>
+              🤝 No one
+            </button>
+          </div>
+        </Section>
       )}
 
       {g.pendingTie && (

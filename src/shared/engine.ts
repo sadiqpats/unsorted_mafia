@@ -498,6 +498,7 @@ export function advancePhase(room: Room, now: number, rng: Rng, by: 'timer' | 'h
     case 'discussion':
       return startVoting(room, now);
     case 'voting':
+      if (g.settings.offlineVoting) fail('pick_result', 'Choose who was voted out (or no one) to move on.');
       return resolveVotes(room, now);
     case 'verdict':
       if (g.pendingTie) fail('pending_tie', 'Resolve the tied vote first.');
@@ -523,6 +524,14 @@ export function tick(room: Room, now: number, rng: Rng): boolean {
   if ((g.phase === 'night' || g.phase === 'prenight') && phaseOpen(room, now) && nightComplete(room)) {
     advancePhase(room, now, rng, 'auto');
     return true;
+  }
+  if (g.phase === 'voting' && s.offlineVoting) {
+    // A show of hands: the clock is only a countdown for the table. When it ends, the host enters the result.
+    if (g.phaseEndsAt !== null && now >= g.phaseEndsAt) {
+      g.phaseEndsAt = null;
+      return true;
+    }
+    return false;
   }
   if (g.phase === 'voting' && !s.allowVoteChange && votingComplete(room)) {
     advancePhase(room, now, rng, 'auto');
@@ -1229,6 +1238,7 @@ export function resolvePreNight(room: Room, now: number, rng: Rng) {
 export function voteEligibility(room: Room, p: Player): { ok: boolean; reason?: string } {
   const g = room.game;
   if (!g) return { ok: false, reason: 'No game.' };
+  if (g.settings.offlineVoting) return { ok: false, reason: 'This vote is by show of hands. Raise your hand when the host calls a name — the host enters the result.' };
   if (!p.alive) return { ok: false, reason: 'Dead players cannot vote.' };
   if (p.silencedRound === g.round && !g.settings.silencedCanVote) return { ok: false, reason: 'You are silenced today and cannot vote.' };
   if (p.noVoteRound === g.round) return { ok: false, reason: 'You were just revived and cannot vote this round.' };
@@ -1332,6 +1342,9 @@ export function resolveVotes(room: Room, now: number) {
     if (!target || !target.alive) continue;
     tally[target.id] = (tally[target.id] ?? 0) + w;
     votes[voter.id] = target.id;
+    const st = g.stats;
+    (st.votesAgainst ??= {})[target.id] = (st.votesAgainst[target.id] ?? 0) + 1;
+    if (isMafiaTeam(target.roleId, s)) (st.mafiaVotes ??= {})[voter.id] = (st.mafiaVotes[voter.id] ?? 0) + 1;
   }
   if (abstain) tally.abstain = abstain;
 
@@ -1413,6 +1426,22 @@ function eliminateByVote(room: Room, targetId: string, verdict: Verdict, now: nu
   const win = settle(room, now);
   if (win) return endGame(room, win, now);
   afterVote(room, now);
+}
+
+/** Offline voting: the table voted by show of hands and the host enters the result (a player, or nobody). */
+export function hostVerdict(room: Room, targetId: string | null, now: number) {
+  const g = requireGame(room);
+  if (g.phase !== 'voting' || !g.settings.offlineVoting) fail('wrong_phase', 'There is no show-of-hands vote to record right now.');
+  if (targetId !== null && !room.players.find((p) => p.id === targetId)?.alive) fail('invalid_target', 'Pick a player who is still in the game.');
+  const verdict: Verdict = { round: g.round, eliminatedId: null, tie: false, runoff: false, tally: {}, votes: {}, jesterWin: false, decidedByHost: true };
+  addLog(room, now, 'host', `Show of hands: ${targetId ? getPlayer(room, targetId).name : 'nobody'} voted out (entered by the Game Master).`, 'host');
+  if (targetId === null) {
+    g.lastVerdict = verdict;
+    addLog(room, now, 'verdict', g.settings.announcements.noElimination, 'public', 'spared');
+    afterVote(room, now);
+    return;
+  }
+  eliminateByVote(room, targetId, verdict, now);
 }
 
 export function resolveTie(room: Room, targetId: string | null, now: number) {
