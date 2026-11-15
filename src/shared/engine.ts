@@ -63,7 +63,8 @@ export function addLog(room: Room, now: number, kind: string, text: string, visi
     text,
     ...(tag ? { tag } : {}),
   });
-  if (room.log.length > 2000) room.log.splice(0, room.log.length - 2000);
+  // Keep the log short: it is saved and sent to every phone on each change (a long game night made the server slow).
+  if (room.log.length > 300) room.log.splice(0, room.log.length - 300);
 }
 
 export function addPrivate(room: Room, rng: Rng, now: number, playerId: string, kind: string, text: string) {

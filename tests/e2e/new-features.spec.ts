@@ -68,15 +68,6 @@ test('offline voting: no ballots on phones, the host enters who is out; lobby ca
   await shot(t.tv, 'A8-tv-voted-out');
 });
 
-test('a quick preset sets the short clocks in one tap', async ({ browser }) => {
-  const { host } = await createRoom(browser, 6);
-  await host.locator('[data-preset="quick"]').click();
-  await expect(host.getByLabel(/^Night \(seconds\)/)).toHaveValue('20');
-  await expect(host.getByLabel(/^Vote \(seconds\)/)).toHaveValue('20');
-  await host.locator('[data-preset="classic"]').click();
-  await expect(host.getByLabel(/^Night \(seconds\)/)).toHaveValue('30');
-});
-
 test('the vote count plays before the result, and the game-over screens show awards', async ({ browser }) => {
   const t = await table(browser, 5);
   await start(t);

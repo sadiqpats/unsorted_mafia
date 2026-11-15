@@ -30,8 +30,9 @@ export function useRoom(code: string, auth: { token?: string; display?: boolean 
     const s = io(SERVER_URL || undefined, {
       auth: { code, ...auth },
       transports: ['websocket', 'polling'],
-      reconnectionDelay: 300,
-      reconnectionDelayMax: 2000,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 8000,
+      randomizationFactor: 0.5,
       // A sleeping free-plan server can take 20–60s to wake; don't give up on the first connect too early.
       timeout: 45000,
     });

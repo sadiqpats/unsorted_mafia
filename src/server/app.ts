@@ -61,7 +61,27 @@ export function createApp(opts: AppOptions) {
   });
 
   // -------------------------------------------------------------- realtime fan-out
+  // Many changes at once (a burst of reconnects, everyone voting) send ONE update per room, not one each.
+  // The first change goes out at once; more changes within 150 ms are folded into one follow-up update.
+  const pending = new Map<string, ReturnType<typeof setTimeout>>();
+  const lastSent = new Map<string, number>();
   const broadcast = (code: string) => {
+    if (pending.has(code)) return;
+    const wait = (lastSent.get(code) ?? 0) + 150 - Date.now();
+    if (wait <= 0) {
+      lastSent.set(code, Date.now());
+      return broadcastNow(code);
+    }
+    pending.set(
+      code,
+      setTimeout(() => {
+        pending.delete(code);
+        lastSent.set(code, Date.now());
+        broadcastNow(code);
+      }, wait),
+    );
+  };
+  const broadcastNow = (code: string) => {
     const room = service.get(code);
     if (!room) return;
     const connected = service.connected(code);
@@ -301,6 +321,9 @@ export function createApp(opts: AppOptions) {
     const data = socket.data as SocketData;
     socket.join(`room:${data.code}`);
     if (data.presenceId) service.markPresence(data.code, data.presenceId, 1);
+    // The phone that just connected gets its screen at once; everyone else gets the batched update.
+    const room0 = service.get(data.code);
+    if (room0) socket.emit('state', buildView(room0, data.identity.viewer, service.connected(data.code), Date.now()));
     broadcast(data.code);
 
     socket.on('cmd', (raw: unknown, ack?: (a: unknown) => void) => {
@@ -355,6 +378,7 @@ export function createApp(opts: AppOptions) {
     },
     async close() {
       clearInterval(tickTimer);
+      for (const t of pending.values()) clearTimeout(t);
       clearInterval(sweepTimer);
       await new Promise<void>((r) => io.close(() => r()));
       store.close();

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { suggestDistribution } from '../../shared/distribution';
 import { ABILITIES, ROLES, ROLE_ORDER, roleAlignment, roleArt, roleTitle } from '../../shared/roles';
-import { defaultSettings, type Settings, type SettingsPatch } from '../../shared/settings';
+import type { Settings, SettingsPatch } from '../../shared/settings';
 import type { ClientView } from '../../shared/view-types';
 import { PlayerCountInput } from '../components/PlayerCountInput';
 import { RoleArt } from '../components/RoleArt';
@@ -267,19 +267,6 @@ function Group({ title, children, open = false }: { title: string; children: Rea
   );
 }
 
-/** One-tap rule sets. Each starts from the standard rules; the table size, characters, where you play and wording stay as they are. */
-function presetPatch(kind: 'quick' | 'classic' | 'chaos', s: Settings): SettingsPatch {
-  const { playerCount: _n, hostPlays: _h, playMode: _m, bollywood: _b, homeLights: _l, musicVolume: _mv, sfxVolume: _sv, announcements: _a, ...base } = defaultSettings(s.playerCount) as Omit<Settings, 'roles'>;
-  if (kind === 'quick') return { ...base, preNightSeconds: 20, nightSeconds: 20, daySeconds: 120, voteSeconds: 20, verdictSeconds: 5 };
-  if (kind === 'chaos') return { ...base, tieRule: 'runoff', voteReveal: 'full', revealRoleOnDeath: true, godfatherSuperpower: true, villagerPowers: { hunch: true, shield: true, rally: false } };
-  return base;
-}
-const PRESETS = [
-  ['quick', '⚡ Quick', 'Short clocks: 20 s nights and votes, 2-minute discussion.'],
-  ['classic', '🎩 Classic', 'The standard rules. Resets every rule below.'],
-  ['chaos', '🌪 Chaos', 'Roles shown on death, open votes, runoff on ties, the Godfather’s Superpower, Villager powers.'],
-] as const;
-
 function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: SettingsPatch) => void; send: GameProps['send']; view: ClientView }) {
   const { act } = useAct(send);
   const vp = s.villagerPowers;
@@ -288,17 +275,6 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
   return (
     <Section title="House rules">
       <p className="mb-3 text-xs text-mute">Rules lock when the game starts, so they can never change mid-match.</p>
-      <div className="mb-4" role="group" aria-label="Quick presets">
-        <p className="mb-2 text-sm font-medium">Quick presets</p>
-        <div className="grid grid-cols-3 gap-2">
-          {PRESETS.map(([kind, label, hint]) => (
-            <button key={kind} title={hint} data-preset={kind} onClick={() => patch(presetPatch(kind, s))} className="rounded-xl border border-line bg-black/20 p-2.5 text-center text-sm font-semibold transition hover:border-gold/60 active:scale-[0.97]">
-              {label}
-            </button>
-          ))}
-        </div>
-        <p className="mt-1.5 text-xs text-mute">One tap sets the rules below — you can still change anything after. Players, characters and wording stay as they are.</p>
-      </div>
       <div className="mb-4" role="radiogroup" aria-label="Where are you playing?">
         <p className="mb-2 text-sm font-medium">Where are you playing?</p>
         <div className="grid grid-cols-2 gap-2">

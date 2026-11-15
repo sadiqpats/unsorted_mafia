@@ -53,7 +53,8 @@ describe('player photos', () => {
     const [a, b, c] = l.players;
     for (const p of [a, b, c]) expect((await upload(l.code, p.token, jpeg())).status).toBe(200);
     expect((await upload(l.code, a.token, null)).status).toBe(200);
-    await l.host.waitFor((v) => v.players.find((p) => p.id === a.id)!.photo === null);
+    // Updates in a burst arrive together a moment later: wait for all three.
+    await l.host.waitFor((v) => v.players.find((p) => p.id === a.id)?.photo === null && !!v.players.find((p) => p.id === b.id)?.photo && !!v.players.find((p) => p.id === c.id)?.photo);
     expect(((await b.client.send({ type: 'remove_photo', playerId: c.id })).error?.code)).toBe('forbidden');
     const bUrl = l.host.view!.players.find((p) => p.id === b.id)!.photo!;
     expectOk(await l.host.send({ type: 'remove_photo', playerId: b.id }));
