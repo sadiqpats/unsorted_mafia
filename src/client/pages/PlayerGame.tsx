@@ -56,6 +56,12 @@ const GROUP_BORDER: Record<string, string> = { mafia: 'border-crimson/60 bg-crim
 const nameOf = (view: ClientView, id: string | null | undefined) => (id ? (view.players.find((p) => p.id === id)?.name ?? '—') : 'Nobody');
 
 const ACTION_PHASES = ['prenight', 'night', 'voting'];
+/**
+ * Anti-cheat: a player's secrets (role card, Mafia family and chat, the dead's role list) open only while
+ * everyone is heads-down — the role reveal, Dawn and Night. In the Day, the vote and the verdict they stay
+ * locked, so nobody can show their card to the table.
+ */
+const SECRET_PHASES = new Set(['reveal', 'prenight', 'night']);
 
 /**
  * One player to pick (night action, Dawn or the vote): their photo, big, with the name under it —
@@ -135,9 +141,10 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
       {phase === 'voting' && <DayPanel key={g.phaseSeq} view={view} send={send} />}
       {phase === 'verdict' && <VerdictPanel view={view} />}
       {phase === 'game_over' && <GameOverPanel view={view} serverNow={serverNow} />}
-      {me.mafiaChat && phase !== 'game_over' && <MafiaChat view={view} send={send} />}
-      {/* Action phases show ONLY the action — no lists, feeds or extra buttons. */}
-      {phase === 'voting' && <MyRoleButton view={view} />}
+      {me.mafiaChat && SECRET_PHASES.has(phase) && <MafiaChat view={view} send={send} />}
+      {/* Action phases show ONLY the action — no lists, feeds or extra buttons. Your card: Dawn and Night only. */}
+      {(phase === 'night' || phase === 'prenight') && <MyRoleButton view={view} />}
+      {phase === 'voting' && <RoleLocked />}
       {/* The dead have no action, so they always get the full running commentary. */}
       {!me.alive && ACTION_PHASES.includes(phase) && (
         <Section title="Announcements">
@@ -146,7 +153,7 @@ export function PlayerGame({ view, send, serverNow }: GameProps) {
       )}
       {!ACTION_PHASES.includes(phase) && (
         <>
-          {phase !== 'reveal' && phase !== 'game_over' && <MyRoleButton view={view} />}
+          {phase !== 'reveal' && phase !== 'game_over' && <RoleLocked />}
           {phase !== 'game_over' && (
             <Section title="Town square">
               <PlayersList view={view} />
@@ -192,7 +199,7 @@ function DeadBanner({ view }: { view: ClientView }) {
         <p className="mt-1 font-[family-name:var(--font-display)] text-lg">You have been eliminated</p>
         <p className="mt-1 text-sm text-mute">Stay silent — no hints, no faces. You can keep watching the game here.</p>
       </div>
-      {me.allRoles && view.game?.phase !== 'game_over' && <DeadRoles view={view} />}
+      {me.allRoles && SECRET_PHASES.has(view.game?.phase ?? '') && <DeadRoles view={view} />}
     </>
   );
 }
@@ -487,9 +494,23 @@ function GodfatherKnows({ view }: { view: ClientView }) {
   );
 }
 
+/** In the Day and the vote the card is locked (anti-cheat): nothing to show the table. */
+function RoleLocked() {
+  return (
+    <div className="flex items-center justify-center gap-2 rounded-xl border border-line/70 bg-black/25 p-3 text-center text-sm text-mute" data-testid="role-locked">
+      🔒 Your card is locked during the Day and the vote. It opens again at Dawn and Night.
+    </div>
+  );
+}
+
 function MyRoleButton({ view }: { view: ClientView }) {
   const me = view.me!;
   const [open, setOpen] = useState(false);
+  const phase = view.game?.phase;
+  // The phase moved on to the Day while the card was open: close it at once.
+  useEffect(() => {
+    if (phase && !SECRET_PHASES.has(phase)) setOpen(false);
+  }, [phase]);
   if (!me.roleId) return null;
   return (
     <>

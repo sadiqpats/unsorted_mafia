@@ -39,11 +39,10 @@ test('5 players: full match — Mafia kill, Detective result, refresh, open disc
   // Refresh mid-game: same seat, role and phase.
   await other.page.reload();
   await waitPhase(other.page, 'Day');
-  await other.page.getByRole('button', { name: /My role/ }).click();
-  await other.page.getByLabel(/Tap instead of hold/).check();
-  await other.page.getByRole('dialog').getByRole('button', { name: /reveal/i }).click();
-  await expect(other.page.getByRole('dialog').locator('.flip-back h3')).toHaveText('Villager');
-  await other.page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+  // Anti-cheat: in the Day the card is locked — nothing to show the table — and the Mafia chat is gone.
+  await expect(other.page.getByTestId('role-locked')).toBeVisible();
+  await expect(other.page.getByRole('button', { name: /My role/ })).toHaveCount(0);
+  await expect(mafia.page.getByTestId('mafia-chat-bar')).toHaveCount(0);
 
   // Day is an open discussion; the host opens the 60-second vote.
   await expect(det.page.getByTestId('discussion')).toBeVisible();
