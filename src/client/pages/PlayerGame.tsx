@@ -679,6 +679,61 @@ function freshNotes(view: ClientView) {
   return view.me!.privateResults.filter((r) => r.at > from);
 }
 
+/** Which night results this phone has already read in the Day (kept across reloads where the phone allows it). */
+const readMemory = new Map<string, number>();
+function useReadUpTo(code: string): [number, (at: number) => void] {
+  const key = `mafia-night:read:${code}`;
+  const [upTo, setUpTo] = useState<number>(() => {
+    try {
+      return Number(localStorage.getItem(key) ?? readMemory.get(key) ?? 0);
+    } catch {
+      return readMemory.get(key) ?? 0;
+    }
+  });
+  const mark = (at: number) => {
+    readMemory.set(key, at);
+    try {
+      localStorage.setItem(key, String(at));
+    } catch {
+      /* storage blocked: this visit only */
+    }
+    setUpTo(at);
+  };
+  return [upTo, mark];
+}
+
+/**
+ * Anti-cheat: in the Day and the vote a night result (e.g. the Detective's) opens ONCE. When it is
+ * hidden again (by the player, or by itself after 15 s) it locks until Dawn and Night.
+ */
+function OnceNote({ view }: { view: ClientView }) {
+  const notes = freshNotes(view);
+  const last = notes.reduce((m, n) => Math.max(m, n.at), 0);
+  const [upTo, markRead] = useReadUpTo(view.code);
+  const opened = useRef(false);
+  if (last <= upTo) {
+    return (
+      <div className="rounded-xl border border-line/70 bg-black/25 p-3 text-center text-sm text-mute" data-testid="note-locked">
+        🔒 Private message read. It opens again at Dawn and Night.
+      </div>
+    );
+  }
+  return (
+    <PrivacyShield
+      label="You have a private message — opens once"
+      onOpenChange={(o) => {
+        if (o) opened.current = true;
+        else if (opened.current) markRead(last);
+      }}
+    >
+      <div className="space-y-2 pt-11">
+        <PrivateNotes view={view} />
+        <p className="text-center text-xs text-mute">Read it now — once hidden, it stays locked until Dawn.</p>
+      </div>
+    </PrivacyShield>
+  );
+}
+
 function PrivateNotes({ view }: { view: ClientView }) {
   const notes = freshNotes(view);
   return (
@@ -892,13 +947,7 @@ function DiscussionPanel({ view }: { view: ClientView }) {
   return (
     <div className="space-y-3">
       <PhaseNews view={view} />
-      {view.me!.alive && freshNotes(view).length > 0 && (
-        <PrivacyShield label="You have a private message">
-          <div className="space-y-2 pt-11">
-            <PrivateNotes view={view} />
-          </div>
-        </PrivacyShield>
-      )}
+      {view.me!.alive && freshNotes(view).length > 0 && <OnceNote view={view} />}
       <div className="card p-5 text-center" data-testid="discussion">
         <div className="text-3xl" aria-hidden="true">
           🗣️
@@ -943,22 +992,16 @@ function VotingPanel({ view, send }: { view: ClientView; send: Send }) {
       <div className="space-y-3">
         {header}
         <div className="card p-5 text-center text-sm text-mute">{v?.reason ?? 'You cannot vote right now.'}</div>
-        {me.alive && freshNotes(view).length > 0 && (
-          <PrivacyShield label="You have a private message">
-            <div className="space-y-2 pt-11">
-              <PrivateNotes view={view} />
-            </div>
-          </PrivacyShield>
-        )}
+        {me.alive && freshNotes(view).length > 0 && <OnceNote view={view} />}
       </div>
     );
   }
   return (
     <div className="space-y-3">
       {header}
+      {me.alive && freshNotes(view).length > 0 && <OnceNote view={view} />}
       <PrivacyShield label={voted ? 'Review your vote' : 'Open your ballot'}>
         <div className="space-y-4 pt-11">
-          <PrivateNotes view={view} />
           <div className={`grid ${(v?.targets.length ?? 0) > 8 ? 'grid-cols-3 gap-2' : 'grid-cols-2 gap-3'}`} role="radiogroup" aria-label="Vote to eliminate">
             {v.targets.map((t) => (
               <PlayerChoice key={t} view={view} id={t} tone="crimson" selected={pick === t} disabled={busy || (voted && !canChange)} onPick={() => tapVote(t)} />

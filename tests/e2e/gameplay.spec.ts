@@ -35,6 +35,12 @@ test('5 players: full match — Mafia kill, Detective result, refresh, open disc
   await det.page.getByRole('button', { name: 'You have a private message' }).click();
   await expect(det.page.getByTestId('private-note')).toContainText(`${mafia.name} is SUSPICIOUS`);
   expect(await other.page.content()).not.toContain('SUSPICIOUS');
+  // It opens once: hidden again, it stays locked (even after a reload) until Dawn and Night.
+  await det.page.getByRole('button', { name: 'Hide' }).click();
+  await expect(det.page.getByTestId('note-locked')).toBeVisible();
+  await det.page.reload();
+  await expect(det.page.getByTestId('note-locked')).toBeVisible({ timeout: 15_000 });
+  expect(await det.page.content()).not.toContain('SUSPICIOUS');
 
   // Refresh mid-game: same seat, role and phase.
   await other.page.reload();
