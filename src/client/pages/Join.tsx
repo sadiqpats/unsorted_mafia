@@ -4,7 +4,7 @@ import { PhotoPicker } from '../components/PhotoPicker';
 import { Shell } from '../components/ui';
 import { uploadPhoto } from '../lib/photo';
 import { ApiError, api, type RoomInfo } from '../lib/api';
-import { loadSession, saveSession } from '../lib/session';
+import { loadSession, saveSession, sessionHash } from '../lib/session';
 
 export default function Join() {
   const params = useParams();
@@ -47,16 +47,19 @@ export default function Join() {
     try {
       if (rejoin) {
         const r = await api<{ token: string; playerId: string }>(`/api/rooms/${clean}/rejoin`, { rejoinCode: rejoinCode.trim() });
-        saveSession({ code: clean, token: r.token, kind: 'player', name: '' });
+        const s = { code: clean, token: r.token, kind: 'player' as const, name: '' };
+        if (!saveSession(s)) return nav(`/r/${clean}${sessionHash(s)}`);
       } else {
         if (!name.trim()) {
           setBusy(false);
           return setError('Enter a display name.');
         }
         const r = await api<{ token: string; playerId: string }>(`/api/rooms/${clean}/join`, { name: name.trim() });
-        saveSession({ code: clean, token: r.token, kind: 'player', name: name.trim() });
+        const s = { code: clean, token: r.token, kind: 'player' as const, name: name.trim() };
+        const kept = saveSession(s);
         // Photo is optional: if the upload fails, the player can retry from the lobby.
         if (photo) await uploadPhoto(clean, r.token, photo).catch(() => undefined);
+        if (!kept) return nav(`/r/${clean}${sessionHash(s)}`);
       }
       nav(`/r/${clean}`);
     } catch (err) {

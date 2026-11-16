@@ -31,7 +31,8 @@ import type { ClientView, HostPanel, MeView, PublicGame, PublicPlayer, PublicVie
 
 export type Viewer = { kind: 'public' } | { kind: 'player'; playerId: string } | { kind: 'host' };
 
-const FEED_LIMIT = 80;
+// Sent to every phone on each change: keep it to what the screens show (the last few announcements).
+const FEED_LIMIT = 30;
 /** Announcement kinds that belong in a phase's news card (not joins, phase chatter, etc.). */
 const NEWS_KINDS = new Set(['morning', 'prenight', 'verdict', 'gm', 'correction', 'pause']);
 

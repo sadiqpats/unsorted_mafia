@@ -64,7 +64,7 @@ export function useRoom(code: string, auth: { token?: string; display?: boolean 
       setEndedReason(e.reason);
       setStatus('ended');
     });
-    const unwatch = watchConnection(s, () => stopped);
+    const unwatch = watchConnection(s, () => stopped, (ok) => setStatus(ok && s.connected ? 'online' : 'offline'));
     // Free hosting (e.g. Render free) sleeps after ~15 min without HTTP requests, and WebSocket
     // traffic may not count. While a room is open, ping the server every 4 minutes to keep it awake.
     const keepAwake = setInterval(() => {

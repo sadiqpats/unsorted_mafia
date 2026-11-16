@@ -1053,7 +1053,7 @@ p { text-wrap: pretty; }
 @keyframes ns-moon { from { transform: translateY(0); } to { transform: translateY(6px); } }
 .ns-star { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: 0.25; animation: ns-twinkle 3.2s ease-in-out infinite; }
 @keyframes ns-twinkle { 0%, 100% { opacity: 0.2; transform: scale(0.8); } 50% { opacity: 0.95; transform: scale(1.25); } }
-.ns-cloud { position: absolute; height: 14px; border-radius: 999px; background: rgba(190, 200, 240, 0.1); filter: blur(3px); animation: ns-drift 38s linear infinite; }
+.ns-cloud { position: absolute; height: 14px; border-radius: 999px; background: radial-gradient(ellipse, rgba(190, 200, 240, 0.12), transparent 70%); animation: ns-drift 38s linear infinite; will-change: transform; }
 .ns-cloud-a { top: 26%; width: 120px; left: -130px; }
 .ns-cloud-b { top: 44%; width: 170px; left: -180px; animation-duration: 55s; animation-delay: -20s; }
 @keyframes ns-drift { to { transform: translateX(calc(100vw + 200px)); } }

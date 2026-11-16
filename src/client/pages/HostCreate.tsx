@@ -4,7 +4,7 @@ import { MAX_PLAYERS, MIN_PLAYERS } from '../../shared/settings';
 import { PlayerCountInput } from '../components/PlayerCountInput';
 import { Shell, Toggle } from '../components/ui';
 import { ApiError, api } from '../lib/api';
-import { saveSession } from '../lib/session';
+import { saveSession, sessionHash } from '../lib/session';
 
 export default function HostCreate() {
   const nav = useNavigate();
@@ -28,8 +28,8 @@ export default function HostCreate() {
     setBusy(true);
     try {
       const r = await api<{ code: string; token: string }>('/api/rooms', { hostName: name.trim(), playerCount: count, hostPlays, hostCode: hostCode.trim() });
-      saveSession({ code: r.code, token: r.token, kind: 'host', name: name.trim() });
-      nav(`/r/${r.code}`);
+      const s = { code: r.code, token: r.token, kind: 'host' as const, name: name.trim() };
+      nav(`/r/${r.code}${saveSession(s) ? '' : sessionHash(s)}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not create the room.');
       setBusy(false);
