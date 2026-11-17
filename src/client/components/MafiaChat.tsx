@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { Ack, CommandInput } from '../../shared/protocol';
 import type { ClientView } from '../../shared/view-types';
 import { serverUrl } from '../lib/server';
+import { Lock, X } from 'lucide-react';
 
 type Send = (cmd: CommandInput) => Promise<Ack>;
 
@@ -67,7 +68,7 @@ export function MafiaChat({ view, send }: { view: ClientView; send: Send }) {
   if (!open)
     return (
       <button type="button" className="mchat-bar" onClick={() => setOpen(true)} data-testid="mafia-chat-bar">
-        <span aria-hidden="true">🔒</span> Notes <span className="mchat-bar-hint">tap to open</span>
+        <Lock className="ic" aria-hidden /> Notes <span className="mchat-bar-hint">tap to open</span>
       </button>
     );
 
@@ -77,10 +78,10 @@ export function MafiaChat({ view, send }: { view: ClientView; send: Send }) {
     <div className="mchat" role="dialog" aria-label="Family chat" data-testid="mafia-chat">
       <div className="mchat-head">
         <span>
-          <span aria-hidden="true">🔒</span> Family chat
+          <Lock className="ic" aria-hidden /> Family chat
         </span>
         <button type="button" className="mchat-close" onClick={() => setOpen(false)} aria-label="Close the chat">
-          ✕
+          <X className="ic" aria-hidden />
         </button>
       </div>
       <div className="mchat-list" ref={list}>

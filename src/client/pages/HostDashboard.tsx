@@ -8,6 +8,7 @@ import { RoleArt } from '../components/RoleArt';
 import { Avatar } from '../components/Avatar';
 import { AlignmentBadge, Feed, Modal, PHASE_LABEL, PlayerRow, Progress, QR, Section, Timer, Toggle, useConfirm, useToast } from '../components/ui';
 import { GameOverPanel, PlayerGame, useAct, type GameProps } from './PlayerGame';
+import { Check, Pause, Play, SkipForward, Vote } from 'lucide-react';
 
 export function HostDashboard(props: GameProps) {
   const { view } = props;
@@ -86,7 +87,7 @@ function HostLobby({ view, send }: GameProps) {
                   key={p.id}
                   className="anim-slide-in"
                   p={p}
-                  sub={<span>{p.ready ? '✓ Ready' : 'Not ready'}</span>}
+                  sub={<span>{p.ready ? <><Check className="ic" aria-hidden /> Ready</> : 'Not ready'}</span>}
                   right={
                     !p.isHost && (
                       <div className="flex gap-1">
@@ -487,10 +488,10 @@ function HostGame({ view, send, serverNow }: GameProps) {
               </>
             )}
             <button className="btn btn-ghost !min-h-11 flex-1 text-sm md:flex-none" disabled={busy} onClick={() => act({ type: g.paused ? 'resume' : 'pause' })}>
-              {g.paused ? '▶ Resume' : '⏸ Pause'}
+              {g.paused ? <><Play className="ic" aria-hidden /> Resume</> : <><Pause className="ic" aria-hidden /> Pause</>}
             </button>
             <button className="btn btn-gold !min-h-11 basis-full text-base md:basis-auto md:px-6" disabled={busy || !!g.pendingTie || (g.phase === 'voting' && !!view.settings.offlineVoting)} onClick={() => act({ type: 'advance', phaseSeq: g.phaseSeq })}>
-              {g.phase === 'discussion' ? '🗳️ Start voting' : 'Next phase ⏭'}
+              {g.phase === 'discussion' ? <><Vote className="ic" aria-hidden /> Start voting</> : <>Next phase <SkipForward className="ic" aria-hidden /></>}
             </button>
           </div>
         )}

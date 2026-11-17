@@ -24,11 +24,11 @@ test('Mafia hit: a quick second tap and a tap during a pause both still count', 
   // Night 2: the host pauses; the Mafia taps C (refused while paused) — on resume it is sent.
   await advanceTo(t, 'Night');
   await m.page.getByRole('button', { name: /Open your night panel/ }).click();
-  await t.host.getByRole('button', { name: '⏸ Pause' }).click();
-  await expect(t.host.getByRole('button', { name: '▶ Resume' })).toBeVisible();
+  await t.host.getByRole('button', { name: 'Pause' }).click();
+  await expect(t.host.getByRole('button', { name: 'Resume' })).toBeVisible();
   await tile(c.name).click();
   await m.page.waitForTimeout(800);
-  await t.host.getByRole('button', { name: '▶ Resume' }).click();
+  await t.host.getByRole('button', { name: 'Resume' }).click();
   await expect(m.page.getByText('Locked in. Put your phone face down.')).toBeVisible({ timeout: 10_000 });
   await skipRest(t, new Set([m.name]));
   await expect(t.host.getByTestId('host-phase')).toHaveText('Day', { timeout: 60_000 });

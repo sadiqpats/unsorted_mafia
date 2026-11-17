@@ -9,6 +9,7 @@ import type { ConnStatus } from '../lib/useRoom';
 import { useFx, usePrefs } from '../lib/prefs';
 import { sounds } from '../lib/sound';
 import { Avatar } from './Avatar';
+import { ArrowLeft, House, Pause, Volume2, VolumeX } from 'lucide-react';
 
 // ------------------------------------------------------------------ brand
 
@@ -42,7 +43,7 @@ export function BrandMark({ compact = false, label = 'MAFIA NIGHT', to = '/mafia
 export function MainMenuLink({ className = '' }: { className?: string }) {
   return (
     <Link to="/" className={`main-menu-link focus-ring ${className}`}>
-      <span aria-hidden="true">←</span> Main menu · all games
+      <ArrowLeft className="ic" aria-hidden /> Main menu · all games
     </Link>
   );
 }
@@ -141,7 +142,7 @@ export function Timer({ endsAt, opensAt = null, serverNow, pausedMs, large = fal
       </span>
     );
   }
-  if (left === null) return pausedMs !== null ? <span className={`chip text-gold ${large ? '!text-2xl' : ''}`}>⏸ Paused</span> : null;
+  if (left === null) return pausedMs !== null ? <span className={`chip text-gold ${large ? '!text-2xl' : ''}`}><Pause className="ic" aria-hidden /> Paused</span> : null;
   const urgent = left < 10_000 && pausedMs === null;
   if (large) {
     // The TV clock: big enough to read across the room; in the last 10 seconds it swells, turns red
@@ -149,7 +150,7 @@ export function Timer({ endsAt, opensAt = null, serverNow, pausedMs, large = fal
     return (
       <span role="timer" aria-label={`${Math.ceil(left / 1000)} seconds left`} className={`tv-timer ${urgent ? 'is-urgent' : ''}`} data-testid="tv-timer">
         <span key={urgent ? secs ?? 0 : 'calm'} className={`tv-timer-num font-[family-name:var(--font-display)] tabular-nums ${urgent ? 'tv-timer-beat' : ''}`}>
-          {pausedMs !== null && '⏸ '}
+          {pausedMs !== null && <Pause className="ic" aria-hidden />}
           {fmt(left)}
         </span>
       </span>
@@ -161,7 +162,7 @@ export function Timer({ endsAt, opensAt = null, serverNow, pausedMs, large = fal
       aria-label={`${Math.ceil(left / 1000)} seconds left`}
       className={`inline-block font-[family-name:var(--font-display)] tabular-nums ${large ? 'text-6xl md:text-8xl' : 'text-lg'} ${urgent ? 'timer-urgent text-ember' : 'text-bone'}`}
     >
-      {pausedMs !== null && '⏸ '}
+      {pausedMs !== null && <Pause className="ic" aria-hidden />}
       {fmt(left)}
     </span>
   );
@@ -265,7 +266,7 @@ export function HomeMenu({ game }: { game: 'mafia' | 'charades' }) {
   return (
     <div className="relative" ref={ref}>
       <button className="btn btn-ghost !min-h-10 !px-3 !py-1.5 text-sm" aria-expanded={open} aria-haspopup="menu" aria-label="Home menu" onClick={() => setOpen((o) => !o)}>
-        <span aria-hidden="true">🏠</span>
+        <House className="ic" aria-hidden />
         <span className="sr-only sm:not-sr-only">Home</span>
       </button>
       {open && (
@@ -289,7 +290,7 @@ export function PrefsMenu() {
   return (
     <div className="relative">
       <button className="btn btn-ghost !min-h-10 !px-3 !py-1.5 text-sm" aria-expanded={open} aria-label="Display and sound settings" onClick={() => setOpen((o) => !o)}>
-        <span aria-hidden="true">{prefs.muted ? '🔇' : '🔊'}</span>
+        {prefs.muted ? <VolumeX className="ic" aria-hidden /> : <Volume2 className="ic" aria-hidden />}
         <span className="sr-only sm:not-sr-only">Settings</span>
       </button>
       {open && (
@@ -356,8 +357,8 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[80] grid place-items-center bg-black/75 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div ref={ref} role="dialog" aria-modal="true" aria-label={title} className="card anim-fade-up w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-scrim fixed inset-0 z-[80] grid place-items-center bg-black/75 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div ref={ref} role="dialog" aria-modal="true" aria-label={title} className="modal-card card w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
         <h2 className="mb-3 font-[family-name:var(--font-display)] text-lg text-gold">{title}</h2>
         {children}
       </div>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { canUseLiveCamera, drawSquare, fileToPhoto } from '../lib/photo';
 import { Avatar } from './Avatar';
 import { Modal } from './ui';
+import { Camera } from 'lucide-react';
 
 /**
  * Optional player photo: take a selfie (live camera when available, otherwise the
@@ -32,7 +33,7 @@ export function PhotoPicker({ name, value, onChange, busy = false }: { name: str
         <Avatar name={name || '?'} photo={value} size={84} />
         <div className="flex flex-1 flex-wrap gap-2">
           <button type="button" className="btn btn-ghost !min-h-11 flex-1 text-sm" disabled={busy} onClick={takeSelfie}>
-            📷 Take a selfie
+            <Camera className="ic" aria-hidden /> Take a selfie
           </button>
           <button type="button" className="btn btn-ghost !min-h-11 flex-1 text-sm" disabled={busy} onClick={() => galleryInput.current?.click()}>
             🖼 Choose photo

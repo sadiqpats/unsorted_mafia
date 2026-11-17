@@ -12,6 +12,7 @@ import { useRoom } from '../lib/useRoom';
 import { loadSession } from '../lib/session';
 import type { CommandInput } from '../../shared/protocol';
 import { revealPlan } from '../lib/reveal';
+import { Pause, Play, SkipForward, Volume2, Vote } from 'lucide-react';
 
 /** TV / projector view. Connects as a read-only "display" and receives only public data. */
 export default function Display() {
@@ -53,7 +54,7 @@ export default function Display() {
             setSoundOn(true);
           }}
         >
-          🔊 Tap to enable sound
+          <Volume2 className="ic" aria-hidden /> Tap to enable sound
         </button>
       )}
       <div className={`mx-auto flex w-full shrink-0 items-center justify-between ${g && view.status !== 'lobby' ? 'max-w-[1800px]' : 'max-w-7xl'}`}>
@@ -297,10 +298,10 @@ function TvControls({ view, send }: { view: NonNullable<ReturnType<typeof useRoo
   return (
     <div className="flex flex-col gap-1.5" data-testid="tv-controls">
       <button className="btn btn-gold !min-h-10 !px-4 !py-1.5 text-sm" disabled={busy || !!g.pendingTie || (g.phase === 'voting' && !!view.settings.offlineVoting)} onClick={() => run({ type: 'advance', phaseSeq: g.phaseSeq })}>
-        {g.phase === 'discussion' ? '🗳️ Start voting' : 'Next phase ⏭'}
+        {g.phase === 'discussion' ? <><Vote className="ic" aria-hidden /> Start voting</> : <>Next phase <SkipForward className="ic" aria-hidden /></>}
       </button>
       <button className="btn btn-ghost !min-h-10 !px-4 !py-1.5 text-sm" disabled={busy} onClick={() => run({ type: g.paused ? 'resume' : 'pause' })}>
-        {g.paused ? '▶ Resume' : '⏸ Pause timer'}
+        {g.paused ? <><Play className="ic" aria-hidden /> Resume</> : <><Pause className="ic" aria-hidden /> Pause timer</>}
       </button>
     </div>
   );

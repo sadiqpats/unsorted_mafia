@@ -18,6 +18,7 @@ import { finale } from '../lib/finale';
 import { uploadPhoto } from '../lib/photo';
 import { loadSession } from '../lib/session';
 import { AlignmentBadge, Feed, LOGO, Modal, PHASE_LABEL, Progress, Section, Timer, useCountdown, useToast, winHeadline, Confetti } from '../components/ui';
+import { Check, Lock } from 'lucide-react';
 
 type Send = (c: CommandInput) => Promise<Ack>;
 
@@ -390,7 +391,7 @@ function PlayersList({ view, lobby = false }: { view: ClientView; lobby?: boolea
             <span className="flex flex-wrap justify-center gap-x-1.5 text-[0.7rem] leading-4 text-mute">
               <span className="sr-only">{p.connected ? 'connected' : 'disconnected'}</span>
               {me && <span className="font-semibold text-gold">You</span>}
-              {lobby && <span>{p.ready ? '✓ Ready' : 'Not ready'}</span>}
+              {lobby && <span>{p.ready ? <><Check className="ic" aria-hidden /> Ready</> : 'Not ready'}</span>}
               {!p.alive && <span>☠ {p.deathCause === 'vote' ? 'Voted out' : p.deathCause === 'host' ? 'Removed' : 'Killed at night'}</span>}
               {p.silenced && <span className="text-gold">🤐 Silenced today</span>}
               {role && <span className={p.revealedRoleId ? '' : 'text-gold'}>{role}</span>}
@@ -498,7 +499,7 @@ function GodfatherKnows({ view }: { view: ClientView }) {
 function RoleLocked() {
   return (
     <div className="flex items-center justify-center gap-2 rounded-xl border border-line/70 bg-black/25 p-3 text-center text-sm text-mute" data-testid="role-locked">
-      🔒 Your card is locked during the Day and the vote. It opens again at Dawn and Night.
+      <Lock className="ic" aria-hidden /> Your card is locked during the Day and the vote. It opens again at Dawn and Night.
     </div>
   );
 }
@@ -714,7 +715,7 @@ function OnceNote({ view }: { view: ClientView }) {
   if (last <= upTo) {
     return (
       <div className="rounded-xl border border-line/70 bg-black/25 p-3 text-center text-sm text-mute" data-testid="note-locked">
-        🔒 Private message read. It opens again at Dawn and Night.
+        <Lock className="ic" aria-hidden /> Private message read. It opens again at Dawn and Night.
       </div>
     );
   }

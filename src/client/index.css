@@ -1096,3 +1096,15 @@ p { text-wrap: pretty; }
 .moments-phone .mafia-count-label { font-size: 0.72rem; letter-spacing: 0.1em; text-align: center; }
 .moments-phone .mafia-count-num { font-size: 4.6rem; }
 .moments-phone .mafia-count-sub { font-size: 0.85rem; text-align: center; }
+
+/* Lucide control icons: sized to the text, sitting on its baseline. */
+.ic { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: -0.16em; stroke-width: 2.25; flex-shrink: 0; }
+.btn .ic, .chip .ic { margin-inline: 0.05em; }
+/* A soft press on choices (CSS, so nothing moves while a choice is being aimed at). */
+.choice-tile:active:not(:disabled) { transform: scale(0.97); transition-duration: 0.06s; }
+/* Pop-ups: the backdrop fades in and the card springs up (pure CSS, no extra download). */
+.modal-scrim { animation: modal-scrim 0.16s ease-out both; }
+.modal-card { animation: modal-card 0.34s cubic-bezier(0.2, 1.25, 0.35, 1) both; }
+@keyframes modal-scrim { from { opacity: 0; } }
+@keyframes modal-card { from { opacity: 0; transform: translateY(18px) scale(0.96); } }
+@media (prefers-reduced-motion: reduce) { .modal-scrim, .modal-card { animation: none; } }
