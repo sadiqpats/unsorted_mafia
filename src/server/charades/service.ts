@@ -2,7 +2,7 @@ import * as E from '../../shared/charades/engine';
 import { CharadesError, type Ctx } from '../../shared/charades/engine';
 import { MAX_WORDS, MIN_YEAR, normalizeTitle, wordCount } from '../../shared/charades/movie';
 import { CCaptainCommandSchema, CHostCommandSchema, type Card, type CRoom, type TeamIdx } from '../../shared/charades/types';
-import { hashToken, newToken, randomCode, safeEqualHex } from '../security';
+import { hashToken, newToken, safeEqualHex, wordCode } from '../security';
 import type { Store } from '../store';
 import { MOVIE_BY_TITLE, MOVIES } from './movies';
 import type { CViewer } from './views';
@@ -67,8 +67,7 @@ export class CharadesService {
 
   // ---------------------------------------------------------------- sessions
   create(hostName: string) {
-    let code = randomCode(5);
-    while (this.rooms.has(code)) code = randomCode(5);
+    const code = wordCode((c) => this.rooms.has(c));
     const token = newToken();
     const room = E.createCRoom({ code, hostName: hostName.trim(), hostTokenHash: hashToken(token), now: this.now() });
     this.rooms.set(code, room);

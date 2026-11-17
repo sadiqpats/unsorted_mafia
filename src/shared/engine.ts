@@ -9,6 +9,7 @@
  */
 import { ABILITIES, BOLLYWOOD, ROLES, ROLE_ORDER, isKiller, isMafiaTeam, roleAlignment, roleTitle, themeText, type AbilityDef } from './roles';
 import { analyzeDistribution, suggestDistribution } from './distribution';
+import { groupsThisDay, makeGroups } from './groups';
 import { MAX_PLAYERS, defaultSettings, fillTemplate, mergeSettings, type Settings, type SettingsPatch } from './settings';
 import type { EventTag, Game, LogEntry, MorningReport, NightAction, Phase, Player, Room, Verdict, WinResult } from './types';
 
@@ -372,8 +373,8 @@ export function startGame(room: Room, now: number, rng: Rng, opts: { force?: boo
 // ---------------------------------------------------------------- phases
 
 /**
- * The clock: Dawn, Night, the Day's discussion and the vote are timed (defaults 30 s, 30 s,
- * 4 min, 30 s). "No timer for discussion" leaves the discussion open-ended (the host starts the
+ * The clock: Dawn, Night, the Day's discussion and the vote are timed (defaults 20 s, 20 s,
+ * 3 min, 30 s). "No timer for discussion" leaves the discussion open-ended (the host starts the
  * vote); "No timers at all" turns every clock off (a phase ends when everyone has acted, or when
  * the host moves on). Role reveal always ends when everyone has looked.
  */
@@ -385,7 +386,7 @@ function phaseDuration(s: Settings, phase: Phase): number | null {
     case 'night':
       return s.nightSeconds;
     case 'discussion':
-      return s.discussionTimer === false ? null : (s.daySeconds ?? 240);
+      return s.discussionTimer === false ? null : (s.daySeconds ?? 180);
     case 'voting':
       return s.voteSeconds ?? 30;
     default:
@@ -463,7 +464,7 @@ function startNight(room: Room, now: number) {
  * Day = the news + an open-ended discussion (no clock). The host starts the vote, which is
  * timed. A runoff goes straight to a new vote.
  */
-function startDay(room: Room, now: number, runoff: string[] | null) {
+function startDay(room: Room, now: number, runoff: string[] | null, rng?: Rng) {
   const g = room.game!;
   g.day = { votes: {}, runoff, runoffUsed: runoff ? true : false };
   if (runoff) {
@@ -474,10 +475,40 @@ function startDay(room: Room, now: number, runoff: string[] | null) {
   enterPhase(room, 'discussion', now);
   // Phase changes are shown on screen; they don't clutter the public announcements.
   addLog(room, now, 'phase', `Day ${g.round} began: discussion.`, 'host');
+  g.groups = null;
+  g.heldClockMs = null;
+  if (rng && groupsThisDay(g.settings, g.round)) {
+    const alive = room.players.filter((p) => p.alive && p.roleId).sort(bySeat);
+    const list = makeGroups(alive, g.settings, (g.groupMet ??= {}), rng);
+    if (list) {
+      g.groups = { round: g.round, list, started: false };
+      // Everyone walks to their group first: the clock waits for the host.
+      if (g.phaseEndsAt !== null) {
+        g.heldClockMs = g.phaseEndsAt - now;
+        g.phaseEndsAt = null;
+      }
+      addLog(room, now, 'phase', `Group discussion: ${list.length} groups.`, 'host');
+    }
+  }
+}
+
+/** Group discussion: everyone is at their group, the host starts the talking (and the discussion clock). */
+export function startGroupTalk(room: Room, now: number) {
+  const g = requireGame(room);
+  const groups = g.phase === 'discussion' ? g.groups : null;
+  if (!groups) return fail('wrong_phase', 'There is no group discussion to start.');
+  if (g.pausedRemainingMs !== null) fail('paused', 'Resume the game first.');
+  if (groups.started) return;
+  groups.started = true;
+  if (g.heldClockMs != null) g.phaseEndsAt = now + g.heldClockMs;
+  g.heldClockMs = null;
+  addLog(room, now, 'phase', 'The group discussion started.', 'host');
 }
 
 function startVoting(room: Room, now: number) {
   const g = room.game!;
+  g.groups = null;
+  g.heldClockMs = null;
   g.day = { votes: {}, runoff: null, runoffUsed: false };
   enterPhase(room, 'voting', now);
   addLog(room, now, 'phase', `Voting began (round ${g.round}).`, 'host');
@@ -495,7 +526,7 @@ export function advancePhase(room: Room, now: number, rng: Rng, by: 'timer' | 'h
     case 'night':
       return resolveNight(room, now, rng);
     case 'morning':
-      return startDay(room, now, null);
+      return startDay(room, now, null, rng);
     case 'discussion':
       return startVoting(room, now);
     case 'voting':
@@ -987,6 +1018,7 @@ export const NIGHT_RESOLVERS: Record<string, Resolver> = {
     addPrivate(room, rng, now, actor.id, 'investigation', text);
     useCharge(room, actor, 'investigate');
     room.game!.stats.investigations++;
+    if (isMafiaTeam(t.roleId, s)) (room.game!.stats.mafiaFound ??= {})[actor.id] = (room.game!.stats.mafiaFound[actor.id] ?? 0) + 1;
     addLog(room, now, 'night', `${actor.name} investigated ${t.name} → ${seenAs}.`, 'host');
   },
   v_hunch(room, _ctx, a, now, rng) {
@@ -1198,7 +1230,7 @@ export function resolveNight(room: Room, now: number, rng: Rng) {
 
   const win = settle(room, now);
   if (win) return endGame(room, win, now);
-  startDay(room, now, null);
+  startDay(room, now, null, rng);
 }
 
 /**
@@ -1560,7 +1592,8 @@ export function resumeGame(room: Room, now: number) {
 export function extendTimer(room: Room, seconds: number, now: number) {
   const g = requireGame(room);
   if (!Number.isFinite(seconds) || seconds < -600 || seconds > 1800) fail('bad_request', 'Invalid amount.');
-  if (g.pausedRemainingMs !== null && g.pausedRemainingMs >= 0) g.pausedRemainingMs = Math.max(0, g.pausedRemainingMs + seconds * 1000);
+  if (g.heldClockMs != null) g.heldClockMs = Math.max(30_000, g.heldClockMs + seconds * 1000);
+  else if (g.pausedRemainingMs !== null && g.pausedRemainingMs >= 0) g.pausedRemainingMs = Math.max(0, g.pausedRemainingMs + seconds * 1000);
   else if (g.phaseEndsAt !== null) {
     // During the opening break, keep a few seconds to act: "-30s" must not close the phase before it opens.
     const floor = g.phaseOpensAt && g.phaseOpensAt > now ? g.phaseOpensAt + 5000 : now;

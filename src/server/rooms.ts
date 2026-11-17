@@ -2,9 +2,13 @@ import * as E from '../shared/engine';
 import { GameError, type Rng } from '../shared/engine';
 import { HOST_COMMANDS, HostCommandSchema, PLAYER_COMMANDS, PlayerCommandSchema, type Ack } from '../shared/protocol';
 import type { Room } from '../shared/types';
-import { hashToken, newToken, randomCode, safeEqualHex } from './security';
+import { normalizeCode } from '../shared/codewords';
+import { hashToken, newToken, safeEqualHex, wordCode } from './security';
 import type { Store } from './store';
 import type { Viewer } from './views';
+
+/** Wrong rejoin codes allowed in one room before all open codes are cancelled. */
+const REJOIN_TRIES = 5;
 
 export interface Identity {
   viewer: Viewer;
@@ -33,6 +37,8 @@ export class RoomService {
   rooms = new Map<string, Room>();
   /** roomCode -> playerId -> live socket count */
   private presence = new Map<string, Map<string, number>>();
+  /** Wrong rejoin codes per room since the last good one (see rejoin). */
+  private rejoinMisses = new Map<string, number>();
   private now: () => number;
 
   constructor(private opts: RoomServiceOptions) {
@@ -76,8 +82,7 @@ export class RoomService {
 
   // ------------------------------------------------------------ sessions
   createRoom(input: { hostName: string; hostPlays?: boolean; playerCount?: number }) {
-    let code = randomCode(5);
-    while (this.rooms.has(code)) code = randomCode(5);
+    const code = wordCode((c) => this.rooms.has(c));
     const token = newToken();
     const room = E.createRoom({
       code,
@@ -103,9 +108,25 @@ export class RoomService {
   /** A host-issued one-time code moves a seat to a new device and logs the old one out. */
   rejoin(code: string, rejoinCode: string) {
     const room = this.requireRoom(code);
-    const h = hashToken(rejoinCode.trim().toUpperCase());
+    const h = hashToken(normalizeCode(rejoinCode));
     const p = room.players.find((x) => x.rejoinCodeHash && safeEqualHex(x.rejoinCodeHash, h));
-    if (!p) throw new GameError('bad_code', 'That rejoin code is not valid. Ask the host for a new one.');
+    if (!p) {
+      // Rejoin codes are short words, so stop guessing: after a few wrong tries in a room, every open code is cancelled.
+      const misses = (this.rejoinMisses.get(room.code) ?? 0) + 1;
+      if (misses >= REJOIN_TRIES) {
+        this.rejoinMisses.delete(room.code);
+        const open = room.players.filter((x) => x.rejoinCodeHash);
+        if (open.length) {
+          for (const x of open) x.rejoinCodeHash = null;
+          E.addLog(room, this.now(), 'host', 'Too many wrong rejoin codes: open codes were cancelled. Issue a new one.', 'host');
+          this.commit(room, 'host', 'rejoin_lockout', false);
+        }
+        throw new GameError('bad_code', 'Too many wrong codes. Ask the host for a new rejoin code.');
+      }
+      this.rejoinMisses.set(room.code, misses);
+      throw new GameError('bad_code', 'That rejoin code is not valid. Ask the host for a new one.');
+    }
+    this.rejoinMisses.delete(room.code);
     const token = newToken();
     p.tokenHash = hashToken(token);
     p.rejoinCodeHash = null;
@@ -243,6 +264,9 @@ export class RoomService {
         case 'resume':
           E.resumeGame(room, now);
           break;
+        case 'start_groups':
+          E.startGroupTalk(room, now);
+          break;
         case 'extend':
           E.extendTimer(room, cmd.seconds, now);
           break;
@@ -284,8 +308,9 @@ export class RoomService {
         case 'issue_rejoin': {
           const p = E.getPlayer(room, cmd.playerId);
           if (p.isHost) throw new GameError('forbidden', 'The host’s seat moves with the host’s own link.');
-          const rejoinCode = randomCode(6);
+          const rejoinCode = wordCode((w) => room.players.some((x) => x.rejoinCodeHash === hashToken(w)));
           p.rejoinCodeHash = hashToken(rejoinCode);
+          this.rejoinMisses.delete(room.code);
           E.addLog(room, now, 'host', `Rejoin code issued for ${p.name}.`, 'host');
           data = { rejoinCode };
           break;

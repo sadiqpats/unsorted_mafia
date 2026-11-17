@@ -236,7 +236,7 @@ export default function Guide() {
           <h3 className="mb-2 mt-6 text-center text-sm font-semibold text-gold">📱 Everyone else</h3>
           <ol className="grid gap-3 sm:grid-cols-3">
             <StepCard n={1} scene="scan" title="Scan to join">
-              Scan the QR or type the 5-letter room code on <b>Join a Game</b>.
+              Scan the QR or type the room code word (like CUP) on <b>Join a Game</b>.
             </StepCard>
             <StepCard n={2} scene="selfie" title="Name + selfie">
               A name the table knows. Photo is optional and goes on the TV.

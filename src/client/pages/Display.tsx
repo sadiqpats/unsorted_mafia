@@ -6,13 +6,14 @@ import { ROLES, roleAlignment, roleTitle } from '../../shared/roles';
 import { MomentsOverlay, useMoments } from '../components/Moments';
 import { FinaleShow, useFinaleElapsed } from '../components/FinaleShow';
 import { Avatar } from '../components/Avatar';
+import { GroupsBoard, groupsLine } from '../components/Groups';
 import type { PublicPlayer } from '../../shared/view-types';
 import { ConnectionBadge, Feed, LOGO, PHASE_LABEL, Progress, QR, Timer, useTitle } from '../components/ui';
 import { useRoom } from '../lib/useRoom';
 import { loadSession } from '../lib/session';
 import type { CommandInput } from '../../shared/protocol';
 import { revealPlan } from '../lib/reveal';
-import { Pause, Play, SkipForward, Volume2, Vote } from 'lucide-react';
+import { Pause, Play, SkipForward, Users, Volume2, Vote } from 'lucide-react';
 
 /** TV / projector view. Connects as a read-only "display" and receives only public data. */
 export default function Display() {
@@ -230,7 +231,7 @@ function TvGame({ view, serverNow, send }: { view: NonNullable<ReturnType<typeof
   const g = view.game!;
   const alive = view.players.filter((p) => p.alive).length;
   const roundFeed = view.feed.filter((e) => e.round === g.round && e.visibility !== 'host');
-  const tagline = g.phase === 'discussion' ? (g.phaseEndsAt !== null || (g.pausedRemainingMs ?? -1) >= 0 ? 'Discuss. Accuse. Defend. The vote opens when the clock runs out.' : 'Discuss. Accuse. Defend. The host opens the vote.') : g.phase === 'voting' && view.settings.offlineVoting ? 'Hands up! Vote out loud — the host records the result.' : (TAGLINE[g.phase] ?? '');
+  const tagline = g.groups ? groupsLine(g.groups) : g.phase === 'discussion' ? (g.phaseEndsAt !== null || (g.pausedRemainingMs ?? -1) >= 0 ? 'Discuss. Accuse. Defend. The vote opens when the clock runs out.' : 'Discuss. Accuse. Defend. The host opens the vote.') : g.phase === 'voting' && view.settings.offlineVoting ? 'Hands up! Vote out loud — the host records the result.' : (TAGLINE[g.phase] ?? '');
   return (
     <div className="mx-auto mt-[1.5vh] flex w-full max-w-[1900px] min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2">
@@ -265,7 +266,7 @@ function TvGame({ view, serverNow, send }: { view: NonNullable<ReturnType<typeof
       </div>
       {/* The faces get the whole width; this round's news is a slim strip along the bottom. */}
       <div className="mt-[1.5vh] flex min-h-0 flex-1 flex-col">
-        <FitBox>{(box) => <PhotoWall players={view.players} settings={view.settings} box={box} />}</FitBox>
+        {g.groups ? <div className="min-h-0 flex-1 overflow-hidden"><GroupsBoard view={view} size="tv" /></div> : <FitBox>{(box) => <PhotoWall players={view.players} settings={view.settings} box={box} />}</FitBox>}
         <aside className="tv-strip" data-testid="tv-news" aria-label={`Round ${g.round} announcements`}>
           <span className="eyebrow shrink-0 !text-[0.65rem]">Round {g.round}</span>
           {roundFeed.length ? (
@@ -297,6 +298,11 @@ function TvControls({ view, send }: { view: NonNullable<ReturnType<typeof useRoo
   };
   return (
     <div className="flex flex-col gap-1.5" data-testid="tv-controls">
+      {g.groups && !g.groups.started && (
+        <button className="btn btn-gold !min-h-10 !px-4 !py-1.5 text-sm" disabled={busy || g.paused} onClick={() => run({ type: 'start_groups' })}>
+          <Users className="ic" aria-hidden /> Start group talk
+        </button>
+      )}
       <button className="btn btn-gold !min-h-10 !px-4 !py-1.5 text-sm" disabled={busy || !!g.pendingTie || (g.phase === 'voting' && !!view.settings.offlineVoting)} onClick={() => run({ type: 'advance', phaseSeq: g.phaseSeq })}>
         {g.phase === 'discussion' ? <><Vote className="ic" aria-hidden /> Start voting</> : <>Next phase <SkipForward className="ic" aria-hidden /></>}
       </button>

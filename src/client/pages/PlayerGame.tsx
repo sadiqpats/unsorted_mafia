@@ -14,6 +14,7 @@ import { RoleArt } from '../components/RoleArt';
 import { PhoneMoments } from '../components/Moments';
 import { FinaleShow, finaleRoleLabel, useFinaleShow } from '../components/FinaleShow';
 import { MafiaChat } from '../components/MafiaChat';
+import { MyGroup } from '../components/Groups';
 import { finale } from '../lib/finale';
 import { uploadPhoto } from '../lib/photo';
 import { loadSession } from '../lib/session';
@@ -947,6 +948,7 @@ function MafiaVotes({ view }: { view: ClientView }) {
 function DiscussionPanel({ view }: { view: ClientView }) {
   return (
     <div className="space-y-3">
+      {view.game!.groups && <MyGroup view={view} />}
       <PhaseNews view={view} />
       {view.me!.alive && freshNotes(view).length > 0 && <OnceNote view={view} />}
       <div className="card p-5 text-center" data-testid="discussion">
@@ -1245,7 +1247,7 @@ function discussionLine(view: ClientView): string {
   if (s.timers === false) return 'Take your time. The host opens the vote when the table is ready.';
   const vote = fmtDuration(s.voteSeconds ?? 30);
   if (s.discussionTimer === false) return `Take your time. The host opens the vote when the table is ready — then you have ${vote}.`;
-  return `You have ${fmtDuration(s.daySeconds ?? 240)} to talk. The vote opens when the clock runs out (or when the host starts it) — then you have ${vote}.`;
+  return `You have ${fmtDuration(s.daySeconds ?? 180)} to talk. The vote opens when the clock runs out (or when the host starts it) — then you have ${vote}.`;
 }
 
 /** 60 → "1 minute", 90 → "90 seconds", 600 → "10 minutes", 210 → "3½ minutes". */

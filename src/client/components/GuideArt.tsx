@@ -85,8 +85,8 @@ const SCENES: Record<string, ReactElement> = {
     <>
       <rect x="20" y="16" width="62" height="40" rx="3" />
       <path d="M14 60h74l-5 5H19z" />
-      <text x="51" y="41" textAnchor="middle" fill={G} stroke="none" fontSize="11" fontFamily="Cinzel, serif" letterSpacing="2">
-        ABCDE
+      <text x="51" y="41" textAnchor="middle" fill={G} stroke="none" fontSize="11" fontFamily="Cinzel, serif" letterSpacing="3">
+        CUP
       </text>
       <g className="ga-float">
         <circle cx="96" cy="26" r="7" />

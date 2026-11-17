@@ -105,6 +105,7 @@ export function buildPublic(room: Room, connected: Set<string>, now: number): Pu
       lastVerdict: verdict,
       mafiaLeft: g.mafiaLeft ?? null,
       lastDawn: g.lastDawn ?? null,
+      groups: g.phase === 'discussion' && g.groups ? { list: g.groups.list, started: g.groups.started, heldMs: g.heldClockMs ?? null } : null,
       winner: g.winner,
       endedAt: g.endedAt,
       stats: over ? g.stats : null,

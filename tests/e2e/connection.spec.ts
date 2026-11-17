@@ -38,7 +38,7 @@ test('Screen Wake Lock is requested in a game room and released when leaving', a
   await host.getByLabel('Host code').fill('e2e-host-code');
   await host.getByLabel('Your name').fill('Judge');
   await host.getByRole('button', { name: 'Open the room' }).click();
-  await host.waitForURL(/\/c\/[A-Z0-9]{5}$/);
+  await host.waitForURL(/\/c\/[A-Z0-9]{3,5}$/);
   await expect.poll(() => host.evaluate(() => (window as any).__wake.requested)).toBeGreaterThan(0);
   // Leaving the room lets the screen sleep again.
   await host.getByRole('button', { name: 'Home menu' }).click();

@@ -149,9 +149,9 @@ export function FinaleShow({ view, variant, elapsed, persist = false }: { view: 
         </header>
       )}
       {persist && g.awards?.length > 0 && (
-        <ul className="fs-awards" style={{ ['--at' as string]: at(fin.end + 0.8) }} data-testid="tv-awards">
-          {g.awards.map((a) => (
-            <li key={a.key}>
+        <ul className="fs-awards" data-testid="tv-awards">
+          {g.awards.map((a, i) => (
+            <li key={a.key} style={{ ['--at' as string]: at(fin.end + 0.8 + i * 0.9) }}>
               <span>
                 {a.emoji} {a.title}
               </span>

@@ -12,7 +12,7 @@ async function table(browser: Browser, setup?: (host: Page) => Promise<void>) {
   await host.getByLabel('Host code').fill('e2e-host-code');
   await host.getByLabel('Your name').fill('Judge');
   await host.getByRole('button', { name: 'Open the room' }).click();
-  await host.waitForURL(/\/c\/[A-Z0-9]{5}$/);
+  await host.waitForURL(/\/c\/[A-Z0-9]{3,5}$/);
   const code = host.url().split('/').pop()!;
   await expect(host.getByText('Invite the captains')).toBeVisible();
   await expect(host.getByTestId('tv-link')).toContainText(`/ctv/${code}`);
@@ -218,7 +218,7 @@ test('Dumb Charades: the host can play too — captain of a team on the same pho
   await host.getByLabel('Host code').fill('e2e-host-code');
   await host.getByLabel('Your name').fill('Sadiq');
   await host.getByRole('button', { name: 'Open the room' }).click();
-  await host.waitForURL(/\/c\/[A-Z0-9]{5}$/);
+  await host.waitForURL(/\/c\/[A-Z0-9]{3,5}$/);
   const code = host.url().split('/').pop()!;
   await host.getByRole('button', { name: /I’ll captain Team 1/ }).click();
   await expect(host.getByTestId('captain-0')).toContainText('Sadiq (you, on this phone)');

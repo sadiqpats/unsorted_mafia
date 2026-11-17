@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ApiError, api } from '../../lib/api';
 import { loadCSession, saveCSession } from '../lib';
+import { isCodeWord } from '../../../shared/codewords';
 import { BollyShell } from '../ui';
 
 interface Info {
@@ -24,7 +25,7 @@ export default function CharadesJoin() {
 
   useEffect(() => {
     setInfo(null);
-    if (code.length < 5) return;
+    if (!isCodeWord(code) && code.length < 5) return;
     // Already a captain (or the host) in this room on this phone? Go straight back in.
     if (loadCSession(code)) {
       nav(`/c/${code}`, { replace: true });
@@ -72,9 +73,11 @@ export default function CharadesJoin() {
               className="field text-center text-xl uppercase tracking-[0.5em]"
               value={code}
               maxLength={5}
+              autoComplete="off"
+              spellCheck={false}
               autoCapitalize="characters"
               onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              placeholder="ABCDE"
+              placeholder="e.g. CUP"
             />
           </label>
           {info && (

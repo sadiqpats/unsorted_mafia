@@ -183,6 +183,12 @@ export interface Game {
   lastDawn?: { round: number; revived: string[] } | null;
   /** The Mafia's secret chat (Mafia members + the Godfather). */
   mafiaChat?: { seq: number; at: number; from: string; text: string }[];
+  /** Group discussion: this Day's groups (player ids, group 1 first); started = the host has started the talking. */
+  groups?: { round: number; list: string[][]; started: boolean } | null;
+  /** How many times each pair of players has shared a group (so each Day mixes new people). Server only. */
+  groupMet?: Record<string, number>;
+  /** The discussion clock, held while everyone walks to their group; it starts when the host starts the talking. */
+  heldClockMs?: number | null;
   /** The Godfather's Superpower: switched on at this round's Dawn, by this player. */
   superpower?: { round: number; by: string } | null;
   /** Who is typing in the Mafia's chat, until when. */
@@ -199,6 +205,8 @@ export interface Game {
     /** Day votes each player received / votes each player cast against a Mafia member (for the end-of-game awards). */
     votesAgainst?: Record<string, number>;
     mafiaVotes?: Record<string, number>;
+    /** Night investigations each player made that landed on a real Mafia member (Best player award). */
+    mafiaFound?: Record<string, number>;
   };
   startedAt: number;
   endedAt: number | null;

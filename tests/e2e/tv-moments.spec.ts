@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { advanceTo, closeMoment, newPhone, nightAct, revealAndAck, setupTable, skipRest, vote } from './helpers';
+import { superpowerOff, advanceTo, closeMoment, newPhone, nightAct, revealAndAck, setupTable, skipRest, vote } from './helpers';
 
 /** Set SHOTS_DIR to keep a screenshot of each screen. */
 const D = process.env.SHOTS_DIR;
@@ -29,6 +29,7 @@ async function fits(p: Page, tag: string) {
 test('TV: after an even round the vote count, the voted-out card and the Mafia count all fit one screen', async ({ browser }) => {
   test.setTimeout(600_000);
   const t = await setupTable(browser, 8, { mafia: 2, godfather: 1, doctor: 1, detective: 1, villager: 3 }, async (h) => {
+    await superpowerOff(h);
     const pause = h.getByLabel('Pause after the vote (seconds)');
     await pause.fill('15');
     await pause.press('Enter');

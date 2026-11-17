@@ -7,11 +7,11 @@ test('host timer settings: defaults, discussion length, "No timer for discussion
     5,
     { mafia: 1, doctor: 1, villager: 3 },
     async (host) => {
-      // The defaults people asked for: Dawn 30 s, a 5 s break, Night 30 s, a 4-minute discussion, a 30 s vote.
-      await expect(host.getByLabel(/^Dawn \(seconds\)/)).toHaveValue('30');
-      await expect(host.getByLabel(/^Night \(seconds\)/)).toHaveValue('30');
+      // The defaults people asked for: Dawn 20 s, a 5 s break, Night 20 s, a 3-minute discussion, a 30 s vote.
+      await expect(host.getByLabel(/^Dawn \(seconds\)/)).toHaveValue('20');
+      await expect(host.getByLabel(/^Night \(seconds\)/)).toHaveValue('20');
       await expect(host.getByLabel(/^Vote \(seconds\)/)).toHaveValue('30');
-      await expect(host.getByLabel(/^Discussion/)).toHaveValue('240');
+      await expect(host.getByLabel(/^Discussion/)).toHaveValue('180');
       await host.getByLabel(/^Discussion/).selectOption('210');
       await expect(host.getByLabel(/^Discussion/)).toHaveValue('210');
       // Then: no clocks at all for this table.

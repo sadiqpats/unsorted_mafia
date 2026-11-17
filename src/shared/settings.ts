@@ -72,6 +72,8 @@ export const SettingsSchema = z.object({
   silencedCanVote: z.boolean(),
   /** On: no ballots on phones. The table votes by show of hands and the host enters who is out (or nobody). */
   offlineVoting: z.boolean().optional(),
+  /** Group discussion: the Day starts with the living players split into small groups that talk apart. 'alternate' = Day 1, 3, 5… */
+  groupDiscussion: z.enum(['off', 'every', 'alternate']).optional(),
   tieRule: z.enum(['none', 'runoff', 'host']),
   /** outcome: only who was eliminated. tally: weighted totals per player. full: who voted for whom. */
   voteReveal: z.enum(['outcome', 'tally', 'full']),
@@ -162,9 +164,9 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     sfxVolume: 70,
     timers: true,
     revealSeconds: 30,
-    preNightSeconds: 30,
-    nightSeconds: 30,
-    daySeconds: 240,
+    preNightSeconds: 20,
+    nightSeconds: 20,
+    daySeconds: 180,
     discussionTimer: true,
     voteSeconds: 30,
     bufferSeconds: 5,
@@ -186,7 +188,7 @@ export function defaultSettings(playerCount = 8): Omit<Settings, 'roles'> {
     godfatherSilenceSelf: true,
     noRepeatTargets: true,
     mafiaChat: true,
-    godfatherSuperpower: false,
+    godfatherSuperpower: true,
     mafiaDecision: 'plurality',
     mafiaWin: 'parity',
     doctorSelfProtect: 'alternate',

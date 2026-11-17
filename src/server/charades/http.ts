@@ -23,7 +23,7 @@ interface SockData {
   identity: CIdentity | null; // null = TV display
 }
 
-const CodeSchema = z.string().regex(/^[A-Za-z0-9]{4,8}$/);
+const CodeSchema = z.string().regex(/^[A-Za-z0-9]{3,8}$/);
 const NameSchema = z.string().trim().min(1).max(24);
 const CreateSchema = z.object({ hostName: NameSchema, hostCode: z.string().max(64).optional() });
 const JoinSchema = z.object({ name: NameSchema, team: z.union([z.literal(0), z.literal(1)]) });

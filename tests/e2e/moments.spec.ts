@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { advanceTo, newPhone, nightAct, revealAndAck, setupTable, skipRest, vote } from './helpers';
+import { superpowerOff, advanceTo, newPhone, nightAct, revealAndAck, setupTable, skipRest, vote } from './helpers';
 
 test('big moments: knife-cut card on TV and phones, pause after the vote, Mafia-left card after even rounds, grouped finale', async ({ browser }) => {
   test.setTimeout(600_000);
   const t = await setupTable(browser, 8, { mafia: 2, godfather: 1, doctor: 1, detective: 1, villager: 3 }, async (h) => {
+    await superpowerOff(h);
     await h.getByLabel('Bollywood Mafia Night').click();
     const pause = h.getByLabel('Pause after the vote (seconds)');
     await pause.fill('8');

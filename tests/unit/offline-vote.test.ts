@@ -61,3 +61,44 @@ describe('end-of-game awards', () => {
     expect(a.find((x) => x.key === 'suspect')?.playerId).toBe('p0');
   });
 });
+
+describe('the four awards', () => {
+  it('always reveals Sharpest eye, Most suspected, Best spy and Best player, in that order', () => {
+    const g = setup(['mafia', 'mafia', 'detective', 'doctor', V, V, V, V], { verdictSeconds: 0 });
+    g.goToVoting();
+    g.vote(2, 0); // detective → Mafia p0
+    g.vote(4, 0);
+    g.vote(5, 6);
+    g.advance();
+    const a = computeAwards(g.room);
+    expect(a.map((x) => x.title)).toEqual(['Sharpest eye', 'Most suspected', 'Best spy', 'Best player']);
+    expect(a.find((x) => x.key === 'eye')!.playerId).toBe('p2');
+    expect(a.find((x) => x.key === 'suspect')!.playerId).toBe('p0');
+    // p0 was voted out, so the Mafia member still standing is the best spy
+    expect(a.find((x) => x.key === 'spy')!.playerId).toBe('p1');
+    // the best player is someone without another award
+    const others = a.filter((x) => x.key !== 'mvp').map((x) => x.playerId);
+    expect(others).not.toContain(a.find((x) => x.key === 'mvp')!.playerId);
+  });
+
+  it('with no day votes, the spy and best player still show', () => {
+    const g = setup(['mafia', V, V, V, V], {});
+    const a = computeAwards(g.room);
+    expect(a.map((x) => x.key)).toEqual(['spy', 'mvp']);
+  });
+});
+
+describe('room code words', () => {
+  it('are 3-4 letters, unique, and none is the start of another', async () => {
+    const { CODE_WORDS, isCodeWord, normalizeCode } = await import('../../src/shared/codewords');
+    expect(CODE_WORDS.length).toBeGreaterThan(150);
+    expect(new Set(CODE_WORDS).size).toBe(CODE_WORDS.length);
+    for (const w of CODE_WORDS) {
+      expect(w).toMatch(/^[A-Z]{3,4}$/);
+      expect(CODE_WORDS.filter((x) => x !== w && x.startsWith(w))).toEqual([]);
+    }
+    expect(isCodeWord(' cup ')).toBe(true);
+    expect(normalizeCode('l-a m p')).toBe('LAMP');
+    expect(isCodeWord('ABCDE')).toBe(false);
+  });
+});

@@ -43,8 +43,8 @@ const CreateSchema = z.object({
   playerCount: z.number().int().min(MIN_PLAYERS).max(MAX_PLAYERS).optional(),
 });
 const JoinSchema = z.object({ name: NameSchema });
-const RejoinSchema = z.object({ rejoinCode: z.string().min(4).max(12) });
-const CodeSchema = z.string().regex(/^[A-Za-z0-9]{4,8}$/);
+const RejoinSchema = z.object({ rejoinCode: z.string().min(3).max(12) });
+const CodeSchema = z.string().regex(/^[A-Za-z0-9]{3,8}$/);
 const PhotoSchema = z.object({ photo: z.string().max(220_000).nullable() });
 
 export function createApp(opts: AppOptions) {

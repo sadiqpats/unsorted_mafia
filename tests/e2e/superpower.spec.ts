@@ -3,10 +3,9 @@ import { advanceTo, newPhone, revealAndAck, setupTable, skipRest } from './helpe
 
 test("the Godfather's Superpower: switched on at Dawn, two kills at night, the Mafia sit out, a big reveal in the morning", async ({ browser }) => {
   test.setTimeout(400_000);
-  // The Superpower is off by default (it suits big tables): switch it on.
+  // The Superpower is on by default.
   const t = await setupTable(browser, 8, { mafia: 1, godfather: 1, doctor: 1, villager: 5 }, async (h) => {
     await h.locator('summary', { hasText: 'Mafia & Godfather' }).click();
-    await h.getByText('Godfather’s Superpower (Mahastra)', { exact: true }).click();
     await expect(h.getByLabel('Godfather’s Superpower (Mahastra)')).toBeChecked();
   });
   const tv = await newPhone(browser);

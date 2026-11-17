@@ -5,6 +5,7 @@ import { Shell } from '../components/ui';
 import { uploadPhoto } from '../lib/photo';
 import { ApiError, api, type RoomInfo } from '../lib/api';
 import { loadSession, saveSession, sessionHash } from '../lib/session';
+import { isCodeWord, normalizeCode } from '../../shared/codewords';
 
 export default function Join() {
   const params = useParams();
@@ -18,16 +19,18 @@ export default function Join() {
   const [rejoinCode, setRejoinCode] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
 
-  const clean = code.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  const clean = normalizeCode(code);
+  // A whole word (CUP) is complete at once; older letter codes (ABCDE) at 5 characters.
+  const complete = isCodeWord(clean) || clean.length >= 5;
 
   // Already joined this room on this device? Go straight back in.
   useEffect(() => {
-    if (clean.length >= 5 && loadSession(clean)) nav(`/r/${clean}`, { replace: true });
-  }, [clean, nav]);
+    if (complete && loadSession(clean)) nav(`/r/${clean}`, { replace: true });
+  }, [clean, complete, nav]);
 
   useEffect(() => {
     setInfo(null);
-    if (clean.length < 5) return;
+    if (!complete) return;
     const t = setTimeout(() => {
       api<RoomInfo>(`/api/rooms/${clean}`)
         .then((r) => {
@@ -37,12 +40,12 @@ export default function Join() {
         .catch((e) => setError(e instanceof ApiError ? e.message : 'Could not check that room.'));
     }, 250);
     return () => clearTimeout(t);
-  }, [clean]);
+  }, [clean, complete]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (clean.length < 5) return setError('Enter the 5-character room code.');
+    if (clean.length < 3) return setError('Enter the room code word, like CUP.');
     setBusy(true);
     try {
       if (rejoin) {
@@ -86,7 +89,7 @@ export default function Join() {
               autoComplete="off"
               spellCheck={false}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="ABCDE"
+              placeholder="e.g. CUP"
               aria-describedby="room-status"
             />
           </label>
@@ -108,7 +111,7 @@ export default function Join() {
           ) : (
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium">Rejoin code from the host</span>
-              <input className="field text-center tracking-[0.3em] uppercase" value={rejoinCode} maxLength={8} onChange={(e) => setRejoinCode(e.target.value.toUpperCase())} placeholder="6 characters" />
+              <input className="field text-center tracking-[0.3em] uppercase" value={rejoinCode} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false} onChange={(e) => setRejoinCode(e.target.value.toUpperCase())} placeholder="e.g. LAMP" />
               <span className="mt-1 block text-xs text-mute">Use this only if you lost your phone/browser session. The host can issue a code from their dashboard.</span>
             </label>
           )}

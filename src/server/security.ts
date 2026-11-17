@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
+import { CODE_WORDS } from '../shared/codewords';
 import type { Rng } from '../shared/engine';
 
 /** Cryptographically secure RNG used for role shuffling and ids. */
@@ -14,6 +15,19 @@ export function randomCode(length: number): string {
   let s = '';
   for (let i = 0; i < length; i++) s += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
   return s;
+}
+
+/** A random everyday word (CUP, LAMP) that is not already taken. Falls back to letters if every word is in use. */
+export function wordCode(taken: (code: string) => boolean): string {
+  for (let i = 0; i < 60; i++) {
+    const w = CODE_WORDS[randomInt(CODE_WORDS.length)];
+    if (!taken(w)) return w;
+  }
+  const free = CODE_WORDS.filter((w) => !taken(w));
+  if (free.length) return free[randomInt(free.length)];
+  let code = randomCode(5);
+  while (taken(code)) code = randomCode(5);
+  return code;
 }
 
 export function newToken(): string {

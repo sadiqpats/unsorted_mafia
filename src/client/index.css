@@ -1034,8 +1034,9 @@ p { text-wrap: pretty; }
 .award-in { animation: award-in 0.55s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
 @keyframes award-in { from { opacity: 0; transform: translateY(14px) scale(0.94); } to { opacity: 1; transform: none; } }
 .reduce-motion .award-in { animation: none; }
-.fs-awards { display: flex; flex-wrap: wrap; justify-content: center; gap: 1vh 1.2vw; margin: 0; padding: 0; list-style: none; opacity: 0; animation: fs-rise 0.6s ease-out var(--at) both; }
-.fs-awards li { display: flex; align-items: baseline; gap: 0.5em; padding: 0.35em 0.9em; border-radius: 999px; border: 1px solid rgba(226, 194, 125, 0.5); background: rgba(226, 194, 125, 0.08); font-size: clamp(0.8rem, 2.3vh, 1.25rem); }
+/* One award at a time, a beat apart (each li has its own --at). */
+.fs-awards { display: flex; flex-wrap: wrap; justify-content: center; gap: 1vh 1.2vw; margin: 0; padding: 0; list-style: none; }
+.fs-awards li { opacity: 0; animation: award-in 0.6s cubic-bezier(0.2, 1.2, 0.4, 1) var(--at) both; display: flex; align-items: baseline; gap: 0.5em; padding: 0.35em 0.9em; border-radius: 999px; border: 1px solid rgba(226, 194, 125, 0.5); background: rgba(226, 194, 125, 0.08); font-size: clamp(0.8rem, 2.3vh, 1.25rem); }
 .fs-awards span { color: #e2c27d; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.78em; }
 .fs-awards b { color: #fff; }
 

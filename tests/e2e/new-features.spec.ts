@@ -94,3 +94,32 @@ test('the vote count plays before the result, and the game-over screens show awa
   await expect(t.seats[2].page.getByTestId('awards')).toContainText('P2', { timeout: 30_000 });
   await shot(t.seats[2].page, 'B5-phone-over', true);
 });
+
+test('group discussion: phones show your group, the TV shows all groups, the host starts the talk', async ({ browser }) => {
+  const t = await table(browser, 8, async (h) => {
+    await h.locator('summary', { hasText: /^Flow/ }).click();
+    await h.getByText('Group discussion', { exact: true }).click();
+    await expect(h.getByLabel(/^Group discussion/)).toBeChecked();
+  });
+  await start(t);
+  await hostTo(t.host, 'Night');
+  await hostTo(t.host, 'Day');
+  for (const s of t.seats) await closeMoment(s.page);
+  const p = t.seats[0].page;
+  await expect(p.getByTestId('my-group')).toContainText(/You’re in Group [12]/);
+  await expect(p.getByTestId('my-group')).toContainText('Go to your group’s place');
+  // Three other people in my group, and no role anywhere on the group card.
+  await expect(p.getByTestId('my-group').locator('li').first()).toBeVisible();
+  await expect(p.getByTestId('my-group')).not.toContainText(/Mafia|Doctor|Detective|Villager/);
+  await expect(t.tv.getByTestId('tv-groups').locator('section')).toHaveCount(2);
+  await expect(t.host.getByTestId('host-groups').locator('section')).toHaveCount(2);
+  await shot(p, 'C1-phone-group', true);
+  if (D) await t.tv.waitForTimeout(15_000); // the morning card goes first
+  await shot(t.tv, 'C2-tv-groups');
+  await t.host.getByTestId('start-groups').click();
+  await expect(p.getByTestId('my-group')).toContainText('Talk in your group');
+  await expect(t.host.getByTestId('start-groups')).toHaveCount(0);
+  await hostTo(t.host, 'Vote');
+  await expect(p.getByTestId('my-group')).toHaveCount(0);
+  await expect(t.tv.getByTestId('tv-groups')).toHaveCount(0);
+});

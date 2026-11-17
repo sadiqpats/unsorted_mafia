@@ -508,8 +508,11 @@ describe("the Mafia's chat", () => {
 
 describe("the Godfather's Superpower (Mahastra)", () => {
   const roles = ['mafia', 'godfather', 'doctor', 'thief', 'villager', 'villager', 'villager', 'villager', 'villager'];
-  it('off by default: no Superpower, and no Dawn just for it', () => {
-    const g = setup(['mafia', 'godfather', 'villager', 'villager', 'villager', 'villager', 'villager']);
+  it('on by default (with its Dawn round); switched off: no Superpower, and no Dawn just for it', () => {
+    const on = setup(['mafia', 'godfather', 'villager', 'villager', 'villager', 'villager', 'villager']);
+    on.advance();
+    expect(on.room.game!.phase).toBe('prenight');
+    const g = setup(['mafia', 'godfather', 'villager', 'villager', 'villager', 'villager', 'villager'], { godfatherSuperpower: false });
     g.advance();
     expect(g.room.game!.phase).not.toBe('prenight');
   });

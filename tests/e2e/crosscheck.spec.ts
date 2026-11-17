@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { advanceTo, hostPhase, newPhone, nightAct, revealAndAck, setupTable, skipRest, vote, waitPhase } from './helpers';
+import { superpowerOff, advanceTo, hostPhase, newPhone, nightAct, revealAndAck, setupTable, skipRest, vote, waitPhase } from './helpers';
 
 /** Set SHOTS_DIR to save host / phone / TV screenshots of every step for a visual check. */
 const SHOTS = process.env.SHOTS_DIR;
@@ -7,6 +7,7 @@ const SHOTS = process.env.SHOTS_DIR;
 test('full Bollywood game on the real clock (Night and Vote time out), with the TV, Godfather-is-Evil win rule', async ({ browser }) => {
   test.setTimeout(900_000);
   const t = await setupTable(browser, 6, { mafia: 1, godfather: 1, villager: 4 }, async (host) => {
+    await superpowerOff(host);
     await host.getByLabel('Bollywood Mafia Night').click();
     await expect(host.getByLabel('Bollywood Mafia Night')).toBeChecked();
   }, { realClock: true });
@@ -43,8 +44,8 @@ test('full Bollywood game on the real clock (Night and Vote time out), with the 
   await expect(spot).toContainText('Killed in the night');
   await expect(tv.getByTestId('tv-timer').first()).toBeVisible();
   await tv.screenshot({ path: `${SHOTS ?? 'test-results'}/spotlight.png` }).catch(() => undefined);
-  // The discussion runs on a 4-minute clock; the host opens the vote early.
-  await expect(t.host.getByRole('timer')).toContainText(/^[34]:\d\d$/);
+  // The discussion runs on a 3-minute clock; the host opens the vote early.
+  await expect(t.host.getByRole('timer')).toContainText(/^[23]:\d\d$/);
   await t.host.getByRole('button', { name: 'Start voting' }).click();
   await expect(t.host.getByTestId('host-phase')).toHaveText('Vote');
   await shot('04-vote');

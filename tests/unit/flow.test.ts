@@ -247,7 +247,7 @@ describe('night flow & anti-cheat', () => {
 });
 
 describe('timers, pause and host corrections', () => {
-  it('the default clock: Dawn 30 s and Night 30 s after a 5 s break, a 4-minute discussion that opens the vote, a 30 s vote', () => {
+  it('the default clock: Dawn 20 s and Night 20 s after a 5 s break, a 3-minute discussion that opens the vote, a 30 s vote', () => {
     const g = setup(['mafia', 'thief', V, V, V], { bufferSeconds: 5 });
     expect(g.room.game!.phaseEndsAt).toBeNull(); // role reveal: until everyone has looked
     for (const p of g.room.players) acknowledgeRole(g.room, p.id);
@@ -256,23 +256,23 @@ describe('timers, pause and host corrections', () => {
     const gm = g.room.game!;
     expect(gm.phase).toBe('prenight');
     expect(gm.phaseOpensAt).toBe(t1 + 5000);
-    expect(gm.phaseEndsAt).toBe(t1 + 5000 + 30_000);
+    expect(gm.phaseEndsAt).toBe(t1 + 5000 + 20_000);
     // Nobody can act during the break.
     expect(() => submitNightAction(g.room, 'p1', { abilityId: 'steal', targetId: 'mafia_kill', phaseSeq: g.seq() }, t1 + 1000)).toThrow(/opens in a moment/);
-    // Time runs out with nobody acting: Dawn simply ends, then Night (30 s after its own break).
+    // Time runs out with nobody acting: Dawn simply ends, then Night (20 s after its own break).
     expect(tick(g.room, gm.phaseEndsAt! + 1, g.rng)).toBe(true);
     expect(gm.phase).toBe('night');
     const nightStart = gm.phaseStartedAt;
-    expect(gm.phaseEndsAt).toBe(nightStart + 5000 + 30_000);
+    expect(gm.phaseEndsAt).toBe(nightStart + 5000 + 20_000);
     expect(tick(g.room, gm.phaseEndsAt! + 1, g.rng)).toBe(true);
-    // Day: a 4-minute discussion (no break); when it runs out the vote opens by itself.
+    // Day: a 3-minute discussion (no break); when it runs out the vote opens by itself.
     expect(gm.phase).toBe('discussion');
     const dayStart = gm.phaseStartedAt;
-    expect(gm.phaseEndsAt).toBe(dayStart + 240_000);
-    expect(tick(g.room, dayStart + 239_000, g.rng)).toBe(false);
-    expect(tick(g.room, dayStart + 240_000, g.rng)).toBe(true);
+    expect(gm.phaseEndsAt).toBe(dayStart + 180_000);
+    expect(tick(g.room, dayStart + 179_000, g.rng)).toBe(false);
+    expect(tick(g.room, dayStart + 180_000, g.rng)).toBe(true);
     expect(gm.phase).toBe('voting');
-    expect(gm.phaseEndsAt).toBe(dayStart + 240_000 + 30_000);
+    expect(gm.phaseEndsAt).toBe(dayStart + 180_000 + 30_000);
     expect(tick(g.room, gm.phaseEndsAt! + 1, g.rng)).toBe(true); // nobody voted: nobody out, the game goes on
     expect(gm.phase).toBe('prenight');
   });
@@ -388,13 +388,13 @@ describe('timers, pause and host corrections', () => {
     g.goToNight();
     const now = g.room.game!.phaseStartedAt;
     pauseGame(g.room, now + 10_000);
-    expect(g.room.game!.pausedRemainingMs).toBe(20_000);
+    expect(g.room.game!.pausedRemainingMs).toBe(10_000); // 20 s night
     expect(tick(g.room, now + 999_999, g.rng)).toBe(false);
     expect(() => g.act(0, 'mafia_kill', 1)).toThrow(/paused/);
     resumeGame(g.room, now + 100_000);
-    expect(g.room.game!.phaseEndsAt).toBe(now + 120_000);
+    expect(g.room.game!.phaseEndsAt).toBe(now + 110_000);
     extendTimer(g.room, 30, now + 100_000);
-    expect(g.room.game!.phaseEndsAt).toBe(now + 150_000);
+    expect(g.room.game!.phaseEndsAt).toBe(now + 140_000);
   });
 
   it('the host can always move a stuck phase on', () => {

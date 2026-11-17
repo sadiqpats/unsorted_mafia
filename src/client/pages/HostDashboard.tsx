@@ -8,7 +8,8 @@ import { RoleArt } from '../components/RoleArt';
 import { Avatar } from '../components/Avatar';
 import { AlignmentBadge, Feed, Modal, PHASE_LABEL, PlayerRow, Progress, QR, Section, Timer, Toggle, useConfirm, useToast } from '../components/ui';
 import { GameOverPanel, PlayerGame, useAct, type GameProps } from './PlayerGame';
-import { Check, Pause, Play, SkipForward, Vote } from 'lucide-react';
+import { Check, Pause, Play, SkipForward, Users, Vote } from 'lucide-react';
+import { GroupsBoard, groupsLine } from '../components/Groups';
 
 export function HostDashboard(props: GameProps) {
   const { view } = props;
@@ -323,8 +324,8 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           <NumberSetting label="Night (seconds)" value={s.nightSeconds} min={15} max={600} onChange={(v) => patch({ nightSeconds: v })} />
           <Select
             label="Discussion"
-            value={String(s.daySeconds ?? 240)}
-            options={[...new Set([120, 150, 180, 210, 240, 270, 300, 360, s.daySeconds ?? 240])].sort((a, b) => a - b).map((n) => [String(n), `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')} min`] as [string, string])}
+            value={String(s.daySeconds ?? 180)}
+            options={[...new Set([120, 150, 180, 210, 240, 270, 300, 360, s.daySeconds ?? 180])].sort((a, b) => a - b).map((n) => [String(n), `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')} min`] as [string, string])}
             onChange={(v) => patch({ daySeconds: Number(v) })}
           />
           <Toggle label="No timer for discussion" hint="The discussion is open-ended: you press “Start voting” when the table is ready." checked={s.discussionTimer === false} onChange={(v) => patch({ discussionTimer: !v })} />
@@ -341,6 +342,15 @@ function HouseRules({ s, patch, send, view }: { s: Settings; patch: (p: Settings
           />
           <Toggle label="I’m also playing" hint="Hides every secret from this dashboard." checked={s.hostPlays} onChange={(v) => act({ type: 'set_host_plays', hostPlays: v })} />
           <Toggle label="Allow late joining" hint="Late joiners always become Villagers." checked={s.allowLateJoin} onChange={(v) => patch({ allowLateJoin: v })} />
+          <Toggle
+            label="Group discussion"
+            hint="The Day starts with the living split into 2–4 small groups (Mafia spread out, new mixes every Day). Phones show each player their group; the clock starts when you press “Start group talk”."
+            checked={(s.groupDiscussion ?? 'off') !== 'off'}
+            onChange={(v) => patch({ groupDiscussion: v ? 'every' : 'off' })}
+          />
+          {(s.groupDiscussion ?? 'off') !== 'off' && (
+            <Toggle label="Groups only every other Day" hint="Day 1, 3, 5… in groups; the Days between are one big table." checked={s.groupDiscussion === 'alternate'} onChange={(v) => patch({ groupDiscussion: v ? 'alternate' : 'every' })} />
+          )}
         </Group>
         <Group title="Voting">
           <Toggle label="Offline voting (show of hands)" hint="No ballots on phones. The table votes out loud; the vote clock is just a short countdown. Then you choose here who was voted out — or no one." checked={!!s.offlineVoting} onChange={(v) => patch({ offlineVoting: v })} />
@@ -490,7 +500,12 @@ function HostGame({ view, send, serverNow }: GameProps) {
             <button className="btn btn-ghost !min-h-11 flex-1 text-sm md:flex-none" disabled={busy} onClick={() => act({ type: g.paused ? 'resume' : 'pause' })}>
               {g.paused ? <><Play className="ic" aria-hidden /> Resume</> : <><Pause className="ic" aria-hidden /> Pause</>}
             </button>
-            <button className="btn btn-gold !min-h-11 basis-full text-base md:basis-auto md:px-6" disabled={busy || !!g.pendingTie || (g.phase === 'voting' && !!view.settings.offlineVoting)} onClick={() => act({ type: 'advance', phaseSeq: g.phaseSeq })}>
+{g.groups && !g.groups.started && (
+              <button className="btn btn-gold !min-h-11 basis-full text-base md:basis-auto md:px-6" disabled={busy || g.paused} onClick={() => act({ type: 'start_groups' })} data-testid="start-groups">
+                <Users className="ic" aria-hidden /> Start group talk
+              </button>
+            )}
+            <button className={`btn ${g.groups && !g.groups.started ? 'btn-ghost' : 'btn-gold'} !min-h-11 basis-full text-base md:basis-auto md:px-6`} disabled={busy || !!g.pendingTie || (g.phase === 'voting' && !!view.settings.offlineVoting)} onClick={() => act({ type: 'advance', phaseSeq: g.phaseSeq })}>
               {g.phase === 'discussion' ? <><Vote className="ic" aria-hidden /> Start voting</> : <>Next phase <SkipForward className="ic" aria-hidden /></>}
             </button>
           </div>
@@ -507,6 +522,13 @@ function HostGame({ view, send, serverNow }: GameProps) {
         <div className="anim-pop rounded-xl border border-ok/50 bg-ok/10 p-3 text-center text-sm" role="status">
           ✅ All votes are in. Press <b>Next phase</b> to reveal the result (players can still change their vote until you do).
         </div>
+      )}
+
+      {g.groups && (
+        <Section title="Groups" className="border-gold/60">
+          <p className="mb-3 text-sm text-mute">{groupsLine(g.groups)}</p>
+          <GroupsBoard view={view} />
+        </Section>
       )}
 
       {g.phase === 'voting' && view.settings.offlineVoting && (

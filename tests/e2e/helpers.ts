@@ -35,7 +35,7 @@ export async function createRoom(browser: Browser, count: number, { realClock = 
   await host.getByLabel('Your display name').fill('Gamemaster');
   await host.getByLabel('Type player count').fill(String(count));
   await host.getByRole('button', { name: 'Create room' }).click();
-  await host.waitForURL(/\/r\/[A-Z0-9]{5}$/);
+  await host.waitForURL(/\/r\/[A-Z0-9]{3,5}$/);
   const code = host.url().split('/').pop()!;
   await expect(host.getByText('Invite players')).toBeVisible();
   // No opening break before Dawn/Night in tests (its own test covers it) — keeps every phase instant.
@@ -73,6 +73,13 @@ export async function joinRoom(browser: Browser, code: string, name: string): Pr
   await page.getByRole('button', { name: 'I’m ready' }).click();
   await expect(page.getByRole('button', { name: /Ready — tap to undo/ })).toBeVisible();
   return page;
+}
+
+/** These tests are about other things: switch the Godfather's Superpower (on by default) off, so there is no Dawn round. */
+export async function superpowerOff(host: Page) {
+  await host.locator('summary', { hasText: 'Mafia & Godfather' }).click();
+  await host.getByText('Godfather’s Superpower (Mahastra)', { exact: true }).click();
+  await expect(host.getByLabel('Godfather’s Superpower (Mahastra)')).not.toBeChecked();
 }
 
 /** Set exact role counts with the host's −/+ buttons. */

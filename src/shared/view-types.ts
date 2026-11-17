@@ -40,6 +40,8 @@ export interface PublicGame {
   lastVerdict: Verdict | null;
   mafiaLeft: { round: number; count: number } | null;
   lastDawn: { round: number; revived: string[] } | null;
+  /** Group discussion (only during the Day's discussion): player ids per group, and whether the host has started the talking. */
+  groups: { list: string[][]; started: boolean; heldMs: number | null } | null;
   winner: WinResult | null;
   /** When the game ended (server time), so every screen plays the finale in step. */
   endedAt: number | null;

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ClientView } from '../../src/shared/view-types';
 import { Client, api, createLobby, expectOk, readyAll, startServer } from './harness';
+import { CODE_WORDS } from '../../src/shared/codewords';
 
 type Srv = Awaited<ReturnType<typeof startServer>>;
 let srv: Srv;
@@ -54,7 +55,8 @@ describe('rooms over HTTP', () => {
   it('creates a room and joins with the code', async () => {
     const c = await api(srv.base, '/api/rooms', { hostName: 'Ana', playerCount: 6 });
     expect(c.status).toBe(201);
-    expect(c.body.code).toMatch(/^[A-Z2-9]{5}$/);
+    expect(CODE_WORDS).toContain(c.body.code); // an everyday word like CUP
+    expect(c.body.code).toMatch(/^[A-Z]{3,4}$/);
     const info = await api(srv.base, `/api/rooms/${c.body.code}`);
     expect(info.body).toMatchObject({ status: 'lobby', capacity: 6, players: 0, joinable: true });
     expect(JSON.stringify(info.body)).not.toMatch(/token|role/i);
@@ -324,6 +326,25 @@ describe('reconnection & persistence', () => {
     expect(p.client.ended).toMatch(/another device/);
     // the code is single-use
     expect((await api(srv.base, `/api/rooms/${g.code}/rejoin`, { rejoinCode: code })).status).toBe(400);
+  });
+
+  it('rejoin codes are words, typed any way, and guessing cancels them after 5 wrong tries', async () => {
+    const g = await startedGame(5);
+    const p = g.players[1];
+    const code = expectOk(await g.host.send({ type: 'issue_rejoin', playerId: p.id })).data!.rejoinCode as string;
+    expect(CODE_WORDS).toContain(code);
+    const wrong = CODE_WORDS.filter((w) => w !== code);
+    for (let i = 0; i < 4; i++) expect((await api(srv.base, `/api/rooms/${g.code}/rejoin`, { rejoinCode: wrong[i] })).status).toBe(400);
+    // still fine after 4 misses, and spaces / lower case don't matter
+    expect((await api(srv.base, `/api/rooms/${g.code}/rejoin`, { rejoinCode: ` ${code.toLowerCase()} ` })).body.playerId).toBe(p.id);
+
+    const code2 = expectOk(await g.host.send({ type: 'issue_rejoin', playerId: p.id })).data!.rejoinCode as string;
+    for (let i = 0; i < 5; i++) await api(srv.base, `/api/rooms/${g.code}/rejoin`, { rejoinCode: wrong.filter((w) => w !== code2)[i] });
+    const r = await api(srv.base, `/api/rooms/${g.code}/rejoin`, { rejoinCode: code2 });
+    expect(r.status).toBe(400); // cancelled by the guessing
+    // the host can simply issue a new one
+    const code3 = expectOk(await g.host.send({ type: 'issue_rejoin', playerId: p.id })).data!.rejoinCode as string;
+    expect((await api(srv.base, `/api/rooms/${g.code}/rejoin`, { rejoinCode: code3 })).body.playerId).toBe(p.id);
   });
 
   it('records an audit log of commands', async () => {
