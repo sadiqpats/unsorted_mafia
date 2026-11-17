@@ -55,7 +55,7 @@ export default function Landing() {
 
         {/* HOW IT WORKS */}
         <section className="mx-auto max-w-6xl px-4 pb-20">
-          <div className="divider-ornament mb-10 font-[family-name:var(--font-display)] text-xs tracking-[0.3em]">HOW IT WORKS</div>
+          <h2 className="divider-ornament mb-10 font-[family-name:var(--font-display)] text-xs tracking-[0.3em]">HOW IT WORKS</h2>
           <ol className="grid gap-4 md:grid-cols-4">
             {[
               ['I', 'Open a room', 'The host picks the player count (5–32) and the characters. A QR code and room code appear.'],

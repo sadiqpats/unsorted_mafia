@@ -14,9 +14,9 @@ import { Avatar } from './Avatar';
 
 /** Unsorted brand assets (light lettering for the dark site; yellow ring kept). */
 export const LOGO = {
-  wordmark: '/brand/unsorted-wordmark-light.png',
-  full: '/brand/unsorted-logo-light.png',
-  mark: '/brand/unsorted-mark.png',
+  wordmark: '/brand/unsorted-wordmark-light.webp',
+  full: '/brand/unsorted-logo-light.webp',
+  mark: '/brand/unsorted-mark.webp',
 };
 
 /** Logo → main menu (all games); the game name next to it → that game's menu. */

@@ -207,3 +207,16 @@
 .reduce-motion .in-card-face, .reduce-motion .in-slash, .reduce-motion .in-title, .reduce-motion .in-title > span { animation: none !important; transform: none; }
 .reduce-motion .in-gate > * { transition-delay: 0s !important; }
 .reduce-motion .in-curtain-l, .reduce-motion .in-curtain-r { animation: none !important; }
+
+/* Phones and small screens: a lighter intro with the same story (curtains, cards, logo, title).
+   Phones were spending ~2 s drawing the continuous effects below, which made the page feel stuck. */
+@media (max-width: 767px), (pointer: coarse) {
+  .in-motes span:nth-child(n + 7) { display: none; }          /* 6 floating specks instead of 16 */
+  .in-motes span { box-shadow: none; }
+  .in-sparks i:nth-child(even) { display: none; }             /* 6 sparks instead of 12 */
+  .in-sparks i { box-shadow: none; }
+  .in-root.is-gate .in-curtain-l, .in-root.is-gate .in-curtain-r { animation: none; } /* no endless sway */
+  .in-title > span { filter: none; }                          /* the shimmer no longer redraws a shadow every frame */
+  .in-root.is-gate .in-title > span { animation-iteration-count: 1; }
+  .in-bloom { width: 100vmax; height: 100vmax; margin: -50vmax 0 0 -50vmax; }
+}

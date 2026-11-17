@@ -326,7 +326,6 @@ export default function Guide() {
                   type="button"
                   onClick={() => setRole(id)}
                   className="guide-tile card flex h-full w-full flex-col items-center p-3 text-center focus-ring"
-                  aria-label={`${ROLES[id].name}: more details`}
                 >
                   <span className="relative">
                     <RoleArt art={ROLES[id].art} alignment={sideOf(id)} size={72} />
